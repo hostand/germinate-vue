@@ -2,7 +2,6 @@
   <div class="custom-page media-page">
     <!-- Heading -->
     <section class="media-hero">
-      <div class="cp-eyebrow"><span class="cp-eyebrow-dot" /> Media library</div>
       <!-- Title on the left, category filter on the right -->
       <div class="media-title-row">
         <h1 class="cp-title">{{ $t('pageMediaTitle') }}</h1>
@@ -302,6 +301,8 @@ export default {
 }
 
 .media-hero {
+  /* The space of the line that was above the title, and a little more */
+  padding-top: 1.75rem;
   margin-bottom: 2.5rem;
 }
 

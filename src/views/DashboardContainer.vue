@@ -1,6 +1,6 @@
 <template>
   <div>
-    <b-navbar :type="storeDarkMode ? 'dark' : 'light'" :variant="storeDarkMode ? 'dark' : 'light'" id="app-header" fixed="top" class="border-primary border-bottom">
+    <b-navbar :type="storeDarkMode ? 'dark' : 'light'" :variant="storeDarkMode ? 'dark' : 'light'" id="app-header" fixed="top">
       <b-navbar-brand :to="{ name: Pages.home }">
         <b-img-lazy class="navbar-brand-full" src="img/germinate-square.svg" width="45" height="45" alt="Germinate logo" />
         <b-img-lazy class="navbar-brand-full navbar-brand-text ml-2" src="img/germinate-text.svg" height="22" alt="Germinate logo" />
@@ -9,22 +9,26 @@
       <!-- Right aligned nav items -->
       <b-navbar-nav class="ml-auto align-items-stretch top-nav">
         <b-nav-form @submit.prevent="search" class="d-none d-md-inline" form-class="h-100">
-          <!-- Search box -->
-          <b-input-group class="mr-sm-2">
+          <!-- Search box: rounded, with the green search button -->
+          <b-input-group class="mr-sm-3 top-nav-search">
             <b-form-input size="sm" class="search-input" v-model="searchTerm" :placeholder="$t('inputPlaceholderSearch')"></b-form-input>
             <b-input-group-append>
-              <b-button @click="search" :aria-label="$t('inputPlaceholderSearch')">
+              <b-button class="top-nav-search-button" @click="search" :aria-label="$t('inputPlaceholderSearch')">
                 <MdiIcon :path="mdiMagnify" />
               </b-button>
             </b-input-group-append>
           </b-input-group>
         </b-nav-form>
 
+        <!-- Marked items (germplasm, markers, locations) -->
+        <MarkedItemsDropdown />
         <b-nav-item :disabled="helpDisabled" @click="showHelp" id="top-nav-help" aria-label="Help information">
           <MdiIcon :path="mdiHelpCircleOutline" :class="{ 'text-info': !helpDisabled }" />
         </b-nav-item>
-        <b-nav-item @click="toggleDarkMode" id="top-nav-darkmode" v-b-tooltip:hover="$t('menuTopDarkModeToggle')" :aria-label="$t('menuTopDarkModeToggle')">
-          <span :class="{ 'text-info': storeDarkMode === true }"><MdiIcon :path="mdiThemeLightDark" /></span>
+        <!-- Light theme: "Toggle dark mode"; dark theme: "Toggle light mode" -->
+        <b-nav-item @click="toggleDarkMode" id="top-nav-darkmode" v-b-tooltip.hover :title="themeToggleText" :aria-label="themeToggleText">
+          <!-- Light theme: the moon (to go dark); dark theme: the sun (to go light) -->
+          <MdiIcon :path="storeDarkMode ? mdiWeatherSunny : mdiWeatherNight" />
         </b-nav-item>
 
         <LocaleDropdown class="top-nav-locale"/>
@@ -69,16 +73,8 @@
       </div>
     </div>
 
-    <!-- GDPR notification -->
-    <b-popover target="app-header" show placement="bottom" variant="info" v-if="storeServerSettings && storeServerSettings.showGdprNotification === true && storeCookiesAccepted === null">
-      <template v-slot:title>{{ $t('widgetGdprNotificationTitle') }}</template>
-      <p>{{ $t('widgetGdprNotificationText') }}</p>
-      <p><router-link :to="{ name: Pages.cookies }">{{ $t('widgetGdprNotificationReadMore') }}</router-link></p>
-      <div class="d-flex flex-row">
-        <b-button variant="success" class="flex-fill mr-2" @click="acceptCookies(true)">{{ $t('widgetGdprNotificationButtonAccept') }}</b-button>
-        <b-button variant="secondary" class="flex-fill" v-b-tooltip:hover :title="$t('tooltipGdprNotificationButtonReject')" @click="acceptCookies(false)">{{ $t('widgetGdprNotificationButtonDecline') }}</b-button>
-      </div>
-    </b-popover>
+    <!-- GDPR notification: a card at the bottom right, until the cookies are allowed or declined -->
+    <GdprConsent v-if="storeServerSettings && storeServerSettings.showGdprNotification === true && storeCookiesAccepted === null" @decide="acceptCookies" />
 
     <!-- Help modal -->
     <b-modal :title="$t('widgetHelpTitle')" v-if="storeHelpKey" ref="helpModal" ok-only size="lg">
@@ -106,18 +102,20 @@
 import { mapGetters } from 'vuex'
 
 import ChangelogModal from '@/components/modals/ChangelogModal'
+import GdprConsent from '@/components/util/GdprConsent'
 import PageHeader from '@/components/structure/PageHeader'
 import SidebarComponent from '@/components/structure/SidebarComponent'
 import StoryNavbar from '@/components/structure/StoryNavbar'
 import MdiIcon from '@/components/icons/MdiIcon'
 import LocaleDropdown from '@/components/dropdowns/LocaleDropdown'
+import MarkedItemsDropdown from '@/components/dropdowns/MarkedItemsDropdown'
 import UserSettingsDropdown from '@/components/dropdowns/UserSettingsDropdown'
 import SidebarAsyncJobs from '@/components/structure/SidebarAsyncJobs'
 import FeedbackButton from '@/components/util/FeedbackButton'
 import Tour from '@/components/util/Tour'
 import { bskyIcon, germinateVersion } from '@/mixins/util'
 
-import { mdiMagnify, mdiHelpCircleOutline, mdiMenu, mdiThemeLightDark, mdiTwitter, mdiGithub, mdiWeb } from '@mdi/js'
+import { mdiMagnify, mdiHelpCircleOutline, mdiMenu, mdiWeatherNight, mdiWeatherSunny, mdiTwitter, mdiGithub, mdiWeb } from '@mdi/js'
 import { Pages } from '@/mixins/pages'
 
 const emitter = require('tiny-emitter/instance')
@@ -125,7 +123,9 @@ const emitter = require('tiny-emitter/instance')
 export default {
   components: {
     ChangelogModal,
+    GdprConsent,
     LocaleDropdown,
+    MarkedItemsDropdown,
     MdiIcon,
     PageHeader,
     SidebarAsyncJobs,
@@ -136,6 +136,10 @@ export default {
     Tour
   },
   computed: {
+    // Tooltip of the theme button: the theme it switches to
+    themeToggleText: function () {
+      return this.storeDarkMode ? this.$t('menuTopLightModeToggle') : this.$t('menuTopDarkModeToggle')
+    },
     ...mapGetters([
       'storeAsyncJobCount',
       'storeCookiesAccepted',
@@ -160,7 +164,8 @@ export default {
       mdiTwitter,
       mdiWeb,
       mdiGithub,
-      mdiThemeLightDark,
+      mdiWeatherNight,
+      mdiWeatherSunny,
       germinateVersion,
       changelogVersionNumber: null,
       collapsed: false,
@@ -343,6 +348,37 @@ $navbar-height: 72px;
 
 .form-inline .form-control.search-input {
   height: auto;
+}
+
+/* Top navigation: the search rounded with a green button, the icons a little bigger */
+#app-header .top-nav-search .search-input {
+  min-width: 14rem;
+  padding: 0.45rem 0.9rem;
+  border-radius: 10px 0 0 10px;
+  font-size: 0.95rem;
+  /* The font of the new pages (loaded with the dropdowns of the top navigation) */
+  font-family: 'DM Sans', -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+#app-header .top-nav-search .search-input::placeholder {
+  font-family: inherit;
+}
+#app-header .top-nav-search .top-nav-search-button {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 0.9rem;
+  border: none;
+  border-radius: 0 10px 10px 0;
+  background: #3b6b35;
+  color: #ffffff;
+}
+#app-header .top-nav-search .top-nav-search-button:hover,
+#app-header .top-nav-search .top-nav-search-button:focus {
+  background: #2f5a2a;
+}
+#app-header .top-nav > .nav-item > .nav-link svg.mdi-icon,
+#app-header .top-nav > .dropdown > .nav-link svg.mdi-icon {
+  width: 1.4rem;
+  height: 1.4rem;
 }
 
 .mdi-heading {

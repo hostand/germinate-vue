@@ -1,76 +1,67 @@
 <template>
   <div :class="['custom-page', 'passport-page', { 'is-popup': isPopup, 'is-new': isNew }]">
+    <!-- Reference images of the accession: behind the top of the page from edge to edge, blurred, fading into the page
+         (light or dark) at the bottom. Several ones fade into each other. -->
+    <!-- It ends where the tabs start (under the header, measured): faded out completely there -->
+    <div class="pp-backdrop" v-if="!isNew && referenceImages.length > 0" :style="backdropStyle" aria-hidden="true">
+      <div v-for="(image, index) in referenceImages"
+           :key="'pp-header-image-' + image.imageId"
+           :class="['pp-header-image', { active: index === referenceImageIndex }]"
+           :style="{ backgroundImage: `url('${getReferenceImageSrc(image)}')` }" />
+      <div class="pp-header-veil" />
+    </div>
+
     <!-- Header -->
     <!-- Not for a new germplasm: there is nothing to show in it yet -->
-    <section :class="['pp-card', 'pp-header', { 'pp-header-has-image': referenceImages.length > 0 }]" v-if="!isNew">
-      <!-- Reference images of the accession, blurred behind the header. Several ones fade into each other. -->
-      <div class="pp-header-backdrop" v-if="referenceImages.length > 0" aria-hidden="true">
-        <div v-for="(image, index) in referenceImages"
-             :key="'pp-header-image-' + image.imageId"
-             :class="['pp-header-image', { active: index === referenceImageIndex }]"
-             :style="{ backgroundImage: `url('${getReferenceImageSrc(image)}')` }" />
-        <div class="pp-header-veil" />
-      </div>
-
+    <section :class="['pp-header', { 'pp-header-has-image': referenceImages.length > 0 }]" v-if="!isNew" ref="header">
       <div class="pp-header-main">
         <div class="pp-header-crop">
-          <!-- Germplasm group of the accession, with the icon of its flagship crop like on the home page -->
-          <template v-if="cropGroup">
-            <span :class="['pp-crop-icon', `cp-crop-${cropGroup.crop ? cropGroup.crop.key : 'other'}`]"><MdiIcon :path="cropGroup.crop ? cropGroup.crop.icon : icons.group" :size="20" /></span>
-            <span class="pp-crop-name">{{ cropGroup.groupName }}</span>
-          </template>
           <!-- In-situ when the accession has the attribute IN-SITU with value 1, ex-situ otherwise -->
           <span class="pp-status-badge" v-if="conservation">{{ conservation }}</span>
+          <!-- Germplasm group of the accession -->
+          <span class="pp-crop-name" v-if="cropGroup">{{ cropGroup.groupName }}</span>
         </div>
-        <!-- Accession number, with the accession name next to it (cut with "..." when too long) -->
+        <!-- Accession number, the box that marks it, and the accession name (cut with "..." when too long) -->
         <h1 class="pp-title" v-if="accessionNumber">
           <span class="pp-title-main">{{ accessionNumber }}</span>
+          <!-- Same as the checkbox on the original passport page: adds the accession to, or removes it from, the marked germplasm -->
+          <button type="button"
+                  :class="['pp-title-mark', { marked: isMarked }]"
+                  :aria-pressed="isMarked"
+                  :disabled="!germplasm"
+                  :title="$t('tooltipGermplasmMarkedItem')"
+                  :aria-label="$t('tooltipGermplasmMarkedItem')"
+                  @click="toggleMarked">
+            <MdiIcon :path="isMarked ? icons.checked : icons.unchecked" :size="24" />
+          </button>
           <small class="pp-title-secondary" v-if="accessionName" :title="accessionName">{{ accessionName }}</small>
         </h1>
         <!-- Genus, species and species authority -->
         <div class="pp-taxonomy" v-if="taxonomy">{{ taxonomy }}</div>
       </div>
-
-      <div class="pp-header-actions">
-        <!-- Same as the checkbox on the original passport page: adds the accession to, or removes it from, the marked germplasm -->
-        <button type="button"
-                :class="['pp-action-button', { marked: isMarked }]"
-                :aria-pressed="isMarked"
-                :disabled="!germplasm"
-                :title="$t('tooltipGermplasmMarkedItem')"
-                @click="toggleMarked">
-          <span class="pp-action-icon pp-action-mark"><MdiIcon :path="isMarked ? icons.checked : icons.unchecked" :size="22" /></span>
-          {{ isMarked ? 'Unmark Germplasm' : 'Mark Germplasm' }}
-        </button>
-        <!-- Same as the original passport page: opens Humbug with this accession in a new window -->
-        <a :href="barcodeUrl" target="_blank" rel="noopener noreferrer" class="pp-action-button" title="Generate barcode using Humbug">
-          <span class="pp-action-icon pp-action-barcode"><MdiIcon :path="icons.barcode" :size="22" /></span>
-          Generate Barcode
-        </a>
-        <!-- Passport Data Completeness Index, out of 10. Hidden when the PDCI calculation is turned off. -->
-        <div class="pp-pdci" v-if="showPdci">
-          <div class="pp-pdci-bar" role="progressbar" aria-valuemin="0" aria-valuemax="10" :aria-valuenow="pdci === null ? 0 : pdci" aria-label="PDCI">
-            <span class="pp-pdci-fill" :style="{ width: `${pdciFillPercent}%` }" />
-          </div>
-          <span class="pp-pdci-text">PDCI: {{ pdciText }}</span>
-          <!-- Same help as next to the PDCI title on the original passport page -->
-          <button type="button" class="pp-info pp-info-button" @click="$refs.pdciModal.show()" :title="$t('pagePassportPdciTitle')" :aria-label="$t('pagePassportPdciTitle')">
-            <MdiIcon :path="icons.info" :size="16" />
-          </button>
-          <b-modal :title="$t('pagePassportPdciTitle')" ok-only ref="pdciModal">
-            <div v-html="$t('pagePassportPdciModal')" />
-          </b-modal>
-        </div>
-      </div>
     </section>
 
     <!-- Tabs: Passport is the default one -->
     <b-tabs class="pp-tabs" nav-class="pp-tabs-nav" content-class="pp-tabs-content" v-model="tabIndex">
-      <b-tab title="Passport" active>
+      <b-tab active>
+        <template #title>
+          Passport<span class="pp-tab-about" id="pp-passport-about" v-if="conservation && !isNew" tabindex="0" aria-label="About"><MdiIcon :path="icons.info" :size="13" /></span>
+        </template>
+        <!-- About: the descriptor standard the data follows, CWRI for in-situ germplasm, MCPD otherwise -->
+        <b-popover target="pp-passport-about" triggers="hover focus" placement="bottom" :delay="{ show: 0, hide: 300 }" custom-class="pp-about-popover" v-if="conservation && !isNew">
+          <template #title>About</template>
+          <template v-if="conservation === 'In-situ'">
+            {{ $t('pagePassportCwriStandardNote') }}
+            <a :href="CWRI_DESCRIPTORS_URL" target="_blank" rel="noopener noreferrer" class="pp-standard-link" :title="CWRI_DESCRIPTORS_URL" :aria-label="CWRI_DESCRIPTORS_URL">
+              <MdiIcon :path="icons.openInNew" :size="14" />
+            </a>
+          </template>
+          <template v-else>{{ $t('pagePassportMcpdStandardNote') }}</template>
+        </b-popover>
         <div :class="['pp-tab-content', { 'pp-tab-content-new': isNew, 'pp-busy': isNew && savingGermplasm }]" :inert="isNew && savingGermplasm">
           <!-- Select on map: the location block unfolds over the whole row with a world map -->
           <transition name="pp-unfold" @after-enter="onExpandedMapShown">
-            <section class="pp-card pp-panel pp-location-expanded" v-if="isSelectingOnMap" ref="expandedLocation">
+            <section class="pp-card pp-panel pp-location-expanded pp-no-booklet" v-if="isSelectingOnMap" ref="expandedLocation">
               <div class="pp-panel-header pp-panel-header-plain">
                 <div class="pp-panel-heading">
                   <h2 class="pp-panel-title">Location</h2>
@@ -107,7 +98,7 @@
 
           <div class="pp-main" v-if="mcpd">
             <!-- Overview: the MCPD fields of the original passport page -->
-            <section :class="['pp-card', 'pp-panel', { 'pp-panel-lists': isEditing }]">
+            <section :class="['pp-card', 'pp-panel', { 'pp-panel-lists': isEditing || overviewMenuOpen }]">
               <!-- The header holds two buttons (edit, collapse), so it is not a button itself. Only the chevron collapses it. -->
               <div class="pp-panel-header pp-panel-header-plain">
                 <h2 class="pp-panel-title">{{ isNew ? 'MCPD' : 'Overview' }}</h2>
@@ -126,6 +117,33 @@
                   <button type="button" class="pp-small-button pp-edit-button pp-cancel-button" v-if="isEditing && !savingGermplasm && !isNew" @mousedown.prevent @click.stop="cancelEditing">
                     <MdiIcon :path="icons.cancel" :size="16" /> Cancel
                   </button>
+                  <!-- Tools of the accession -->
+                  <b-dropdown v-if="!isNew && germplasm" size="sm" variant="link" right toggle-class="pp-cog-toggle" menu-class="top-nav-menu pp-cog-menu" aria-label="Tools" @shown="overviewMenuOpen = true" @hidden="overviewMenuOpen = false">
+                    <template #button-content><MdiIcon :path="icons.cog" :size="16" /></template>
+                    <!-- Groups under small grey titles, a line between them -->
+                    <li role="presentation" class="pp-cog-menu-section">Download</li>
+                    <b-dropdown-item link-class="top-nav-menu-item" @click="downloadPassport">Passport Data</b-dropdown-item>
+                    <!-- One A4 page as a PDF: the header, Overview, Location and Institutions of the Passport tab, with the QR-code -->
+                    <b-dropdown-item link-class="top-nav-menu-item" :disabled="generatingBooklet" @click="downloadBooklet">{{ generatingBooklet ? 'Booklet page ...' : 'Booklet page' }}</b-dropdown-item>
+                    <li role="presentation" class="pp-cog-menu-section">Generate</li>
+                    <!-- Same as the original passport page: opens Humbug with this accession in a new window -->
+                    <b-dropdown-item link-class="top-nav-menu-item" :href="barcodeUrl" target="_blank" rel="noopener noreferrer">Barcode</b-dropdown-item>
+                    <b-dropdown-item link-class="top-nav-menu-item" @click="generateQrCode">QR-code</b-dropdown-item>
+                  </b-dropdown>
+                  <!-- The QR-code of the link of this page -->
+                  <b-modal ref="qrCodeModal" title="QR-code" centered size="sm" header-class="custom-page" body-class="custom-page" footer-class="custom-page" @hidden="qrCodeImage = null">
+                    <div class="pp-qr">
+                      <img class="pp-qr-image" :src="qrCodeImage" :alt="'QR-code of ' + qrCodeUrl" v-if="qrCodeImage" />
+                      <div class="pp-qr-name" v-if="germplasm">{{ germplasm.germplasmName }}</div>
+                      <a class="pp-qr-url" :href="qrCodeUrl" target="_blank" rel="noopener noreferrer">{{ qrCodeUrl }}</a>
+                    </div>
+                    <template #modal-footer="{ hide }">
+                      <button type="button" class="pp-small-button pp-edit-button-save" @click="downloadQrCode">
+                        <MdiIcon :path="icons.download" :size="16" /> Download
+                      </button>
+                      <button type="button" class="pp-small-button" @click="hide()">Close</button>
+                    </template>
+                  </b-modal>
                   <button type="button" class="pp-panel-toggle" :aria-expanded="open.overview" @click.stop="toggle('overview')" aria-label="Show or hide overview">
                     <span :class="['pp-panel-chevron', { closed: !open.overview }]"><MdiIcon :path="icons.chevronUp" :size="22" /></span>
                   </button>
@@ -437,21 +455,24 @@
               </div>
             </section>
 
-            <!-- The Overview fields are MCPD descriptors -->
-            <!-- Descriptor standard the data follows: CWRI for in-situ germplasm, MCPD otherwise. Shown once the in-situ attribute is known. -->
-            <p class="pp-standard-note" v-if="conservation">
-              <MdiIcon :path="icons.standard" :size="18" />
-              <template v-if="conservation === 'In-situ'">
-                <span>{{ $t('pagePassportCwriStandardNote') }}</span>
-                <a :href="CWRI_DESCRIPTORS_URL" target="_blank" rel="noopener noreferrer" class="pp-standard-link" :title="CWRI_DESCRIPTORS_URL" :aria-label="CWRI_DESCRIPTORS_URL">
-                  <MdiIcon :path="icons.openInNew" :size="16" />
-                </a>
-              </template>
-              <span v-else>{{ $t('pagePassportMcpdStandardNote') }}</span>
-            </p>
           </div>
 
           <div class="pp-side">
+            <!-- Passport Data Completeness Index, out of 10. Hidden when the PDCI calculation is turned off. -->
+            <div class="pp-pdci pp-no-booklet" v-if="showPdci && !isNew">
+              <div class="pp-pdci-bar" role="progressbar" aria-valuemin="0" aria-valuemax="10" :aria-valuenow="pdci === null ? 0 : pdci" aria-label="PDCI">
+                <span class="pp-pdci-fill" :style="{ width: `${pdciFillPercent}%` }" />
+              </div>
+              <span class="pp-pdci-text">PDCI: {{ pdciText }}</span>
+              <!-- Same help as next to the PDCI title on the original passport page -->
+              <button type="button" class="pp-info pp-info-button" @click="$refs.pdciModal.show()" :title="$t('pagePassportPdciTitle')" :aria-label="$t('pagePassportPdciTitle')">
+                <MdiIcon :path="icons.info" :size="16" />
+              </button>
+              <b-modal :title="$t('pagePassportPdciTitle')" ok-only ref="pdciModal">
+                <div v-html="$t('pagePassportPdciModal')" />
+              </b-modal>
+            </div>
+
             <!-- Location: same map as the original passport page. Shown when the accession has coordinates, and to data
                  curators so they can set one. While selecting on the map it moves to the full-width block above. -->
             <section class="pp-card pp-panel" v-if="(location || isDataCurator) && !isSelectingOnMap">
@@ -491,7 +512,7 @@
 
             <!-- Datasets: same data as the datasets table of the original passport page.
                  Only shown when there are any, or to data curators so they can add one. -->
-            <section class="pp-card pp-panel" v-if="(datasetTotal > 0 || isDataCurator) && !isNew">
+            <section class="pp-card pp-panel pp-no-booklet" v-if="(datasetTotal > 0 || isDataCurator) && !isNew">
               <!-- The header holds two buttons (add, collapse), so it is not a button itself -->
               <div class="pp-panel-header" @click="toggle('datasets')">
                 <div class="pp-panel-heading">
@@ -628,7 +649,7 @@
 
             <!-- Publications: same data as the publications of the original passport page.
                  Only shown when there are any, or to data curators so they can add one. -->
-            <section class="pp-card pp-panel" v-if="(publications.length > 0 || isDataCurator) && !isNew">
+            <section class="pp-card pp-panel pp-no-booklet" v-if="(publications.length > 0 || isDataCurator) && !isNew">
               <div class="pp-panel-header" @click="toggle('publications')">
                 <div class="pp-panel-heading">
                   <h2 class="pp-panel-title">Publications</h2>
@@ -676,7 +697,7 @@
 
             <!-- Recently viewed germplasm, the same list as "Recently viewed items" on the germplasm page -->
             <!-- Not in the preview of a table: it is for moving between passport pages -->
-            <RecentlyViewedPanel :currentId="germplasm ? germplasm.germplasmId : null" v-if="!isPopup && !isNew" />
+            <RecentlyViewedPanel class="pp-no-booklet" :currentId="germplasm ? germplasm.germplasmId : null" v-if="!isPopup && !isNew" />
           </div>
         </div>
       </b-tab>
@@ -975,9 +996,10 @@ import { SUGGESTION_FIELDS, getMcpdSuggestions, getAllMcpdValues, clearMcpdSugge
 import VueTypeaheadBootstrap from 'vue-typeahead-bootstrap'
 import { getHighContrastTextColor } from '@/mixins/colors'
 import { isPageAvailable } from '@/mixins/util'
+import { Pages } from '@/mixins/pages'
 import { userIsAtLeast, USER_TYPE_DATA_CURATOR, USER_TYPE_ADMINISTRATOR } from '@/mixins/api/auth'
 
-import { mdiBarley, mdiBarcode, mdiCheckboxBlankOutline, mdiCheckboxMarkedOutline, mdiChevronUp, mdiInformationOutline, mdiShovel, mdiHomeCity, mdiHandHeartOutline, mdiBookOpenVariant, mdiChevronLeft, mdiChevronRight, mdiOpenInNew, mdiDatabase, mdiPlus, mdiGroup, mdiShieldCheckOutline, mdiVectorLink, mdiTable, mdiMapMarker, mdiClose, mdiMagnifyScan, mdiPlaylistEdit, mdiContentSave, mdiBroom, mdiReload, mdiCancel, mdiSprout } from '@mdi/js'
+import { mdiBarley, mdiBarcode, mdiCheckboxBlankOutline, mdiCheckboxMarkedOutline, mdiChevronUp, mdiInformationOutline, mdiShovel, mdiHomeCity, mdiHandHeartOutline, mdiBookOpenVariant, mdiChevronLeft, mdiChevronRight, mdiOpenInNew, mdiDatabase, mdiPlus, mdiGroup, mdiShieldCheckOutline, mdiVectorLink, mdiTable, mdiMapMarker, mdiClose, mdiMagnifyScan, mdiPlaylistEdit, mdiContentSave, mdiBroom, mdiReload, mdiCancel, mdiSprout, mdiDownloadMultiple, mdiDownload } from '@mdi/js'
 
 const emitter = require('tiny-emitter/instance')
 
@@ -988,6 +1010,16 @@ const CWRI_DESCRIPTORS_URL = 'https://openknowledge.fao.org/server/api/core/bits
 
 // How long each reference image stays in the header background
 const REFERENCE_IMAGE_INTERVAL = 15000
+// The size of the QR-code image (pixels, the downloaded file too)
+const QR_CODE_SIZE = 480
+// The booklet page: the width the copy of the page is laid out at (pixels); in mm: the width of an A4 page, its margins
+// (around the content, for binding; the reference image goes over them), the room for the footer above the bottom
+// margin and the height of its text
+const BOOKLET_WIDTH = 1240
+const BOOKLET_PAGE_WIDTH = 210
+const BOOKLET_MARGIN = 10
+const BOOKLET_FOOTER = 8
+const BOOKLET_FOOTER_TEXT = 3.2
 
 // Fields of the Overview block, in the order and with the labels of the MCPD block of the original passport page.
 // "code" is the MCPD acronym and "description" its MCPD definition, both shown in the popover of the field.
@@ -1378,6 +1410,15 @@ export default {
       // Images of the accession marked as reference image, shown in the header background
       referenceImages: [],
       referenceImageIndex: 0,
+      // The cog menu of the Overview is open
+      overviewMenuOpen: false,
+      // The QR-code of the cog menu: the link of this page and its image (a PNG data URL)
+      qrCodeUrl: null,
+      qrCodeImage: null,
+      // The booklet page (PDF) is being made
+      generatingBooklet: false,
+      // Where the header ends (from the top of the page): the reference images end there
+      headerBottom: 0,
       referenceImageTimer: null,
       // Number of traits with performance data for this germplasm, the tab only shows when there are any
       traitStatsCount: 0,
@@ -1482,6 +1523,8 @@ export default {
       icons: {
         wheat: mdiBarley,
         barcode: mdiBarcode,
+        cog: mdiDownloadMultiple,
+        download: mdiDownload,
         unchecked: mdiCheckboxBlankOutline,
         checked: mdiCheckboxMarkedOutline,
         chevronUp: mdiChevronUp,
@@ -1511,6 +1554,7 @@ export default {
   computed: {
     ...mapGetters([
       'storeToken',
+      'storeBaseUrl',
       'storeMarkedGermplasm',
       'storeServerSettings'
     ]),
@@ -1964,6 +2008,11 @@ export default {
         countryCode2: g.countryCode,
         countryCode3: null
       }
+    },
+    // The reference images: from above the page (the space under the navigation) to a little past the top of the tabs
+    // (1.5rem under the header, then 4rem more, less 15px)
+    backdropStyle: function () {
+      return this.headerBottom > 0 ? { height: `calc(${this.headerBottom}px + 1.75rem + 1.5rem + 4rem - 15px)` } : null
     },
     // Same as the original passport page: the barcode is made from the germplasm name
     barcodeUrl: function () {
@@ -3178,6 +3227,429 @@ export default {
         this.mcpd = result || null
       })
     },
+    // Cog menu of the Overview. The QR-code: the full link of this page (data/germplasm/<id>), shown in a modal.
+    generateQrCode: function () {
+      if (!this.germplasm) {
+        return
+      }
+      this.qrCodeUrl = this.getPassportUrl()
+      this.createQrCode(this.qrCodeUrl).then(canvas => {
+        this.qrCodeImage = canvas.toDataURL('image/png')
+        this.$refs.qrCodeModal.show()
+      }).catch(() => {
+        this.$bvToast.toast('The QR-code could not be generated.', { title: 'QR-code', variant: 'danger', autoHideDelay: 5000, appendToast: true })
+      })
+    },
+    // The full link of this page (data/germplasm/<id>)
+    getPassportUrl: function () {
+      const route = this.$router.resolve({ name: Pages.passport, params: { germplasmId: this.germplasm.germplasmId } })
+      return `${window.location.href.split('#')[0]}${route.href}`
+    },
+    // The QR-code of a link, with the logo of the project in the middle (a canvas). Loaded only when needed. The highest
+    // error correction (H, up to 30% of the code can be covered): the logo doesn't stop it from being read.
+    createQrCode: function (url) {
+      const canvas = document.createElement('canvas')
+      return import('qrcode').then(module => {
+        const QRCode = module.default || module
+        return QRCode.toCanvas(canvas, url, { width: QR_CODE_SIZE, margin: 2, errorCorrectionLevel: 'H' })
+      }).then(() => this.drawQrCodeLogo(canvas).catch(() => {
+        // No logo (not found, can't be drawn): the plain code
+      })).then(() => canvas)
+    },
+    // Booklet page: one A4 page (PDF) like a picture of the Passport tab, only the header (reference image, accession,
+    // QR-code), Passport Data (the Overview), Location and Institutions, without the buttons. A copy of the page is laid
+    // out off screen at a fixed width with the margins of the page around it, photographed (html2canvas) and put on the
+    // page (jsPDF), with the date of printing at the bottom.
+    downloadBooklet: function () {
+      if (!this.germplasm || this.generatingBooklet) {
+        return
+      }
+      if (this.isEditing || this.isEditingInstitutions || this.isSelectingOnMap || this.savingGermplasm) {
+        this.$bvToast.toast('Finish or cancel the changes first.', { title: 'Booklet page', variant: 'warning', autoHideDelay: 5000, appendToast: true })
+        return
+      }
+      this.generatingBooklet = true
+      let container = null
+      Promise.all([
+        import('html2canvas'),
+        import('jspdf'),
+        this.createQrCode(this.getPassportUrl()),
+        this.createBookletMapImages(),
+        // The font of the project, for the footer
+        document.fonts ? Promise.all([document.fonts.load('400 16px "DM Sans"'), document.fonts.load('700 16px "DM Sans"')]).catch(() => null) : null
+      ]).then(([html2canvasModule, jspdfModule, qrCode, mapImages]) => {
+        container = this.createBookletCopy(qrCode.toDataURL('image/png'), mapImages)
+        document.body.appendChild(container)
+        return this.paintBookletBackdrop(container).then(() => {
+          const html2canvas = html2canvasModule.default || html2canvasModule
+          return html2canvas(container, {
+            scale: 2,
+            useCORS: true,
+            logging: false,
+            backgroundColor: '#ffffff',
+            width: container.offsetWidth,
+            height: container.offsetHeight,
+            // Always in the light colours (also when the page is in dark mode): it is for printing
+            onclone: doc => doc.body.classList.remove('dark-mode')
+          })
+        }).then(canvas => {
+          const JsPdf = jspdfModule.jsPDF || jspdfModule.default
+          const pdf = new JsPdf({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+          const pageWidth = pdf.internal.pageSize.getWidth()
+          const pageHeight = pdf.internal.pageSize.getHeight()
+          // The margins are in the picture (so the reference image can reach the edges): from the top left corner, the
+          // whole width of the page; smaller (centred) only when that would be too tall for the room above the footer
+          const room = pageHeight - BOOKLET_MARGIN - BOOKLET_FOOTER
+          let width = pageWidth
+          let height = width * canvas.height / canvas.width
+          if (height > room) {
+            height = room
+            width = height * canvas.width / canvas.height
+          }
+          pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', (pageWidth - width) / 2, 0, width, height)
+          this.addBookletFooter(pdf, 1, 1)
+          const name = (this.germplasm.germplasmName || 'germplasm').replace(/[^\w.-]+/g, '_')
+          pdf.save(`${name}-booklet.pdf`)
+        })
+      }).catch(() => {
+        this.$bvToast.toast('The booklet page could not be generated.', { title: 'Booklet page', variant: 'danger', autoHideDelay: 5000, appendToast: true })
+      }).finally(() => {
+        if (container && container.parentNode) {
+          container.parentNode.removeChild(container)
+        }
+        this.generatingBooklet = false
+      })
+    },
+    // Footer of a booklet page, inside the margins: the date of printing on the left ("Oct 01, 2026 11:20", the time of
+    // the computer of the person), the page of the pages in the middle ("1/1"), the address of the site on the right (a
+    // link to the page of the germplasm). In the font of the project, drawn as images (jsPDF only has its own fonts).
+    addBookletFooter: function (pdf, page, pages) {
+      const pageWidth = pdf.internal.pageSize.getWidth()
+      const pageHeight = pdf.internal.pageSize.getHeight()
+      const now = new Date()
+      const month = now.toLocaleString('en-GB', { month: 'short' })
+      const pad = value => `${value}`.padStart(2, '0')
+      const date = `${month} ${pad(now.getDate())}, ${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())}`
+      const bottom = pageHeight - BOOKLET_MARGIN
+      const left = this.createBookletText(date, 400)
+      pdf.addImage(left.image, 'PNG', BOOKLET_MARGIN, bottom - BOOKLET_FOOTER_TEXT, left.ratio * BOOKLET_FOOTER_TEXT, BOOKLET_FOOTER_TEXT)
+      const center = this.createBookletText(`${page}/${pages}`, 400)
+      const centerWidth = center.ratio * BOOKLET_FOOTER_TEXT
+      pdf.addImage(center.image, 'PNG', (pageWidth - centerWidth) / 2, bottom - BOOKLET_FOOTER_TEXT, centerWidth, BOOKLET_FOOTER_TEXT)
+      // The address of the site (metaUrl), a link (black, not underlined) to the page of this germplasm
+      const site = (this.$t('metaUrl') || '').trim() || window.location.origin
+      const right = this.createBookletText(site, 400)
+      const rightWidth = right.ratio * BOOKLET_FOOTER_TEXT
+      const rightX = pageWidth - BOOKLET_MARGIN - rightWidth
+      pdf.addImage(right.image, 'PNG', rightX, bottom - BOOKLET_FOOTER_TEXT, rightWidth, BOOKLET_FOOTER_TEXT)
+      pdf.link(rightX, bottom - BOOKLET_FOOTER_TEXT, rightWidth, BOOKLET_FOOTER_TEXT, { url: this.getPassportUrl() })
+    },
+    // A line of text in DM Sans as an image (PNG data URL) and its width/height ratio
+    createBookletText: function (text, weight) {
+      const size = 64
+      const font = `${weight} ${size}px "DM Sans", -apple-system, "Segoe UI", Roboto, sans-serif`
+      const canvas = document.createElement('canvas')
+      const context = canvas.getContext('2d')
+      context.font = font
+      canvas.width = Math.ceil(context.measureText(text).width) + 4
+      // The height of the line, the text on its baseline with room for the descenders
+      canvas.height = Math.ceil(size * 1.25)
+      context.font = font
+      context.fillStyle = '#000000'
+      context.textBaseline = 'alphabetic'
+      context.fillText(text, 2, size)
+      return { image: canvas.toDataURL('image/png'), ratio: canvas.width / canvas.height }
+    },
+    // The maps of the page as pictures (html2canvas can't draw them: they come out grey): their tiles (loaded again so
+    // they may be drawn, OpenStreetMap allows it) and markers drawn where they are on the page. One per map, in order.
+    createBookletMapImages: function () {
+      const maps = Array.from(this.$el.querySelectorAll('.pp-map .leaflet-container'))
+      return Promise.all(maps.map(map => {
+        const bounds = map.getBoundingClientRect()
+        if (bounds.width === 0 || bounds.height === 0) {
+          return null
+        }
+        const images = Array.from(map.querySelectorAll('.leaflet-tile-pane img, .leaflet-shadow-pane img, .leaflet-marker-pane img'))
+          .filter(image => image.complete && image.naturalWidth > 0)
+        return Promise.all(images.map(image => new Promise(resolve => {
+          const rect = image.getBoundingClientRect()
+          const opacity = Number(window.getComputedStyle(image).opacity) || 1
+          const source = new URL(image.src, window.location.href)
+          // Of this site (the marker) or inside the page: drawn as it is
+          if (source.protocol === 'data:' || source.protocol === 'blob:' || source.origin === window.location.origin) {
+            resolve({ image, rect, opacity })
+            return
+          }
+          const copy = new Image()
+          copy.crossOrigin = 'anonymous'
+          copy.onload = () => resolve({ image: copy, rect, opacity })
+          copy.onerror = () => resolve(null)
+          // Over https: the redirect from http to https (tile servers) has no CORS header, the image would be blocked
+          if (source.protocol === 'http:') {
+            source.protocol = 'https:'
+          }
+          copy.src = source.href
+        }))).then(loaded => {
+          const scale = 2
+          const canvas = document.createElement('canvas')
+          canvas.width = Math.round(bounds.width * scale)
+          canvas.height = Math.round(bounds.height * scale)
+          const context = canvas.getContext('2d')
+          // The grey of an empty map under the tiles
+          context.fillStyle = '#dddddd'
+          context.fillRect(0, 0, canvas.width, canvas.height)
+          loaded.filter(entry => entry).forEach(entry => {
+            context.globalAlpha = entry.opacity
+            context.drawImage(entry.image, (entry.rect.left - bounds.left) * scale, (entry.rect.top - bounds.top) * scale, entry.rect.width * scale, entry.rect.height * scale)
+          })
+          context.globalAlpha = 1
+          return { image: canvas.toDataURL('image/png'), width: bounds.width, height: bounds.height }
+        })
+      }))
+    },
+    // The copy of the page for the booklet, off screen: what is not in it removed, collapsed blocks opened, the maps as
+    // pictures, always two columns and compact rows, the QR-code at the top right of the header, the note of the
+    // descriptor standard under Passport Data. Around it the margins of the page.
+    createBookletCopy: function (qrCodeImage, mapImages) {
+      const copy = this.$el.cloneNode(true)
+      copy.classList.add('pp-booklet')
+      copy.removeAttribute('id')
+      // Not on paper: other blocks, buttons, links, help (the "?" of the fields), the controls of the map, the tabs (the
+      // content moves up into their place), the flags and the icons of the institutions
+      const removed = ['.pp-no-booklet', '.pp-panel-actions', '.pp-panel-chevron', '.pp-panel-toggle', '.pp-panel-add',
+        '.pp-title-mark', '.pp-tab-about', '.pp-location-change', '.pp-new-location', '.pp-field-link', '.pp-pager',
+        '.pp-info', '.leaflet-control-zoom', '.leaflet-control-layers', '.leaflet-popup-pane', '.pp-tabs-nav', '.fi',
+        '.pp-institution .pp-item-icon']
+      copy.querySelectorAll(removed.join(',')).forEach(element => element.remove())
+      // The icon before the type of the location
+      copy.querySelectorAll('.pp-map dd > span').forEach(element => {
+        if (element.querySelector('svg')) {
+          element.remove()
+        }
+      })
+      // The Overview is called Passport Data on paper, the metadata (Metadata tab, not on the page until opened) at its end
+      copy.querySelectorAll('.pp-panel-title').forEach(title => {
+        if (title.textContent.trim() === 'Overview') {
+          title.textContent = 'Passport Data'
+          const section = title.closest('.pp-panel')
+          if (section) {
+            this.addBookletMetadata(section)
+          }
+        }
+      })
+      // Collapsed blocks (v-show): shown
+      copy.querySelectorAll('.pp-panel > [style*="display: none"]').forEach(element => {
+        element.style.display = ''
+      })
+      // The maps: their picture (as large as on the page, centred) instead of the tiles and markers
+      copy.querySelectorAll('.pp-map .leaflet-container').forEach((map, index) => {
+        const picture = mapImages[index]
+        map.querySelectorAll('.leaflet-map-pane').forEach(pane => pane.remove())
+        if (picture) {
+          const image = document.createElement('img')
+          image.src = picture.image
+          image.alt = ''
+          image.style.cssText = `position: absolute; top: 0; left: 50%; width: ${picture.width}px; height: ${picture.height}px; margin-left: -${picture.width / 2}px; max-width: none;`
+          map.insertBefore(image, map.firstChild)
+        }
+      })
+      // The QR-code at the top right, the header text kept clear of it
+      const header = copy.querySelector('.pp-header')
+      if (header) {
+        const image = document.createElement('img')
+        image.src = qrCodeImage
+        image.alt = ''
+        image.style.cssText = 'position: absolute; top: 0; right: 0.75rem; width: 136px; height: 136px; padding: 6px; background: #ffffff;'
+        header.appendChild(image)
+      }
+      // Off screen, inside the margins of the page (the reference image goes over them, up to the edges of the page)
+      const margin = Math.round(BOOKLET_WIDTH * BOOKLET_MARGIN / (BOOKLET_PAGE_WIDTH - BOOKLET_MARGIN * 2))
+      const container = document.createElement('div')
+      container.dataset.bookletMargin = `${margin}`
+      container.style.cssText = `position: absolute; top: 0; left: -30000px; width: ${BOOKLET_WIDTH + margin * 2}px; padding: ${margin}px ${margin}px 0; background: #ffffff;`
+      container.appendChild(copy)
+      return container
+    },
+    // The PDCI and the metadata of the germplasm as rows of the Passport Data of the booklet: copies of its last row (same
+    // look) with the code, label and values (one per line) of each one
+    addBookletMetadata: function (section) {
+      const rows = section.querySelectorAll('.pp-field')
+      const model = rows[rows.length - 1]
+      if (!model) {
+        return
+      }
+      let previous = model
+      // First the PDCI (when turned on and known), then the metadata
+      const pdci = (this.showPdci && this.pdci !== null) ? [{ code: 'PDCI', label: 'Passport Data Completeness Index', lines: [{ text: this.pdciText }] }] : []
+      pdci.concat(this.metadataFields).forEach(field => {
+        const row = model.cloneNode(true)
+        const code = row.querySelector('.pp-field-code')
+        const label = row.querySelector('.pp-field-label')
+        const value = row.querySelector('.pp-field-value')
+        if (code) {
+          code.textContent = field.acronym || field.code
+        }
+        if (label) {
+          label.textContent = field.label || ''
+        }
+        if (value) {
+          value.className = 'pp-field-value'
+          value.innerHTML = ''
+          const lines = (field.lines || []).filter(line => line && line.text)
+          if (lines.length === 0) {
+            value.textContent = '—'
+          }
+          lines.forEach(line => {
+            const element = document.createElement('div')
+            element.textContent = line.iso3 ? `${line.text} (${line.iso3})` : line.text
+            value.appendChild(element)
+          })
+        }
+        previous.parentNode.insertBefore(row, previous.nextSibling)
+        previous = row
+      })
+    },
+    // Once the copy is on the page (sizes known): the reference image painted (html2canvas can't draw a blur or a fading
+    // mask) with the same blur, veil and fade as on the page, from the top and sides of the page to a little under the
+    // header
+    paintBookletBackdrop: function (container) {
+      const backdrop = container.querySelector('.pp-backdrop')
+      const reference = this.referenceImages[this.referenceImageIndex] || this.referenceImages[0]
+      if (!backdrop) {
+        return Promise.resolve()
+      }
+      if (!reference) {
+        backdrop.remove()
+        return Promise.resolve()
+      }
+      const margin = Number(container.dataset.bookletMargin)
+      const header = container.querySelector('.pp-header')
+      const headerBottom = header ? header.offsetTop + header.offsetHeight : 200
+      backdrop.style.top = `-${margin}px`
+      backdrop.style.left = `-${margin}px`
+      backdrop.style.right = `-${margin}px`
+      backdrop.style.height = `${margin + headerBottom + 48}px`
+      const width = backdrop.offsetWidth
+      const height = backdrop.offsetHeight
+      return new Promise(resolve => {
+        const image = new Image()
+        image.onload = () => {
+          const canvas = document.createElement('canvas')
+          canvas.width = width
+          canvas.height = height
+          const context = canvas.getContext('2d')
+          // Covering the box and 24px more on each side, so the blurred edges stay outside
+          const scale = Math.max((width + 48) / image.naturalWidth, (height + 48) / image.naturalHeight)
+          const imageWidth = image.naturalWidth * scale
+          const imageHeight = image.naturalHeight * scale
+          context.filter = 'blur(8px)'
+          context.drawImage(image, (width - imageWidth) / 2, (height - imageHeight) / 2, imageWidth, imageHeight)
+          context.filter = 'none'
+          context.fillStyle = 'rgba(255, 255, 255, 0.72)'
+          context.fillRect(0, 0, width, height)
+          // Faded out from 40% of the height to the bottom
+          const fade = context.createLinearGradient(0, 0, 0, height)
+          fade.addColorStop(0, 'rgba(0, 0, 0, 1)')
+          fade.addColorStop(0.4, 'rgba(0, 0, 0, 1)')
+          fade.addColorStop(1, 'rgba(0, 0, 0, 0)')
+          context.globalCompositeOperation = 'destination-in'
+          context.fillStyle = fade
+          context.fillRect(0, 0, width, height)
+          const painted = document.createElement('img')
+          painted.alt = ''
+          painted.style.cssText = 'position: absolute; inset: 0; width: 100%; height: 100%;'
+          painted.onload = () => resolve()
+          painted.onerror = () => resolve()
+          backdrop.innerHTML = ''
+          backdrop.classList.add('pp-booklet-backdrop-painted')
+          backdrop.appendChild(painted)
+          painted.src = canvas.toDataURL('image/png')
+        }
+        image.onerror = () => {
+          backdrop.remove()
+          resolve()
+        }
+        image.src = this.getReferenceImageSrc(reference)
+      })
+    },
+    // The logo of the project (logo.svg of the template images), all black, on a white rounded box in the middle of the
+    // QR-code. The SVG is read as text and given a size (it only has a viewBox, some browsers can't draw it otherwise).
+    drawQrCodeLogo: function (canvas) {
+      return fetch(`${this.storeBaseUrl}image/src-svg/logo.svg`).then(response => {
+        if (!response.ok) {
+          throw new Error(`${response.status}`)
+        }
+        return response.text()
+      }).then(svg => new Promise((resolve, reject) => {
+        const doc = new DOMParser().parseFromString(svg, 'image/svg+xml')
+        const root = doc.documentElement
+        const viewBox = (root.getAttribute('viewBox') || '').split(/[\s,]+/).map(Number)
+        const ratio = (viewBox.length === 4 && viewBox[2] > 0 && viewBox[3] > 0) ? viewBox[2] / viewBox[3] : 1
+        root.setAttribute('width', `${QR_CODE_SIZE * ratio}`)
+        root.setAttribute('height', `${QR_CODE_SIZE}`)
+        const url = URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(root)], { type: 'image/svg+xml' }))
+        const image = new Image()
+        image.onload = () => {
+          URL.revokeObjectURL(url)
+          resolve({ image, ratio })
+        }
+        image.onerror = () => {
+          URL.revokeObjectURL(url)
+          reject(new Error('logo'))
+        }
+        image.src = url
+      })).then(({ image, ratio }) => {
+        const size = canvas.width
+        // The logo within 38% of the code each way: a wide logo like that of COUSIN covers about 9% of it (with its white
+        // box), well under what the error correction allows
+        const box = size * 0.38
+        const logoWidth = ratio >= 1 ? box : box * ratio
+        const logoHeight = ratio >= 1 ? box / ratio : box
+        // The logo in black: drawn alone, then only its shape filled
+        const logo = document.createElement('canvas')
+        logo.width = Math.round(logoWidth * 2)
+        logo.height = Math.round(logoHeight * 2)
+        const logoContext = logo.getContext('2d')
+        logoContext.drawImage(image, 0, 0, logo.width, logo.height)
+        logoContext.globalCompositeOperation = 'source-in'
+        logoContext.fillStyle = '#000000'
+        logoContext.fillRect(0, 0, logo.width, logo.height)
+        // A white box with rounded corners behind it, a little larger
+        const padding = size * 0.025
+        const boxWidth = logoWidth + padding * 2
+        const boxHeight = logoHeight + padding * 2
+        const x = (size - boxWidth) / 2
+        const y = (size - boxHeight) / 2
+        const radius = size * 0.03
+        const context = canvas.getContext('2d')
+        context.fillStyle = '#ffffff'
+        context.beginPath()
+        context.moveTo(x + radius, y)
+        context.arcTo(x + boxWidth, y, x + boxWidth, y + boxHeight, radius)
+        context.arcTo(x + boxWidth, y + boxHeight, x, y + boxHeight, radius)
+        context.arcTo(x, y + boxHeight, x, y, radius)
+        context.arcTo(x, y, x + boxWidth, y, radius)
+        context.closePath()
+        context.fill()
+        context.drawImage(logo, x + padding, y + padding, logoWidth, logoHeight)
+      })
+    },
+    // The image of the QR-code as a PNG file, named after the accession
+    downloadQrCode: function () {
+      if (!this.qrCodeImage) {
+        return
+      }
+      const name = ((this.germplasm && this.germplasm.germplasmName) || 'germplasm').replace(/[^\w.-]+/g, '_')
+      const link = document.createElement('a')
+      link.href = this.qrCodeImage
+      link.download = `${name}-qr-code.png`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    },
+    downloadPassport: function () {
+      // To do
+    },
     toggleMarked: function () {
       if (!this.germplasm) {
         return
@@ -3716,6 +4188,9 @@ export default {
     this.confirmLeave().then(leave => next(leave))
   },
   beforeDestroy: function () {
+    if (this.headerObserver) {
+      this.headerObserver.disconnect()
+    }
     this.stopReferenceImageTimer()
     this.removeDocumentPointerListener()
     clearTimeout(this.accenumbCheckTimer)
@@ -3724,6 +4199,14 @@ export default {
   },
   mounted: function () {
     window.addEventListener('beforeunload', this.onBeforeUnload)
+    // The bottom of the header, followed when its size changes (name, taxonomy, width of the window)
+    if (this.$refs.header && window.ResizeObserver) {
+      this.headerObserver = new ResizeObserver(() => {
+        const header = this.$refs.header
+        this.headerBottom = header ? header.offsetTop + header.offsetHeight : 0
+      })
+      this.headerObserver.observe(this.$refs.header)
+    }
     if (this.isNew) {
       // An empty passport: no germplasm, no attributes. The conservation type is the one chosen (none yet).
       this.mcpd = {}
@@ -3756,10 +4239,9 @@ export default {
   --pp-barcode: #2c7da0;
   --pp-barcode-icon: #000000;
 
-  /* Same content width as the home page */
-  max-width: 1488px;
-  margin: 0 auto;
-  padding: 0.5rem 0 3rem;
+  /* Same content width as the home page, kept with paddings (the reference images go from edge to edge behind it) */
+  position: relative;
+  padding: 0.5rem max(0px, calc((100% - 1488px) / 2)) 3rem;
 }
 /* Add Germplasm: the whole width of the modal */
 .passport-page.is-new {
@@ -3783,14 +4265,14 @@ body.dark-mode .passport-page {
   border-radius: 12px;
 }
 
-/* Header */
+/* Header: no card, on the page (or on the reference images) */
 .pp-header {
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
   align-items: flex-start;
   gap: 1.5rem;
-  padding: 1.75rem 2rem;
+  padding: 1.25rem 0.75rem 0.25rem;
 }
 /* Takes the free space so a long accession name gets cut instead of pushing the buttons down */
 .pp-header-main {
@@ -3798,21 +4280,29 @@ body.dark-mode .passport-page {
   min-width: 0;
 }
 
-/* Reference images behind the header: blurred, with a veil in the card colour so the text stays readable */
-.pp-header {
+/* Reference images behind the top of the page: from edge to edge of the content (over the gutters of the container and
+   up to the navigation), blurred, with a veil so the text stays readable, fading into the page at the bottom (the page
+   shows through, so it works in light and dark mode). Header and tabs come after it, so they are drawn above it. */
+.pp-header,
+.pp-tabs {
   position: relative;
-  overflow: hidden;
 }
-.pp-header > .pp-header-main,
-.pp-header > .pp-header-actions {
-  position: relative;
-  z-index: 1;
-}
-.pp-header-backdrop {
+.pp-backdrop {
   position: absolute;
-  inset: 0;
-  z-index: 0;
+  top: -1.75rem;
+  left: -15px;
+  right: -15px;
+  /* Without the measure of the header (set as a style): about its height */
+  height: 18.5rem;
+  overflow: hidden;
   pointer-events: none;
+  -webkit-mask-image: linear-gradient(to bottom, #000 40%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 40%, transparent 100%);
+}
+.passport-page.is-popup .pp-backdrop {
+  top: 0;
+  left: 0;
+  right: 0;
 }
 .pp-header-image {
   position: absolute;
@@ -3881,6 +4371,26 @@ body.dark-mode .passport-page {
   font-size: 2.2rem;
   font-weight: 600;
   letter-spacing: -0.01em;
+}
+/* The box that marks the accession, next to its number */
+.pp-title-mark {
+  display: inline-flex;
+  align-self: center;
+  flex-shrink: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--pp-mark);
+  line-height: 1;
+  cursor: pointer;
+}
+.pp-title-mark.marked,
+.pp-title-mark:hover {
+  color: var(--cp-green);
+}
+.pp-title-mark:disabled {
+  opacity: 0.6;
+  cursor: default;
 }
 .pp-title-main {
   flex-shrink: 0;
@@ -3956,11 +4466,13 @@ body.dark-mode .passport-page {
 .pp-action-barcode {
   color: var(--pp-barcode-icon);
 }
+/* At the top of the column on the right, at the height of the Overview title */
 .pp-pdci {
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  padding-top: 0.25rem;
+  min-height: 3.6rem;
+  padding: 0 0.25rem;
 }
 .pp-pdci-bar {
   flex: 1;
@@ -3994,6 +4506,141 @@ body.dark-mode .passport-page {
   color: var(--pp-code);
 }
 
+/* Passport tab: the "About" icon, small and raised after the title */
+.pp-tab-about {
+  display: inline-flex;
+  position: relative;
+  top: -0.45em;
+  margin-left: 0.15rem;
+  line-height: 0;
+  color: var(--cp-muted);
+  cursor: help;
+}
+.pp-tab-about:hover,
+.pp-tab-about:focus {
+  color: var(--pp-code);
+  outline: none;
+}
+/* The cog menu of the Overview: a small bordered button */
+.pp-panel-actions >>> .pp-cog-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  border: 1px solid var(--cp-border);
+  border-radius: 8px;
+  background: var(--cp-surface);
+  color: var(--cp-muted);
+  text-decoration: none;
+  box-shadow: none;
+}
+.pp-panel-actions >>> .pp-cog-toggle:hover,
+.pp-panel-actions >>> .pp-cog-toggle:focus {
+  border-color: var(--cp-green);
+  color: var(--cp-text);
+}
+/* Its menu: the look of the marked items dropdown (top-nav-dropdown.css, loaded by the dropdowns of the top navigation:
+   not imported here again, it would come after their own rules and override them), the texts on the left */
+.pp-panel-actions >>> .pp-cog-menu {
+  min-width: 12rem;
+  margin-top: 10px;
+  text-align: left;
+}
+/* No lines between the options, only between the groups (above their titles) */
+.pp-panel-actions >>> .pp-cog-menu .top-nav-menu-item {
+  justify-content: flex-start;
+  text-align: left;
+  border-top: none;
+}
+/* No title: the first row without a line above */
+.pp-panel-actions >>> .pp-cog-menu > li:first-child .top-nav-menu-item {
+  border-top: none;
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
+}
+/* The titles of the groups (Download, Generate): small and grey, a line above (not the first one) */
+.pp-cog-menu-section {
+  padding: 0.55rem 1rem 0.15rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  font-size: 0.64rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #8a8d8a;
+}
+.pp-panel-actions >>> .pp-cog-menu-section:first-child {
+  border-top: none;
+}
+body.dark-mode .pp-cog-menu-section {
+  border-top-color: rgba(255, 255, 255, 0.1);
+  color: #a39d93;
+}
+/* The copy of the page for the booklet page (PDF, see downloadBooklet): always two columns, compact rows, room for the
+   QR-code in the header, the reference image already painted (blurred and faded) */
+.pp-booklet {
+  padding-bottom: 1rem;
+}
+.pp-booklet .pp-tab-content {
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+}
+.pp-booklet .pp-header {
+  padding-right: 170px;
+}
+.pp-booklet .pp-field {
+  padding: 0.5rem 1.5rem;
+}
+.pp-booklet .pp-backdrop.pp-booklet-backdrop-painted {
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+/* On paper: the borders of the blocks, the line under their titles and all the texts in black */
+.pp-booklet .pp-card,
+.pp-booklet .pp-panel-header {
+  border-color: #000000;
+}
+/* The names of the institutions whole, on several lines when needed */
+.pp-booklet .pp-institution-name {
+  overflow: visible;
+  white-space: normal;
+  text-overflow: clip;
+}
+.pp-booklet,
+.pp-booklet * {
+  color: #000000 !important;
+}
+.pp-booklet .pp-status-badge {
+  border-color: #000000;
+}
+/* The QR-code modal: the code on white (readable in dark mode too), the accession and its link under it */
+.pp-qr {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  text-align: center;
+}
+.pp-qr-image {
+  width: 100%;
+  max-width: 240px;
+  height: auto;
+  border: 1px solid var(--cp-border);
+  border-radius: 10px;
+  background: #ffffff;
+}
+.pp-qr-name {
+  margin-top: 0.4rem;
+  font-weight: 600;
+  color: var(--cp-text);
+}
+.pp-qr-url {
+  max-width: 100%;
+  font-size: 0.78rem;
+  color: var(--cp-muted);
+  word-break: break-all;
+}
+
 /* Tabs (Bootstrap), in the look of the custom pages. No scrolling: the tabs wrap when there is no room. */
 .pp-tabs {
   margin-top: 1.5rem;
@@ -4018,6 +4665,12 @@ body.dark-mode .passport-page {
   border-color: var(--cp-border) var(--cp-border) var(--cp-surface);
   background: var(--cp-surface);
   color: var(--cp-text);
+}
+/* Dark mode: the dark theme gives the selected tab a lighter line at the bottom; it stays open on its content */
+body.dark-mode .pp-tabs >>> .pp-tabs-nav .nav-link.active,
+body.dark-mode .pp-tabs >>> .pp-tabs-nav .nav-link.active:focus {
+  border-color: var(--cp-border) var(--cp-border) var(--cp-surface);
+  background: var(--cp-surface);
 }
 .pp-tab-panel {
   margin-top: 1.25rem;
@@ -4138,26 +4791,12 @@ body.dark-mode .passport-page {
   font-weight: 600;
   font-style: italic;
 }
-/* Under the Overview, with room below so it doesn't touch the footer */
-.pp-standard-note {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin: 0.75rem 0 1.5rem;
-  font-size: 0.9rem;
-  color: var(--cp-muted);
-}
 .pp-standard-link {
   display: inline-flex;
   color: var(--cp-green);
 }
 .pp-standard-link:hover {
   color: var(--cp-green-hover);
-}
-.pp-standard-note >>> .mdi-icon-wrapper {
-  display: inline-flex;
-  flex-shrink: 0;
-  color: var(--cp-green);
 }
 .pp-side {
   display: flex;

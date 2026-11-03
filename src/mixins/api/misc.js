@@ -13,6 +13,9 @@ const apiPostGatekeeperNew = (queryData, onSuccess, onError) => authAxios({ url:
 
 const apiGetLocales = (onSuccess, onError) => authAxios({ url: `clientlocale?random=${uuidv4()}`, success: onSuccess, error: onError })
 
+// The language file of the server (its texts override those of the client)
+const apiGetLocaleFile = (locale, onSuccess, onError) => authAxios({ url: `clientlocale/${locale}?random=${uuidv4()}`, success: onSuccess, error: onError })
+
 const apiPostTableExport = (queryData, tableType, onSuccess, onError) => authAxios({ url: `${tableType}/table/export`, method: 'POST', dataType: 'blob', data: queryData, success: onSuccess, error: onError })
 
 const apiPostInstitutionTable = (queryData, onSuccess, onError) => {
@@ -175,6 +178,7 @@ export {
   apiPostGatekeeperExisting,
   apiPostGatekeeperNew,
   apiGetLocales,
+  apiGetLocaleFile,
   apiPostTableExport,
   apiPostInstitutionTable,
   apiPostInstitutionDatasetTable,

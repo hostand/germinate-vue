@@ -110,3 +110,87 @@ body.dark-mode .custom-page {
     font-size: 1rem;
   }
 }
+
+/* Title and description of a page, in the size of the title of the home page ("The project"): at the left, a bit away
+   from the edge; the description 4 of 12 columns wide (the whole width on small screens). The description is smaller and cut to two lines; the
+   chevron at the end of its first line shows all of it. Markup:
+   <header class="cp-page-header">
+     <h1 class="cp-page-title">Title</h1>
+     <div class="cp-page-lead-row">
+       <div class="cp-page-lead collapsed">Description</div>
+       <button class="cp-page-lead-toggle"><span class="cp-page-lead-chevron">(chevron down)</span></button>
+     </div>
+   </header> */
+.custom-page .cp-page-header {
+  padding: 0 0.75rem;
+}
+.custom-page .cp-page-title {
+  margin: 0.75rem 0 1.5rem;
+  font-size: 2.9rem;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+.custom-page .cp-page-lead-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  width: 33.3333%;
+}
+.custom-page .cp-page-lead {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--cp-muted);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+.custom-page .cp-page-lead p {
+  margin: 0 0 0.5rem;
+}
+.custom-page .cp-page-lead p:last-child {
+  margin-bottom: 0;
+}
+.custom-page .cp-page-lead.collapsed {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+.custom-page .cp-page-lead.collapsed p {
+  display: inline;
+}
+.custom-page .cp-page-lead.collapsed p + p::before {
+  content: ' ';
+}
+/* As tall as a line of the description: next to its first line */
+.custom-page .cp-page-lead-toggle {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  height: 1.6rem;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--cp-muted);
+  cursor: pointer;
+}
+.custom-page .cp-page-lead-toggle:hover {
+  color: var(--cp-text);
+}
+.custom-page .cp-page-lead-chevron {
+  display: inline-flex;
+  transition: transform 0.2s;
+}
+.custom-page .cp-page-lead-chevron.open {
+  transform: rotate(180deg);
+}
+@media (max-width: 991px) {
+  .custom-page .cp-page-lead-row {
+    width: 100%;
+  }
+}
+@media (max-width: 767px) {
+  .custom-page .cp-page-title {
+    font-size: 1.9rem;
+  }
+}

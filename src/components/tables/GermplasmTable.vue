@@ -527,6 +527,9 @@ export default {
     refresh: function () {
       this.$refs.germplasmTable.refresh()
     },
+    clearFilter: function () {
+      this.$refs.germplasmTable.clearFilter()
+    },
     getSrc: function (germplasm) {
       return getImageUrl(germplasm.firstImagePath, {
         name: germplasm.firstImagePath,

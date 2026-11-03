@@ -1,11 +1,12 @@
 <template>
   <div>
     <!-- The common filters show the filters the table currently uses -->
-    <GermplasmTableFilter :activeFilters="activeFilters" @filtering-changed="onFilteringChanged" @filtering-removed="onFilteringRemoved" ref="germplasmTableFilter" class="my-3" />
-    <RecentItems itemType="germinatebase" />
+    <GermplasmTableFilter :activeFilters="activeFilters" :customLook="customLook" @filtering-changed="onFilteringChanged" @filtering-removed="onFilteringRemoved" @filtering-cleared="onFilteringCleared" ref="germplasmTableFilter" class="my-3" />
+    <!-- The custom look has them in a tab of their own -->
+    <RecentItems itemType="germinatebase" v-if="!customLook" />
     <!-- Table showing all germplasm -->
     <!-- Filters set by the common filters may have their own text above the table (e.g. 'Conservation' equals 'In-situ') -->
-    <GermplasmTable :filterOn="filterOn" :getData="getData" :getIds="getIds" :downloadTable="downloadFunction" :filterLabel="getFilterLabel" :tableActions="userIsDataCurator ? tableActions : null" conservationColumn @filter-changed="resetFilter" ref="germplasmTable" />
+    <GermplasmTable :filterOn="filterOn" :getData="getData" :getIds="getIds" :downloadTable="downloadFunction" :filterLabel="getFilterLabel" :filterCrumbs="customLook" :tableActions="userIsDataCurator ? tableActions : null" conservationColumn @filter-changed="resetFilter" ref="germplasmTable" />
 
     <!-- Add Germplasm: the passport page from its tabs, empty (data curators) -->
     <b-modal v-if="userIsDataCurator" ref="addGermplasmModal" title="Add Germplasm" header-class="custom-page" title-class="add-germplasm-title" size="xl" dialog-class="add-germplasm-modal" scrollable @hide="onAddGermplasmHide" @hidden="addingGermplasm = false">
@@ -56,6 +57,11 @@ export default {
   props: {
     download: {
       type: Function
+    },
+    // Look of the custom pages for the common filters
+    customLook: {
+      type: Boolean,
+      default: false
     }
   },
   data: function () {
@@ -142,9 +148,12 @@ export default {
         this.filterOn = []
       }
     },
-    onFilteringChanged: function (filters) {
-      let copy = this.filterOn.concat().filter(f => !filters.some(ff => ff.column.name === f.column.name))
-      copy = copy.concat(filters)
+    // "replacedColumns": filters of these columns are removed as well (e.g. a former search by accession number or name)
+    onFilteringChanged: function (filters, replacedColumns = []) {
+      let copy = this.filterOn.concat().filter(f => !filters.some(ff => ff.column.name === f.column.name) && !replacedColumns.includes(f.column.name))
+      // The server joins the filters from left to right ((a and b) or c): a group with "or" goes first, so it is
+      // ((x or y) and the others)
+      copy = filters.some(f => f.operator === 'or') ? filters.concat(copy) : copy.concat(filters)
       this.filterOn = copy
       this.$refs.germplasmTable.refresh()
     },
@@ -158,6 +167,11 @@ export default {
       this.filterOn = this.filterOn.filter(f => !removed.includes(f.column && typeof f.column === 'object' ? f.column.name : f.column))
       // After the table filter has taken the change over
       this.$nextTick(() => this.$refs.germplasmTable.refresh())
+    },
+    // Clear filters of the common filters: none left, the table shows everything
+    onFilteringCleared: function () {
+      this.filterOn = []
+      this.$nextTick(() => this.$refs.germplasmTable.clearFilter())
     },
     // The conservation filter (kept short in the table and the URL) becomes germplasm ids for the server, see conservation.js
     downloadTable: function (data, callback) {

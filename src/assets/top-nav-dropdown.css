@@ -1,0 +1,138 @@
+/* Dropdowns of the top navigation (marked items, locale): a card in the font of the new pages, with a shadow, a little
+   below its icon and a small arrow pointing at it, a darker grey title and rows separated by lines. Used with
+   menu-class="top-nav-menu" on a b-nav-item-dropdown, the title "top-nav-menu-title", each row "top-nav-menu-row". */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
+
+.dropdown-menu.top-nav-menu {
+  min-width: 15rem;
+  margin-top: 12px;
+  padding: 0;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 10px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.14), 0 2px 6px rgba(0, 0, 0, 0.06);
+  font-family: 'DM Sans', -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+/* Arrow: its border (before), then its fill (after) */
+.dropdown-menu.top-nav-menu::before,
+.dropdown-menu.top-nav-menu::after {
+  content: '';
+  position: absolute;
+  right: 0.85rem;
+  width: 0;
+  height: 0;
+  border-style: solid;
+}
+.dropdown-menu.top-nav-menu::before {
+  top: -9px;
+  border-width: 0 9px 9px 9px;
+  border-color: transparent transparent rgba(0, 0, 0, 0.1) transparent;
+}
+.dropdown-menu.top-nav-menu::after {
+  top: -8px;
+  border-width: 0 8px 8px 8px;
+  border-color: transparent transparent #ffffff transparent;
+}
+.top-nav-menu .top-nav-menu-title {
+  padding: 0.85rem 1rem 0.6rem;
+  font-size: 1.05rem;
+  font-weight: 500;
+  color: #4a4d4b;
+}
+/* A row: separated by a line, highlighted on hover */
+.top-nav-menu .top-nav-menu-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.5rem 1rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  font-size: 0.9rem;
+  color: inherit;
+  cursor: pointer;
+}
+.top-nav-menu .top-nav-menu-row:hover,
+.top-nav-menu .top-nav-menu-row:focus {
+  background: rgba(0, 0, 0, 0.04);
+  outline: none;
+}
+.top-nav-menu .top-nav-menu-row:last-child {
+  border-bottom-left-radius: 10px;
+  border-bottom-right-radius: 10px;
+}
+
+/* Dark mode: a lighter card than the page, a visible edge and a deeper shadow; the arrow in the same colours */
+body.dark-mode .dropdown-menu.top-nav-menu {
+  background-color: rgb(38, 42, 43);
+  border-color: rgb(78, 84, 88);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+body.dark-mode .dropdown-menu.top-nav-menu::before {
+  border-bottom-color: rgb(78, 84, 88);
+}
+body.dark-mode .dropdown-menu.top-nav-menu::after {
+  border-bottom-color: rgb(38, 42, 43);
+}
+body.dark-mode .top-nav-menu .top-nav-menu-title {
+  color: #c4beb5;
+}
+body.dark-mode .top-nav-menu .top-nav-menu-row {
+  border-top-color: rgba(255, 255, 255, 0.1);
+}
+body.dark-mode .top-nav-menu .top-nav-menu-row:hover,
+body.dark-mode .top-nav-menu .top-nav-menu-row:focus {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* Items of a menu that are dropdown items (links, actions, e.g. user settings): shown like the rows above. Used with
+   link-class="top-nav-menu-item" on b-dropdown-item. */
+.top-nav-menu .top-nav-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.5rem 1rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  font-size: 0.9rem;
+  color: inherit;
+  white-space: nowrap;
+}
+.top-nav-menu .top-nav-menu-item:hover,
+.top-nav-menu .top-nav-menu-item:focus {
+  background: rgba(0, 0, 0, 0.04);
+  color: inherit;
+}
+.top-nav-menu > li:last-child .top-nav-menu-item {
+  border-bottom-left-radius: 10px;
+  border-bottom-right-radius: 10px;
+}
+/* A second title in the same menu: a line above it */
+.top-nav-menu .top-nav-menu-title.top-nav-menu-section {
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+/* An icon in a small square, a pastel version of its colour behind (warning, info, danger, success) */
+.top-nav-menu .top-nav-menu-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 6px;
+}
+.top-nav-menu .top-nav-menu-icon.is-warning { background: #fff3cd; color: #b38600; }
+.top-nav-menu .top-nav-menu-icon.is-info { background: #d4eef2; color: #117a8b; }
+.top-nav-menu .top-nav-menu-icon.is-danger { background: #f8d9dc; color: #c82333; }
+.top-nav-menu .top-nav-menu-icon.is-success { background: #d8f0de; color: #1e7e34; }
+
+body.dark-mode .top-nav-menu .top-nav-menu-item {
+  border-top-color: rgba(255, 255, 255, 0.1);
+}
+body.dark-mode .top-nav-menu .top-nav-menu-item:hover,
+body.dark-mode .top-nav-menu .top-nav-menu-item:focus {
+  background: rgba(255, 255, 255, 0.06);
+}
+body.dark-mode .top-nav-menu .top-nav-menu-title.top-nav-menu-section {
+  border-top-color: rgba(255, 255, 255, 0.1);
+}
+body.dark-mode .top-nav-menu .top-nav-menu-icon.is-warning { background: rgba(255, 193, 7, 0.18); color: #ffd65c; }
+body.dark-mode .top-nav-menu .top-nav-menu-icon.is-info { background: rgba(23, 162, 184, 0.2); color: #6fd3e3; }
+body.dark-mode .top-nav-menu .top-nav-menu-icon.is-danger { background: rgba(220, 53, 69, 0.2); color: #f08591; }
+body.dark-mode .top-nav-menu .top-nav-menu-icon.is-success { background: rgba(40, 167, 69, 0.2); color: #7fd492; }

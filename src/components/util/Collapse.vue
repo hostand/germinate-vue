@@ -1,5 +1,11 @@
 <template>
-  <b-card no-body>
+  <!-- Look of the custom pages: the content in a panel (as those of the passport page), always shown, no title -->
+  <div class="cp-collapse-bare" v-if="customLook">
+    <!-- Buttons of the page (slot "actions"): on the bottom edge, at the right -->
+    <div class="cp-collapse-actions" v-if="$scopedSlots.actions"><slot name="actions" /></div>
+    <slot name="content" v-bind:update="update"/>
+  </div>
+  <b-card no-body v-else>
     <!-- Header click toggles the collapse -->
     <b-card-header header-tag="header" class="p-2 collapse-header" role="tab" @click="toggle">
       <div class="d-flex flex-row align-items-center">
@@ -56,6 +62,11 @@ export default {
     showLoading: {
       type: Boolean,
       default: true
+    },
+    // Look of the custom pages: the content in a panel, always shown
+    customLook: {
+      type: Boolean,
+      default: false
     }
   },
   data: function () {
@@ -107,5 +118,26 @@ export default {
 }
 .collapse-expand-status::before {
   transition: 0.1s ease-in-out;
+}
+
+/* Look of the custom pages: a panel as those of the passport page. Not cut: the lists of the fields inside open over
+   the rest of the page. */
+.cp-collapse-bare {
+  position: relative;
+  /* Room at the bottom for the buttons on the bottom edge */
+  padding: 1.25rem 1.5rem 1rem;
+  border: 1px solid var(--cp-border);
+  border-radius: 12px;
+  background: var(--cp-surface);
+}
+/* Over the bottom border, at the right */
+.cp-collapse-actions {
+  position: absolute;
+  bottom: 0;
+  right: 1.5rem;
+  z-index: 1;
+  display: flex;
+  gap: 0.5rem;
+  transform: translateY(50%);
 }
 </style>

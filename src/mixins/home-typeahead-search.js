@@ -37,7 +37,7 @@ import { apiPostDatasetTable, apiPostCollaboratorsTable } from '@/mixins/api/dat
 import { apiPostMapsTable } from '@/mixins/api/genotype'
 import { apiPostTraitTable } from '@/mixins/api/trait'
 import { apiPostClimateTable } from '@/mixins/api/climate'
-import { apiPostLocationTable, apiPostLocationPolygonTable, apiGetCountries } from '@/mixins/api/location'
+import { apiPostLocationTable, apiPostLocationPolygonTable, apiPostLocationPolygonTableIds, apiGetCountries } from '@/mixins/api/location'
 import { apiPostGermplasmTable, apiPostGermplasmGroupTable, apiGetTaxonomyData, apiPostGermplasmPolygonTableIds, apiGetBiologicalStatusData, apiPostPedigreeTable } from '@/mixins/api/germplasm'
 import { searchWiewsOrganizations } from '@/mixins/fao-wiews'
 import { getCountryFlagCode, MCPD_SAMPSTAT } from '@/mixins/mcpd'
@@ -45,7 +45,8 @@ import { CODE_DOMAINS, splitCodes } from '@/mixins/mcpd-update'
 import { getBrapiGermplasm } from '@/mixins/mcpd-suggestions'
 import { apiPostPublicationsTable, apiPostInstitutionDatasetTable } from '@/mixins/api/misc'
 import { MAX_JAVA_INTEGER } from '@/mixins/api/base'
-import { findFlagshipCrop } from '@/mixins/crops'
+import { FLAGSHIP_CROPS, findFlagshipCrop } from '@/mixins/crops'
+import { apiPostGroupTable } from '@/mixins/api/group'
 import { datasetTypes, datasetStates, dataTypes, locationTypes } from '@/mixins/types'
 import { Pages } from '@/mixins/pages'
 import { getNumberWithSuffix } from '@/mixins/formatting'
@@ -149,6 +150,9 @@ const TYPEAHEAD_SCOPES = {
     fields: [
       { value: 'name', text: 'Accession number', column: 'germplasmName', placeholder: 'Search germplasm by accession number...' },
       { value: 'displayName', text: 'Accession name', column: 'germplasmDisplayName', placeholder: 'Search germplasm by accession name...' },
+      // Accession number or name at once, from the second character. Only where asked for ("fieldValues", the common
+      // filters of the germplasm list), not on the home page.
+      { value: 'identifier', text: 'Accession number or name', columns: ['germplasmName', 'germplasmDisplayName'], minChars: 2, onlyWhenListed: true, placeholder: 'Accession number or name...' },
       { value: 'country', text: 'Country', countries: true, column: 'countryName', placeholder: 'Search countries...' },
       { value: 'genus', text: 'Genus', taxon: 'genus', column: 'genus', placeholder: 'Search genera...' },
       // The germplasm whose location (with coordinates) is inside the area drawn: no list under the map, the Search
@@ -159,7 +163,10 @@ const TYPEAHEAD_SCOPES = {
       { value: 'bioStatus', text: 'Biological status', bioStatus: true, column: 'biologicalStatusName', placeholder: 'Choose the biological statuses below...' },
       { value: 'storage', text: 'Storage', storage: true, placeholder: 'Choose the types of storage below...' },
       { value: 'pdci', text: 'PDCI', pdci: true, column: 'pdci', requires: 'pdci', placeholder: 'Choose the PDCI range below...' },
-      { value: 'institution', text: 'Institution', institution: true, placeholder: 'Institute code, e.g. DEU146...' }
+      { value: 'institution', text: 'Institution', institution: true, placeholder: 'Institute code, e.g. DEU146...' },
+      // The flagship crops (their germplasm groups), as the cards of the home page: a crop opens the table of the
+      // members of its group. Only on the Search page ("inlineOnly").
+      { value: 'flagshipCrop', text: 'Flagship crop', options: 'flagshipCrops', flagshipCrop: true, inlineOnly: true, placeholder: 'Choose a flagship crop...' }
     ],
     api: apiPostGermplasmTable,
     idKey: 'germplasmId',
@@ -267,7 +274,8 @@ const TYPEAHEAD_SCOPES = {
       { value: 'country', text: 'Country', countries: true, column: 'countryName', placeholder: 'Search countries...' },
       { value: 'elevation', text: 'Elevation', column: 'locationElevation', number: true, decimal: true, placeholder: 'Elevation (m)...' },
       { value: 'type', text: 'Type', options: 'locationTypes', column: 'locationType', placeholder: 'Choose a location type...' },
-      { value: 'geofence', text: 'Geofencing', geofence: true, geofenceApi: apiPostLocationPolygonTable, placeholder: 'Draw an area on the map below...' },
+      // Listed under the map ("geofenceApi"); the Search button opens the locations table with them ("geofenceIdsApi")
+      { value: 'geofence', text: 'Geofencing', geofence: true, geofenceApi: apiPostLocationPolygonTable, geofenceIdsApi: apiPostLocationPolygonTableIds, placeholder: 'Draw an area on the map below...' },
       {
         value: 'coordinates',
         text: 'Has coordinates',
@@ -491,6 +499,8 @@ export default {
     return {
       numberComparators: NUMBER_COMPARATORS.slice().sort((a, b) => byText(a, b)),
       typeaheadField: 'name',
+      // Germplasm groups of the flagship crops (loaded once): group name in lower case -> group
+      flagshipGroups: null,
       numberComparator: 'greaterThan',
       typeaheadResults: [],
       typeaheadCount: 0,
@@ -548,10 +558,16 @@ export default {
     },
     // The fields of the scope the server allows (PDCI only when it calculates it)
     typeaheadFields: function () {
-      // In alphabetical order
-      return this.typeaheadScope
-        ? this.typeaheadScope.fields.filter(field => field.requires !== 'pdci' || this.isPdciAvailable).slice().sort((a, b) => byText(a, b))
-        : []
+      if (!this.typeaheadScope) {
+        return []
+      }
+      const fields = this.typeaheadScope.fields.filter(field => field.requires !== 'pdci' || this.isPdciAvailable)
+      // Only some fields (compact search, "fieldValues"): in that order
+      if (this.fieldValues) {
+        return this.fieldValues.map(value => fields.find(field => field.value === value)).filter(field => field)
+      }
+      // In alphabetical order (without the fields only offered where asked for, nor those of the Search page elsewhere)
+      return fields.filter(field => !field.onlyWhenListed && (!field.inlineOnly || this.inline)).sort((a, b) => byText(a, b))
     },
     // "PDCI calculation" of the server; only administrators receive the setting, for everyone else it counts as on
     isPdciAvailable: function () {
@@ -661,7 +677,7 @@ export default {
     },
     // A geofence whose results are listed under the map (not those whose table the Search button opens)
     geofenceListsResults: function () {
-      return this.isGeofenceSearch && !this.typeaheadFieldConfig.geofenceIdsApi
+      return this.isGeofenceSearch && !!this.typeaheadFieldConfig.geofenceApi
     },
     isPdciSearch: function () {
       return !!this.typeaheadFieldConfig && !!this.typeaheadFieldConfig.pdci
@@ -723,7 +739,27 @@ export default {
     },
     // The list of an "options" field
     optionList: function () {
+      if (this.isOptionSearch && this.typeaheadFieldConfig.flagshipCrop) {
+        return this.flagshipCropOptions
+      }
       return this.isOptionSearch && OPTION_LISTS[this.typeaheadFieldConfig.options] ? OPTION_LISTS[this.typeaheadFieldConfig.options]() : []
+    },
+    // The flagship crops that have a group with germplasm: icon (in the colours of the crop) and name; the key is the
+    // id of the group
+    flagshipCropOptions: function () {
+      if (!this.flagshipGroups) {
+        return []
+      }
+      return FLAGSHIP_CROPS
+        .map(crop => ({ crop, group: this.flagshipGroups[crop.groupName.toLowerCase()] }))
+        .filter(({ group }) => group && (group.count || 0) > 0)
+        .map(({ crop, group }) => ({
+          key: group.groupId,
+          text: crop.name,
+          groupName: group.groupName,
+          path: crop.icon,
+          iconStyle: { color: `var(--cp-crop-${crop.key}-fg)`, background: `var(--cp-crop-${crop.key}-bg)` }
+        }))
     },
     // Countries matching what is typed (name or code), those chosen first
     countryOptions: function () {
@@ -1005,6 +1041,9 @@ export default {
       if (this.isTaxonSearch) {
         this.loadTaxa()
       }
+      if (this.isOptionSearch && this.typeaheadFieldConfig.flagshipCrop) {
+        this.loadFlagshipGroups()
+      }
       if (this.isInstitutionCodeSearch) {
         this.searchTerm = this.maskInstituteCode(this.searchTerm)
       }
@@ -1049,7 +1088,8 @@ export default {
     resetTypeahead: function () {
       clearTimeout(this.typeaheadTimer)
       this.typeaheadRequest = (this.typeaheadRequest || 0) + 1
-      this.typeaheadField = (this.typeaheadScope && this.typeaheadScope.defaultField) || 'name'
+      // The first of the fields asked for, else the default of the scope
+      this.typeaheadField = (this.fieldValues && this.fieldValues[0]) || (this.typeaheadScope && this.typeaheadScope.defaultField) || 'name'
       this.relativeSearchBy = 'number'
       this.numberComparator = 'greaterThan'
       this.clearTypeaheadResults()
@@ -1204,6 +1244,10 @@ export default {
       // Each kind of data chosen (all of them; those found first, e.g. publications, see submitTypeaheadSearch)
       if (field.hasData) {
         return this.selectedHasData.length > 0 ? this.selectedHasDataOptions.filter(option => option.filter).map(option => option.filter) : null
+      }
+      // Several columns: any of them contains the text
+      if (field.columns) {
+        return this.hasTypeaheadTerm ? field.columns.map(column => ({ column, comparator: 'contains', operator: 'or', values: [this.typeaheadTerm] })) : null
       }
       if (!field.column || !this.hasTypeaheadTerm) {
         return null
@@ -1520,6 +1564,11 @@ export default {
         return
       }
       this.closeTypeaheadPanel()
+      // A germplasm where the page shows the table itself ("emitTableSearch"): the table with only that germplasm
+      if (item.germplasm && !item.relative && this.emitTableSearch) {
+        this.goToTable([{ column: 'germplasmName', comparator: 'equals', operator: 'and', values: [item.record.germplasmName] }], item.record.germplasmName)
+        return
+      }
       // A germplasm (germplasm scope) on the home page: its page (the new passport page)
       if (item.germplasm && !item.relative && !this.inline) {
         this.$router.push({ name: Pages.passport, params: { germplasmId: item.id } })
@@ -1845,8 +1894,9 @@ export default {
         iconTitle: group ? group.name : null,
         // The group as a badge, in the colours of its crop
         group: group ? { name: group.name, className: `cp-crop-${crop ? crop.key : 'other'}` } : null,
-        numberParts: field === 'name' ? splitMatches(number, term) : [{ text: number, match: false }],
-        accessionNameParts: accessionName ? (field === 'displayName' ? splitMatches(accessionName, term) : [{ text: accessionName, match: false }]) : [],
+        // Searched by number, name or both (identifier): the text marked where it was searched
+        numberParts: (field === 'name' || field === 'identifier') ? splitMatches(number, term) : [{ text: number, match: false }],
+        accessionNameParts: accessionName ? ((field === 'displayName' || field === 'identifier') ? splitMatches(accessionName, term) : [{ text: accessionName, match: false }]) : [],
         taxonomy: [record.genus, record.species, record.subtaxa].map(value => plain(value)).filter(value => value !== '').join(' '),
         badges: []
       }
@@ -1902,9 +1952,28 @@ export default {
     getGeofenceText: function () {
       return this.geofencePolygons.map(polygon => polygon.map(point => `${point.lat.toFixed(6)},${point.lng.toFixed(6)}`).join(';')).join('|')
     },
-    // Search button: the table of the scope filtered by the field chosen (a geofence: the geographic search with the
-    // areas, which lists the locations and germplasm inside them)
+    // Search button: the table of the scope filtered by the field chosen (a geofence: the table with those inside the
+    // areas)
+    // The germplasm groups of the flagship crops (as on the home page), once
+    loadFlagshipGroups: function () {
+      if (this.flagshipGroups) {
+        return
+      }
+      apiPostGroupTable({ page: 1, limit: MAX_JAVA_INTEGER, filter: [{ column: 'groupType', comparator: 'equals', operator: 'and', values: ['germinatebase'] }] }, result => {
+        const groups = {}
+        ;((result && result.data) || []).forEach(group => { groups[group.groupName.toLowerCase()] = group })
+        this.flagshipGroups = groups
+      }, { codes: [], callback: () => { this.flagshipGroups = {} } })
+    },
     submitTypeaheadSearch: function () {
+      // A flagship crop: the members of its group (as the cards of the home page), "Flagship crop > <group>"
+      if (this.isOptionSearch && this.typeaheadFieldConfig.flagshipCrop) {
+        const option = this.optionList.find(o => o.key === this.selectedOption)
+        if (option) {
+          this.emitSearch({ tableName: 'groupGermplasm', groupId: option.key, filter: [], crumbs: ['Flagship crop', option.groupName] })
+        }
+        return
+      }
       // Parent or child by accession name: the pedigree table only holds the GID, so the GIDs of the germplasm with that
       // name are searched
       if (this.isRelativeSearch && this.relativeSearchBy === 'name' && this.hasTypeaheadTerm) {
@@ -1953,8 +2022,13 @@ export default {
         if (this.geofencePolygons.length === 0) {
           return
         }
+        // The Search page: the locations inside the areas, in its table (the polygon search)
+        if (this.inline && this.typeaheadFieldConfig.geofenceApi) {
+          this.emitSearch({ polygons: this.geofencePolygons })
+          return
+        }
         const idsApi = this.typeaheadFieldConfig.geofenceIdsApi
-        // Germplasm: their table, with those inside the areas
+        // Germplasm, locations: their table, with those inside the areas
         if (idsApi) {
           this.typeaheadLoading = true
           idsApi({ polygons: this.geofencePolygons }, result => {
@@ -1963,14 +2037,7 @@ export default {
             // None inside: a filter that finds none
             this.goToTable([{ column: this.typeaheadScope.idKey, comparator: 'inSet', operator: 'and', values: ids.length > 0 ? ids : [-1] }])
           }, { codes: [], callback: () => { this.typeaheadLoading = false } })
-          return
         }
-        // The Search page: the locations inside the areas, in its table
-        if (this.inline) {
-          this.emitSearch({ polygons: this.geofencePolygons })
-          return
-        }
-        this.$router.push({ name: Pages.geographicSearch, query: { tabIndex: 1, polygons: this.getGeofenceText() } })
         return
       }
       const filter = this.getTypeaheadFilter()
@@ -1982,7 +2049,8 @@ export default {
     // result chosen, shown in the breadcrumb instead of the values of the field.
     // "options": { openDetails } details of the datasets shown at once (e.g. 'collaborators')
     goToTable: function (filter, label, options = {}) {
-      if (this.inline) {
+      // The page shows the results itself (the Search page, or "emitTableSearch")
+      if (this.inline || this.emitTableSearch) {
         this.emitSearch({ filter, openDetails: options.openDetails || null }, label)
         return
       }

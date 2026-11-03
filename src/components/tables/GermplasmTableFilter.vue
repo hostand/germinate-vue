@@ -1,9 +1,22 @@
 <template>
   <div>
-    <Collapse :icon="mdiFilter" :title="$t('widgetGermplasmTableFilterToggle')" :visible="false" :showLoading="false" class="mb-2" @toggle="collapseVisible = !collapseVisible">
+    <Collapse :icon="customLook ? null : mdiFilter" :title="$t('widgetGermplasmTableFilterToggle')" :visible="customLook" :showLoading="false" :customLook="customLook" :class="['mb-2', { 'gt-filter-custom': customLook }]" @toggle="collapseVisible = !collapseVisible">
+      <!-- Removes all the filters of the table: only while it has some -->
+      <template v-slot:actions v-if="customLook && activeFilters.length > 0">
+        <button type="button" class="gt-filter-clear" @click="$emit('filtering-cleared')">
+          <MdiIcon :path="mdiFilterRemove" :size="16" /> Clear filters
+        </button>
+      </template>
       <template v-slot:content>
         <b-row>
-          <b-col cols=12 sm=6 md=6 lg=4 xl=3>
+          <!-- Custom look: the search of the home page for germplasm, by accession number and name at once -->
+          <b-col cols=12 sm=6 md=6 lg=4 xl=3 v-if="customLook">
+            <!-- A label (not a legend), as the other fields -->
+            <b-form-group :label="$t('formLabelGermplasmTableFilterIdentifier')" label-for="germplasm-identifier-search">
+              <SearchModule compact initialScope="germplasm" :fieldValues="['identifier']" emitTableSearch @search="onIdentifierSearch" />
+            </b-form-group>
+          </b-col>
+          <b-col cols=12 sm=6 md=6 lg=4 xl=3 v-else>
             <b-form-group :label="$t('formLabelGermplasmTableFilterIdentifier')" label-for="identifier">
               <b-input-group>
                 <b-form-input id="identifier" @keyup.enter="searchByIdentifier" v-model="identifierSearch" />
@@ -28,7 +41,7 @@
             </b-form-group>
           </b-col>
           <!-- Has data of type and Conservation share one column of the grid, side by side -->
-          <b-col cols=12 sm=6 md=6 lg=4 xl=3 v-if="locationOptions && locationOptions.length > 2">
+          <b-col cols=12 sm=6 md=6 lg=4 xl=3>
             <div class="filter-pair">
               <!-- One group of toggles, in sync with the table: pressed while the table has that filter, a click on a pressed one removes it -->
               <b-form-group :label="$t('widgetGermplasmTableFilterHasData')" label-for="has-data">
@@ -105,21 +118,15 @@ import GermplasmFilterSelect from '@/components/tables/GermplasmFilterSelect'
 import { MCPD_SAMPSTAT } from '@/mixins/mcpd'
 import { CODE_DOMAINS } from '@/mixins/mcpd-update'
 
-import { apiGetTaxonomyData, apiGetLocationData, apiGetBiologicalStatusData, apiPostGermplasmTable } from '@/mixins/api/germplasm.js'
+import { apiPostGermplasmTable } from '@/mixins/api/germplasm.js'
+import { MAX_JAVA_INTEGER } from '@/mixins/api/base'
 import { CONSERVATION_COLUMN, isConservationFilter, toConservationOption } from '@/mixins/conservation'
 import { apiGetCountries } from '@/mixins/api/location.js'
 import { entityTypes, datasetTypes } from '@/mixins/types'
 import { getNumberWithSuffix } from '@/mixins/formatting'
 import { getHighContrastTextColor } from '@/mixins/colors'
 
-import { mdiFilter, mdiCamera, mdiMagnify } from '@mdi/js'
-
-// { key or taxonomy, count } of the statistics endpoints -> { value, name, count }, only values with germplasm and a name,
-// in alphabetical order
-const toFilterOptions = (items, nameKey) => (items || [])
-  .filter(item => item.count > 0 && item[nameKey] !== null && item[nameKey] !== undefined && `${item[nameKey]}`.trim() !== '')
-  .map(item => ({ value: item[nameKey], name: `${item[nameKey]}`, count: item.count }))
-  .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
+import { mdiFilter, mdiFilterRemove, mdiCamera, mdiMagnify } from '@mdi/js'
 
 // SAMPSTAT code of a biological status name of the database. Compared up to the first bracket, without case, as some
 // database names differ from MCPD in their details (e.g. "Cytogenic stocks" for 422).
@@ -134,16 +141,16 @@ const getSampstatCode = name => {
   return SAMPSTAT_NAME_ALIASES[wanted] !== undefined ? SAMPSTAT_NAME_ALIASES[wanted] : null
 }
 
-// Columns of the searchable lists, counted on the table
+// Columns of the searchable lists, their values taken from the rows of the germplasm table
 const FACET_COLUMNS = ['genus', 'species', 'subtaxa', 'countryName', 'biologicalStatusName']
 // Lists whose values follow the genus filter
 const GENUS_DEPENDENT_COLUMNS = ['species', 'subtaxa']
-// Count requests sent at the same time
-const FACET_REQUESTS = 6
 
 export default {
   components: {
     Collapse,
+    // Only for the custom look (it is large)
+    SearchModule: () => import(/* webpackChunkName: "search-module" */ '@/components/search/SearchModule'),
     GermplasmFilterSelect,
     MdiIcon
   },
@@ -152,12 +159,18 @@ export default {
     activeFilters: {
       type: Array,
       default: () => []
+    },
+    // Look of the custom pages (the germplasm page)
+    customLook: {
+      type: Boolean,
+      default: false
     }
   },
   data: function () {
     return {
       datasetTypes,
       mdiFilter,
+      mdiFilterRemove,
       mdiCamera,
       mdiMagnify,
       collapseVisible: false,
@@ -167,28 +180,16 @@ export default {
       selectedSubtaxa: null,
       selectedLocation: null,
       selectedBiologicalStatus: null,
-      biologicalStatus: null,
-      locations: null,
       // Country list of the database, for the flags of the country filter
       countries: null,
-      // Number of germplasm of the table for each value of each list, with the filters it uses now. Keyed by column.
-      facetCounts: {},
-      // Lists being counted, keyed by column
-      facetLoading: {},
+      // The rows of the germplasm table (all of them), where the values of the lists come from. Null until loaded.
+      tableRows: null,
       conservationOptions: [{ value: 'Ex-situ', text: 'Ex-situ' }, { value: 'In-situ', text: 'In-situ' }],
-      // Latest count run (older ones are dropped) and the delay before counting
-      facetRun: 0,
-      facetTimer: null,
       entities: {
         total: 0,
         accession: 0,
         plantplot: 0,
         sample: 0
-      },
-      taxonomy: {
-        genus: null,
-        species: null,
-        subtaxa: null
       }
     }
   },
@@ -199,8 +200,28 @@ export default {
     allGermplasmCount: function () {
       return getNumberWithSuffix(this.entityTypeOptions.map(o => o.count).reduce((a, b) => a + b), 2)
     },
-    // Options of the searchable lists (see GermplasmFilterSelect): the values the table has germplasm for, with the
-    // filters it uses now (see updateFacetCounts). So with a genus filter, species and subtaxa follow it.
+    // Number of germplasm of the table for each value of each list (keyed by column, then value), from its rows: all
+    // of them, species and subtaxa only within the genus the table is filtered by. Null until the rows are loaded.
+    facetCounts: function () {
+      if (!this.tableRows) {
+        return null
+      }
+      const genus = this.activeGenus
+      const counts = {}
+      FACET_COLUMNS.forEach(column => {
+        const rows = (GENUS_DEPENDENT_COLUMNS.includes(column) && genus !== null) ? this.tableRows.filter(row => row.genus === genus) : this.tableRows
+        counts[column] = rows.reduce((values, row) => {
+          const value = row[column]
+          if (value !== null && value !== undefined && String(value).trim() !== '') {
+            values[value] = (values[value] || 0) + 1
+          }
+          return values
+        }, {})
+      })
+      return counts
+    },
+    // Options of the searchable lists (see GermplasmFilterSelect): the values of the rows of the table. With a genus
+    // filter, species and subtaxa follow it.
     genusOptions: function () {
       return this.getFacetOptions('genus')
     },
@@ -240,21 +261,6 @@ export default {
         return { ...option, flag: country && country.countryCode2 ? country.countryCode2.toLowerCase() : null }
       })
     },
-    locationOptions: function () {
-      if (this.locations) {
-        return [{
-          value: null,
-          text: this.$t('tableColumnCountryName')
-        }].concat(this.locations.filter(g => g.count > 0).map(g => {
-          return {
-            value: g.key,
-            text: `${g.key} (${getNumberWithSuffix(g.count, 2)})`
-          }
-        }))
-      } else {
-        return null
-      }
-    },
     // Shown with the names of the passport editing ("Inbred line"); the table is still filtered by the database name
     biologicalStatusOptions: function () {
       const options = this.getFacetOptions('biologicalStatusName')
@@ -289,33 +295,8 @@ export default {
   watch: {
     collapseVisible: function (newValue) {
       if (newValue) {
-        if (!this.taxonomy.genus && !this.taxonomy.species && !this.taxonomy.subtaxa) {
-          apiGetTaxonomyData(result => { this.taxonomy = result })
-        }
-        if (!this.locations) {
-          apiGetLocationData(result => { this.locations = result })
-        }
-        if (!this.countries) {
-          apiGetCountries(result => { this.countries = result || [] })
-        }
-        if (!this.biologicalStatus) {
-          apiGetBiologicalStatusData(result => { this.biologicalStatus = result })
-        }
-        this.scheduleFacetCounts()
+        this.loadListData()
       }
-    },
-    // Species and subtaxa are counted again when the genus filter changes; all lists once the possible values are known
-    activeGenus: function () {
-      this.scheduleFacetCounts()
-    },
-    taxonomy: function () {
-      this.scheduleFacetCounts()
-    },
-    locations: function () {
-      this.scheduleFacetCounts()
-    },
-    biologicalStatus: function () {
-      this.scheduleFacetCounts()
     },
     selectedGenus: function (newValue) {
       if (newValue) {
@@ -388,6 +369,15 @@ export default {
       }
     }
   },
+  created: function () {
+    // Open at once in the custom look
+    this.collapseVisible = this.customLook
+  },
+  mounted: function () {
+    if (this.collapseVisible) {
+      this.loadListData()
+    }
+  },
   methods: {
     getNumberWithSuffix,
     getHighContrastTextColor,
@@ -438,13 +428,26 @@ export default {
         values: [option]
       }])
     },
-    // Still counting a list, or not counted yet
-    isFacetLoading: function (column) {
-      return !!this.facetLoading[column] || !this.facetCounts[column]
+    // The rows of the table not loaded yet
+    isFacetLoading: function () {
+      return !this.facetCounts
+    },
+    // What the lists need (once): the rows of the table, the countries (for the flags)
+    loadListData: function () {
+      if (!this.tableRows && !this.loadingRows) {
+        this.loadingRows = true
+        apiPostGermplasmTable({ page: 1, limit: MAX_JAVA_INTEGER }, result => {
+          this.loadingRows = false
+          this.tableRows = (result && result.data) || []
+        }, { codes: [], callback: () => { this.loadingRows = false; this.tableRows = [] } })
+      }
+      if (!this.countries) {
+        apiGetCountries(result => { this.countries = result || [] })
+      }
     },
     // { value, name, count } of a list, values the table has germplasm for, in alphabetical order. Null until counted.
     getFacetOptions: function (column) {
-      const counts = this.facetCounts[column]
+      const counts = this.facetCounts ? this.facetCounts[column] : null
       if (!counts) {
         return null
       }
@@ -452,80 +455,6 @@ export default {
         .filter(name => counts[name] > 0)
         .map(name => ({ value: name, name, count: counts[name] }))
         .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
-    },
-    // Values that may be in a list: those the statistics know of (their own counts don't match the table, e.g. they
-    // count taxonomies no listed germplasm uses, so they are only used to know which values to count)
-    getFacetCandidates: function (column) {
-      const source = {
-        genus: [this.taxonomy.genus, 'taxonomy'],
-        species: [this.taxonomy.species, 'taxonomy'],
-        subtaxa: [this.taxonomy.subtaxa, 'taxonomy'],
-        countryName: [this.locations, 'key'],
-        biologicalStatusName: [this.biologicalStatus, 'key']
-      }[column]
-      if (!source || !source[0]) {
-        return null
-      }
-      return toFilterOptions(source[0], source[1]).map(option => option.name)
-    },
-    scheduleFacetCounts: function () {
-      if (!this.collapseVisible) {
-        return
-      }
-      clearTimeout(this.facetTimer)
-      this.facetTimer = setTimeout(() => this.updateFacetCounts(), 300)
-    },
-    // Each list counts its values on the germplasm table itself (asking only for the count), so it only offers values
-    // the table has germplasm for. Species and subtaxa are counted within the filtered genus, the others on all
-    // germplasm. At most FACET_REQUESTS requests at a time.
-    updateFacetCounts: function () {
-      const run = ++this.facetRun
-      const genus = this.activeGenus
-      const genusFilter = genus !== null ? [{ column: 'genus', comparator: 'equals', operator: 'and', values: [genus] }] : []
-
-      const tasks = []
-      const results = {}
-      // The genus only changes the species and subtaxa: the other lists are counted once
-      FACET_COLUMNS.filter(column => GENUS_DEPENDENT_COLUMNS.includes(column) || !this.facetCounts[column]).forEach(column => {
-        const candidates = this.getFacetCandidates(column)
-        if (!candidates) {
-          return
-        }
-        results[column] = {}
-        this.facetLoading = { ...this.facetLoading, [column]: true }
-        const others = GENUS_DEPENDENT_COLUMNS.includes(column) ? genusFilter : []
-        candidates.forEach(name => {
-          tasks.push(() => new Promise(resolve => {
-            const query = {
-              page: 1,
-              limit: 1,
-              filter: others.concat([{ column, comparator: 'equals', operator: 'and', values: [name] }])
-            }
-            apiPostGermplasmTable(query, result => {
-              results[column][name] = result && result.count ? result.count : 0
-              resolve()
-            }, { codes: [], callback: () => { results[column][name] = 0; resolve() } })
-          }))
-        })
-      })
-
-      let next = 0
-      const worker = () => {
-        if (run !== this.facetRun || next >= tasks.length) {
-          return Promise.resolve()
-        }
-        const task = tasks[next++]
-        return task().then(worker)
-      }
-      Promise.all(Array.from({ length: Math.min(FACET_REQUESTS, tasks.length) }, worker)).then(() => {
-        // Only the latest count is shown
-        if (run === this.facetRun) {
-          this.facetCounts = { ...this.facetCounts, ...results }
-          const loading = { ...this.facetLoading }
-          Object.keys(results).forEach(column => { loading[column] = false })
-          this.facetLoading = loading
-        }
-      })
     },
     // Value of the "equals" filter the table uses on this column, null when it uses none
     getActiveValue: function (column) {
@@ -583,6 +512,22 @@ export default {
       }])
 
       this.identifierSearch = null
+    },
+    // The search of the custom look (as on the home page): its filter (e.g. accession number contains the text) on the table
+    onIdentifierSearch: function (search) {
+      if (!search || !search.filter) {
+        return
+      }
+      // The server joins each filter to the next with its operator, from left to right: the last one of the group
+      // (accession number OR name) joins the other filters of the table with "and"
+      // Replaces any former search of it (accession number and/or name, also a germplasm chosen in its list)
+      const last = search.filter.length - 1
+      this.$emit('filtering-changed', search.filter.map((f, index) => ({
+        column: { name: f.column, type: String },
+        comparator: f.comparator,
+        operator: index === last ? 'and' : f.operator,
+        values: f.values
+      })), ['germplasmName', 'germplasmDisplayName'])
     },
     onHasImagesClicked: function () {
       this.$emit('filtering-changed', [{
@@ -655,6 +600,25 @@ export default {
 </script>
 
 <style scoped>
+/* Clear filters, on the bottom edge of the panel (custom look) */
+.gt-filter-clear {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.75rem;
+  border: 1px solid var(--cp-border);
+  border-radius: 10px;
+  background: var(--cp-surface);
+  color: var(--cp-text);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+.gt-filter-clear:hover {
+  border-color: var(--cp-green);
+  color: var(--cp-green);
+}
 /* Has data of type and Conservation in two equal sub-columns of one column, each at the start of its own */
 .filter-pair {
   display: grid;

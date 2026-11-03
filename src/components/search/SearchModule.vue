@@ -1,7 +1,7 @@
 <template>
   <!-- The search of the home page, shared with the Search page (any change shows on both). "custom-page" brings the
        colour tokens and font of the custom pages (and the crop colours used by the results). -->
-  <div :class="['custom-page', 'search-module', { 'search-module-inline': inline }]">
+  <div :class="['custom-page', 'search-module', { 'search-module-inline': inline, 'search-module-compact': compact }]">
   <section class="home-search-section">
     <!-- Searching datasets or genotypic maps: a typeahead (see home-typeahead-search.js) -->
     <div class="home-search-wrap" @focusout="onSearchWrapFocusOut">
@@ -71,8 +71,8 @@
                @click="onSearchFieldClick"
                @keydown="onSearchKeydown" />
       </div>
-      <!-- What to search by -->
-      <div class="home-search-select" v-if="hasTypeahead">
+      <!-- What to search by (not when there is only one field) -->
+      <div class="home-search-select" v-if="hasTypeahead && typeaheadFields.length > 1">
         <select v-model="typeaheadField" aria-label="Search by">
           <option v-for="field in typeaheadFields" :key="'typeahead-field-' + field.value" :value="field.value">{{ field.text }}</option>
         </select>
@@ -106,13 +106,14 @@
         </select>
         <MdiIcon :path="icons.chevronDown" :size="18" />
       </div>
-      <div class="home-search-select">
+      <!-- Compact: one scope only, no choice -->
+      <div class="home-search-select" v-if="!compact">
         <select v-model="searchScope" aria-label="Search scope">
           <option v-for="scope in sortedSearchScopes" :key="'search-scope-option-' + scope.value" :value="scope.value">{{ scope.text }}</option>
         </select>
         <MdiIcon :path="icons.chevronDown" :size="18" />
       </div>
-      <button type="submit" class="home-search-button" :disabled="!canSubmitSearch"><MdiIcon :path="icons.search" :size="18" /> Search</button>
+      <button type="submit" class="home-search-button" :disabled="!canSubmitSearch" :title="compact ? $t('inputPlaceholderSearch') : null" :aria-label="$t('inputPlaceholderSearch')"><MdiIcon :path="icons.search" :size="18" /> <template v-if="!compact">{{ $t('inputPlaceholderSearch') }}</template></button>
     </form>
 
     <!-- Results, 5 at a time, as wide as the search field. Clicks keep the focus in the field (mousedown). -->
@@ -129,7 +130,7 @@
                 @click="chooseOption(option)">
           <!-- A letter (relationship types) or an icon -->
           <span class="home-code-badge home-code-badge-list home-typeahead-letter" v-if="option.badge">{{ option.badge }}</span>
-          <span class="home-typeahead-icon" :style="getColorStyle(option.color)" v-else><MdiIcon :path="option.path" :size="18" /></span>
+          <span class="home-typeahead-icon" :style="option.iconStyle || getColorStyle(option.color)" v-else><MdiIcon :path="option.path" :size="18" /></span>
           <span class="home-typeahead-name">{{ option.text }}</span>
         </button>
       </template>
@@ -280,10 +281,10 @@
               </span>
               <span class="home-typeahead-taxonomy" v-if="item.taxonomy">{{ item.taxonomy }}</span>
             </span>
-            <!-- The group of the germplasm -->
-            <span :class="['home-typeahead-group', item.group.className]" v-if="item.group" :title="item.group.name">{{ item.group.name }}</span>
-            <!-- Marks the germplasm, like the checkbox of the germplasm table -->
-            <label class="home-typeahead-markbox" :title="isGermplasmMarked(item.id) ? 'Marked: click to unmark' : 'Mark this germplasm'" @click.stop>
+            <!-- The group of the germplasm (not in the compact search) -->
+            <span :class="['home-typeahead-group', item.group.className]" v-if="item.group && !compact" :title="item.group.name">{{ item.group.name }}</span>
+            <!-- Marks the germplasm, like the checkbox of the germplasm table (not in the compact search) -->
+            <label class="home-typeahead-markbox" v-if="!compact" :title="isGermplasmMarked(item.id) ? 'Marked: click to unmark' : 'Mark this germplasm'" @click.stop>
               <input type="checkbox" :checked="isGermplasmMarked(item.id)" :aria-label="`Mark ${item.record.germplasmName}`" @change="setGermplasmMarked(item.id, $event.target.checked)" />
             </label>
           </template>
@@ -318,8 +319,8 @@
     </div>
     </div>
 
-    <div class="home-chips">
-      <span class="home-chips-label">Search within:</span>
+    <div class="home-chips" v-if="!compact">
+      <span class="home-chips-label">{{ $t('homeSearchWithinLabel') }}</span>
       <button type="button"
               v-for="scope in sortedSearchScopes"
               :key="'search-scope-chip-' + scope.value"
@@ -343,7 +344,8 @@ import { mdiMagnify, mdiChevronDown, mdiChevronLeft, mdiChevronRight, mdiCheck, 
 // Search scopes ("all" searches everything). Values of the scopes with a typeahead are those of TYPEAHEAD_SCOPES
 // (home-typeahead-search.js).
 const SEARCH_SCOPES = [
-  { value: 'all', text: 'All' },
+  // textKey: the text in the language in use
+  { value: 'all', text: 'All', textKey: 'buttonAll' },
   { value: 'datasets', text: 'Datasets' },
   // "Germplasm data" on the legacy search page
   { value: 'germplasm', text: 'Germplasms' },
@@ -363,6 +365,11 @@ const SEARCH_SCOPES = [
  * - On the home page (default): a search opens the page of its table (or the Search page for "All").
  * - "inline" (the Search page): a search is emitted as "search" ({ scope, tableName, filter, polygons, crumbs, term })
  *   and the page shows the results itself.
+ *
+ * - "compact" (e.g. the common filters of the germplasm list): one scope ("initialScope"), only the fields
+ *   "fieldValues" (in that order), smaller, no scope dropdown nor "Search within" chips.
+ * - "emitTableSearch": the Search button emits "search" (as inline) instead of opening the page of the table; a
+ *   germplasm of the list too (the table with only that germplasm) instead of opening its page.
  *
  * Emits "field-click" when the search field is clicked (the home page collapses its flagship crops then).
  */
@@ -397,6 +404,21 @@ export default {
     noResults: {
       type: Boolean,
       default: false
+    },
+    // Small, one scope (see above)
+    compact: {
+      type: Boolean,
+      default: false
+    },
+    // The fields of the scope offered, in this order (all of them, in alphabetical order, when not set)
+    fieldValues: {
+      type: Array,
+      default: null
+    },
+    // The Search button emits "search" instead of opening the page of the table
+    emitTableSearch: {
+      type: Boolean,
+      default: false
     }
   },
   data: function () {
@@ -406,7 +428,6 @@ export default {
       lastSearchTerm: null,
       // Where to search. Shared by the dropdown and the "Search within" chips so both always show the same selection.
       searchScope: 'all',
-      searchScopes: SEARCH_SCOPES,
       // Search page, everything: how the text is compared (In set: several values separated by commas)
       allComparator: 'contains',
       allComparators: [
@@ -430,6 +451,10 @@ export default {
     showClearText: function () {
       // The page's results: only while the text is the one searched
       return !!this.searchTerm && this.searchTerm.trim() !== '' && (this.typeaheadNothingFound || (this.noResults && this.searchTerm === this.lastSearchTerm))
+    },
+    // The scopes, in the language in use when they have a textKey
+    searchScopes: function () {
+      return SEARCH_SCOPES.map(scope => scope.textKey ? { ...scope, text: this.$t(scope.textKey) } : scope)
     },
     // All first, the other scopes in alphabetical order (scope dropdown and "Search within" chips)
     sortedSearchScopes: function () {
@@ -466,7 +491,7 @@ export default {
       // All: the Search page searches every table
       if (this.inline) {
         const comparator = this.allComparators.find(c => c.value === this.allComparator)
-        this.$emit('search', { scope: 'all', term, comparator: this.allComparator, crumbs: ['All', comparator ? comparator.text() : null, `"${term}"`].filter(crumb => crumb) })
+        this.$emit('search', { scope: 'all', term, comparator: this.allComparator, crumbs: [this.$t('buttonAll'), comparator ? comparator.text() : null, `"${term}"`].filter(crumb => crumb) })
         return
       }
 
@@ -566,6 +591,81 @@ body.dark-mode .search-module {
 /* Search */
 .home-search-section {
   margin-top: 2.5rem;
+}
+
+/* Compact (e.g. the common filters of the germplasm list): the height of the other fields of a form */
+.search-module-compact .home-search-section {
+  margin-top: 0;
+}
+.search-module-compact .home-search-field {
+  min-height: 40px;
+  padding: 2px 0 2px 1.9rem;
+}
+.search-module-compact .home-search-icon {
+  height: 38px;
+  padding: 0 0.2rem 0 0.65rem;
+}
+.search-module-compact .home-search-input {
+  flex-basis: 4rem;
+  min-width: 4rem;
+  height: 34px;
+  padding: 0 0.3rem;
+  font-size: 0.95rem;
+}
+/* Narrow: no room for the cross of the browser (the broom clears a text that finds nothing) */
+.search-module-compact .home-search-input::-webkit-search-cancel-button {
+  display: none;
+}
+.search-module-compact .home-search-select {
+  height: 40px;
+}
+.search-module-compact .home-search-select select {
+  padding: 0 1.4rem 0 0.5rem;
+  font-size: 0.8rem;
+}
+.search-module-compact .home-search-select >>> .mdi-icon-wrapper {
+  right: 0.4rem;
+}
+.search-module-compact .home-search-button {
+  height: 40px;
+  padding: 0 0.7rem;
+}
+/* The results as wide as the search (field and button); what doesn't fit is cut with "..." */
+.search-module-compact .home-typeahead {
+  width: 100% !important;
+}
+.search-module-compact .home-typeahead-item {
+  gap: 0.5rem;
+  padding: 0.5rem 0.6rem;
+}
+.search-module-compact .home-typeahead-icon {
+  width: 1.9rem;
+  height: 1.9rem;
+}
+.search-module-compact .home-typeahead-accession {
+  flex-wrap: nowrap;
+  column-gap: 0.4rem;
+  min-width: 0;
+}
+.search-module-compact .home-typeahead-accenumb,
+.search-module-compact .home-typeahead-accename,
+.search-module-compact .home-typeahead-taxonomy {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.search-module-compact .home-typeahead-accenumb {
+  flex: 0 1 auto;
+  font-size: 0.92rem;
+}
+.search-module-compact .home-typeahead-accename {
+  flex: 1 1 0;
+  min-width: 0;
+  font-size: 0.85rem;
+}
+/* Germplasm: icon and text only (no group, no checkbox) */
+.search-module-compact .home-typeahead-item.home-typeahead-germplasm {
+  grid-template-columns: auto minmax(0, 1fr);
 }
 /* Each part has its own outline: only the text field grows (several lines of chips), the dropdowns and the button
    keep their height */

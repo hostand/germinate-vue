@@ -1,21 +1,39 @@
 <template>
   <!-- "custom-page" brings the shared colour tokens used by shared components such as RecentlyViewedPanel -->
-  <div class="custom-page home">
-    <!-- Hero -->
-    <section class="home-hero">
-      <div class="home-eyebrow"><span class="home-eyebrow-dot" /> Research data platform</div>
-      <h1 class="home-title">Explore Crop Datasets</h1>
-      <p class="home-lead">
-        Browse and search experimental data, germplasms, traits, and publications across
-        five flagship crops. Built for plant researchers and breeders.
-      </p>
+  <div class="custom-page home" ref="home">
+    <!-- The images of the carousel (Add > Carousel): behind the top of the page from edge to edge, blurred, fading into
+         the page (light or dark) further down than on the germplasm page. It ends at the search bar (measured).
+         Several ones fade into each other. -->
+    <div class="home-backdrop" v-if="heroImages.length > 0" :style="backdropStyle" aria-hidden="true">
+      <div v-for="(image, index) in heroImages"
+           :key="'home-hero-image-' + image.name"
+           :class="['home-hero-image', { active: index === heroIndex }]"
+           :style="{ backgroundImage: `url('${image.src}')` }" />
+      <div class="home-hero-veil" />
+    </div>
+
+    <!-- Hero: the title and text of the image shown ("homeHeroText": #Title##Text, one per image), changing with it -->
+    <section class="home-hero" ref="hero">
+      <!-- All the texts of "homeHeroText" on top of each other, only the current one visible: the block is always as tall
+           as the longest one (also before the images arrive), so nothing under it moves, and the title stays in place -->
+      <div class="home-hero-slides" v-if="heroTexts.length > 0">
+        <div v-for="(slide, index) in heroTexts"
+             v-show="slide.title"
+             :key="'home-hero-text-' + index"
+             :class="['home-hero-text', { active: index === heroTextIndex }]"
+             :aria-hidden="index === heroTextIndex ? null : 'true'">
+          <!-- Title and text may hold HTML (written by administrators in the carousel) -->
+          <div class="home-title" :role="index === heroTextIndex ? 'heading' : null" :aria-level="index === heroTextIndex ? 1 : null" v-html="slide.title" />
+          <p class="home-lead" v-if="slide.text" v-html="slide.text" />
+        </div>
+      </div>
     </section>
 
     <!-- Flagship crops: collapsed while the search below is used, the chevron opens or closes them -->
     <section :class="['home-section', 'home-crops-section', { collapsed: !open.crops }]">
       <div class="home-section-header">
-        <h2 class="home-section-title">Flagship crops</h2>
-        <button type="button" class="home-panel-toggle" :aria-expanded="open.crops" @click="toggle('crops')" :aria-label="(open.crops ? 'Hide ' : 'Show ') + 'flagship crops'">
+        <h2 class="home-section-title">{{ $t('homeFlagshipCropsTitle') }}</h2>
+        <button type="button" class="home-panel-toggle" :aria-expanded="open.crops" @click="toggle('crops')" :aria-label="(open.crops ? 'Hide ' : 'Show ') + $t('homeFlagshipCropsTitle')">
           <span :class="['home-panel-chevron', { closed: !open.crops }]"><MdiIcon :path="icons.chevronUp" :size="26" /></span>
         </button>
       </div>
@@ -29,13 +47,17 @@
                   @leave="collapseLeave"
                   @after-leave="collapseAfter">
       <div class="home-crops" v-show="open.crops">
-        <div v-for="crop in crops" :key="crop.key" :class="['home-crop-card', { disabled: isCropDisabled(crop) }]" :aria-disabled="isCropDisabled(crop)">
+        <!-- The whole card opens the Search page with the members of the crop's group (not without germplasm) -->
+        <component v-for="crop in crops"
+                   :key="crop.key"
+                   :is="getCropGroup(crop) && !isCropDisabled(crop) ? 'router-link' : 'div'"
+                   :to="getCropGroup(crop) && !isCropDisabled(crop) ? getCropLink(crop) : null"
+                   :class="['home-crop-card', { disabled: isCropDisabled(crop) }]"
+                   :aria-disabled="isCropDisabled(crop)">
           <div :class="['home-crop-icon', `home-crop-${crop.key}`]"><MdiIcon :path="crop.icon" :size="26" /></div>
           <div class="home-crop-name">{{ crop.name }}</div>
           <div class="home-crop-count">{{ getCropCountText(crop) }}</div>
-          <router-link v-if="getCropGroup(crop)" :to="getCropLink(crop)" :class="['home-crop-link', { disabled: isCropDisabled(crop) }]" :tabindex="isCropDisabled(crop) ? -1 : null">Explore <MdiIcon :path="icons.arrow" /></router-link>
-          <span v-else :class="['home-crop-link', { disabled: cropGroups !== null }]">Explore <MdiIcon :path="icons.arrow" /></span>
-        </div>
+        </component>
       </div>
       </transition>
     </section>
@@ -43,7 +65,7 @@
     <!-- Search -->
     <!-- Shared with the Search page (src/components/search/SearchModule.vue). A click in the search field collapses the
          flagship crops: only their chevron opens them again. -->
-    <SearchModule class="home-search-module" @field-click="open.crops = false" />
+    <SearchModule class="home-search-module" @field-click="open.crops = false" ref="searchModule" />
 
     <!-- Stats -->
     <!-- Statistics carousel: 5 visible on wide screens, the sides fade where more are hidden -->
@@ -220,10 +242,19 @@
               <span>News item</span>
             </button>
           </div>
+          <!-- On a line of its own: the images of the carousel, same as "Edit image carousel" on the original home page
+               (administrators only there too) -->
+          <div class="home-add-actions home-add-actions-more" v-if="canEditCarousel">
+            <button type="button" class="home-add-action" @click="$refs.carouselEditModal.show()">
+              <span class="home-stat-icon"><MdiIcon :path="icons.carousel" :size="18" /></span>
+              <span>Carousel</span>
+            </button>
+          </div>
 
           <AddPublicationModal ref="addPublicationModal" @publication-added="onPublicationAdded" />
           <AddStoryModal ref="addStoryModal" />
           <AddNewsModal ref="addNewsModal" @news-added="loadNews(1)" />
+          <CarouselEditModal ref="carouselEditModal" v-if="canEditCarousel" @change="loadHeroImages" />
         </div>
       </div>
     </section>
@@ -237,26 +268,32 @@ import MdiIcon from '@/components/icons/MdiIcon'
 import AddPublicationModal from '@/components/modals/AddPublicationModal'
 import AddStoryModal from '@/components/modals/AddStoryModal'
 import AddNewsModal from '@/components/modals/AddNewsModal'
+import CarouselEditModal from '@/components/modals/CarouselEditModal'
 import RecentlyViewedPanel from '@/components/germplasm/RecentlyViewedPanel'
 
-import { mdiArrowRight, mdiMagnify, mdiChevronDown, mdiChevronRight, mdiDatabase, mdiSprout, mdiMapMarkerOutline, mdiTagOutline, mdiBookOpenVariant, mdiMapOutline, mdiWeatherSnowyRainy, mdiCommentPlusOutline, mdiNewBox, mdiOpenInNew, mdiChevronLeft, mdiCalendarClock, mdiDelete, mdiRefresh, mdiNewspaper, mdiChevronUp, mdiDna, mdiCheck } from '@mdi/js'
+import { mdiMagnify, mdiChevronDown, mdiChevronRight, mdiDatabase, mdiSprout, mdiMapMarkerOutline, mdiTagOutline, mdiBookOpenVariant, mdiMapOutline, mdiWeatherSnowyRainy, mdiCommentPlusOutline, mdiNewBox, mdiOpenInNew, mdiChevronLeft, mdiCalendarClock, mdiDelete, mdiRefresh, mdiNewspaper, mdiChevronUp, mdiDna, mdiCheck, mdiImageSizeSelectLarge } from '@mdi/js'
 import { Pages } from '@/mixins/pages'
 import { FLAGSHIP_CROPS } from '@/mixins/crops'
 import { apiPostGroupTable } from '@/mixins/api/group'
 import { apiPostGermplasmTable } from '@/mixins/api/germplasm'
-import { apiPostPublicationsTable, apiPostNewsTable, apiDeleteNews, apiDeletePublicationReference } from '@/mixins/api/misc'
+import { apiPostPublicationsTable, apiPostNewsTable, apiDeleteNews, apiDeletePublicationReference, apiGetTemplateCarouselConfig } from '@/mixins/api/misc'
+import { getImageUrl } from '@/mixins/image'
+import { parseHeroText } from '@/mixins/hero-text'
 import { apiPostLocationTable } from '@/mixins/api/location'
 import { apiPostDatasetTable } from '@/mixins/api/dataset'
 import { apiPostTraitTable } from '@/mixins/api/trait'
 import { apiPostClimateTable } from '@/mixins/api/climate'
 import { apiPostMarkerTable, apiPostMapsTable } from '@/mixins/api/genotype'
 import { MAX_JAVA_INTEGER } from '@/mixins/api/base'
-import { userIsAtLeast, USER_TYPE_DATA_CURATOR } from '@/mixins/api/auth'
+import { userIsAtLeast, USER_TYPE_DATA_CURATOR, USER_TYPE_ADMINISTRATOR } from '@/mixins/api/auth'
 import SearchModule from '@/components/search/SearchModule'
 
 const emitter = require('tiny-emitter/instance')
 
 const NEWS_PER_PAGE = 5
+// Same as the reference images of the germplasm page: the next image (and its text) after this long
+const HERO_INTERVAL = 15000
+
 const PUBLICATIONS_PER_PAGE = 5
 
 // News types shown in "Announcements". "Projects" (related projects) are handled separately.
@@ -447,11 +484,16 @@ export default {
     AddPublicationModal,
     AddStoryModal,
     AddNewsModal,
+    CarouselEditModal,
     RecentlyViewedPanel,
     SearchModule
   },
   data: function () {
     return {
+      // The images of the carousel in the language in use (the hero), the one shown and where they end (the search bar)
+      heroImages: [],
+      heroIndex: 0,
+      heroBottom: 0,
       // Flagship crops. "groupName" is the name of the matching germplasm group in Germinate.
       crops: FLAGSHIP_CROPS,
       // Germplasm groups (with their member count), keyed by lower-case group name. Null until loaded.
@@ -486,7 +528,6 @@ export default {
         chevronUp: mdiChevronUp,
         reload: mdiRefresh,
         check: mdiCheck,
-        arrow: mdiArrowRight,
         search: mdiMagnify,
         chevronDown: mdiChevronDown,
         chevronRight: mdiChevronRight,
@@ -496,11 +537,41 @@ export default {
         delete: mdiDelete,
         publication: mdiBookOpenVariant,
         addStory: mdiCommentPlusOutline,
-        addNews: mdiNewBox
+        addNews: mdiNewBox,
+        carousel: mdiImageSizeSelectLarge
       }
     }
   },
   computed: {
+    // The titles and texts of "homeHeroText", in the language in use (English when it isn't translated)
+    heroTexts: function () {
+      return parseHeroText(this.$t('homeHeroText'))
+    },
+    // How many slides: one per image, or (without images) one per text. One: nothing changes.
+    heroCount: function () {
+      return this.heroImages.length > 0 ? this.heroImages.length : this.heroTexts.length
+    },
+    // The text shown: that of the place of the image in "homeHeroText" when it is in the pattern #Title##Text, else
+    // the last one before it that is (so with a single description the text stays, without animation, while the
+    // images change); none in the pattern: the first one with a title
+    heroTextIndex: function () {
+      if (this.heroImages.length === 0) {
+        return this.heroIndex
+      }
+      const count = this.heroImages.length
+      for (let step = 0; step < count; step++) {
+        const index = (this.heroIndex - step + count) % count
+        if (this.heroTexts[index] && this.heroTexts[index].valid) {
+          return index
+        }
+      }
+      const titled = this.heroTexts.findIndex(slide => slide.title)
+      return titled >= 0 ? titled : 0
+    },
+    // The images: from above the page (the space under the navigation) to the bottom of the search bar
+    backdropStyle: function () {
+      return this.heroBottom > 0 ? { height: `calc(${this.heroBottom}px + 1.75rem)` } : null
+    },
     // Statistics shown in the carousel
     statTypes: function () {
       return this.totalTypes.filter(t => t.statistic !== false && (!t.onlyWhenPresent || this.totals[t.key] > 0))
@@ -559,9 +630,22 @@ export default {
     // Adding publications, data stories and news requires at least data curator rights
     canAddContent: function () {
       return !!this.storeToken && userIsAtLeast(this.storeToken.userType, USER_TYPE_DATA_CURATOR)
+    },
+    // Same as the original home page: only administrators edit the image carousel
+    canEditCarousel: function () {
+      return !!this.storeToken && userIsAtLeast(this.storeToken.userType, USER_TYPE_ADMINISTRATOR)
     }
   },
   watch: {
+    // The images of the other language
+    storeLocale: function () {
+      this.loadHeroImages()
+    },
+    // Another number of slides (images loaded, language changed): from the first one again
+    heroCount: function () {
+      this.heroIndex = 0
+      this.startHeroTimer()
+    },
     // The server settings can arrive after the page was mounted
     showPublicationSection: function (newValue) {
       if (newValue && this.recentPublications === null) {
@@ -575,6 +659,48 @@ export default {
     }
   },
   methods: {
+    // The images of the carousel, in the language in use (English when it has none)
+    loadHeroImages: function () {
+      apiGetTemplateCarouselConfig(result => {
+        const images = (result && (result[this.storeLocale] || result.en_GB)) || []
+        this.heroImages = images.filter(image => image && image.name).map(image => ({
+          name: image.name,
+          src: getImageUrl(image.name, {
+            name: image.name,
+            token: this.storeToken ? this.storeToken.imageToken : null,
+            type: 'template',
+            size: 'large'
+          })
+        }))
+      }, {
+        codes: [404],
+        // No carousel: only the texts
+        callback: () => {
+          this.heroImages = []
+        }
+      })
+    },
+    updateHeroBottom: function () {
+      const home = this.$refs.home
+      const search = this.$refs.searchModule ? this.$refs.searchModule.$el : null
+      const bar = search ? (search.querySelector('.home-search-button') || search) : null
+      this.heroBottom = (home && bar) ? bar.getBoundingClientRect().bottom - home.getBoundingClientRect().top : 0
+    },
+    // The next slide (image and text) every HERO_INTERVAL, when there are several
+    startHeroTimer: function () {
+      this.stopHeroTimer()
+      if (this.heroCount > 1) {
+        this.heroTimer = setInterval(() => {
+          this.heroIndex = (this.heroIndex + 1) % this.heroCount
+        }, HERO_INTERVAL)
+      }
+    },
+    stopHeroTimer: function () {
+      if (this.heroTimer) {
+        clearInterval(this.heroTimer)
+        this.heroTimer = null
+      }
+    },
     // 5 statistics on wide screens, fewer on smaller ones
     updateStatsVisible: function () {
       const width = window.innerWidth
@@ -646,14 +772,18 @@ export default {
       const group = this.getCropGroup(crop)
       return group ? (group.count || 0) : 0
     },
-    // Group details page, scrolled to the group members (the accessions)
+    // The Search page with the members of the group (the accessions), breadcrumb "Flagship crop > <group>"
     getCropLink: function (crop) {
       const group = this.getCropGroup(crop)
 
       return {
-        name: Pages.groupDetails,
-        params: { groupId: group.groupId },
-        hash: '#group-members'
+        name: Pages.search,
+        query: {
+          searchTable: 'groupGermplasm',
+          searchGroup: `${group.groupId}`,
+          searchFilter: '[]',
+          searchCrumbs: JSON.stringify(['Flagship crop', group.groupName])
+        }
       }
     },
     getCropCountText: function (crop) {
@@ -815,8 +945,23 @@ export default {
   },
   beforeDestroy: function () {
     window.removeEventListener('resize', this.updateStatsVisible)
+    this.stopHeroTimer()
+    if (this.heroObserver) {
+      this.heroObserver.disconnect()
+    }
   },
   mounted: function () {
+    // The bottom of the search bar (its button: the lists under it don't count), followed when the page changes size
+    // (other text, flagship crops opened or closed, width of the window)
+    if (this.$refs.home && window.ResizeObserver) {
+      this.heroObserver = new ResizeObserver(() => this.updateHeroBottom())
+      this.heroObserver.observe(this.$refs.home)
+      if (this.$refs.hero) {
+        this.heroObserver.observe(this.$refs.hero)
+      }
+    }
+    this.loadHeroImages()
+    this.startHeroTimer()
     this.updateStatsVisible()
     window.addEventListener('resize', this.updateStatsVisible)
     this.loadCropGroups()
@@ -866,10 +1011,11 @@ export default {
   --home-news-updates-bg: #e6f0fb; --home-news-updates-fg: #2c6aa8;
   --home-news-data-bg: #fdf3d6; --home-news-data-fg: #946f0c;
 
-  /* 1240px was 10 of 12 grid columns: one more column on each side (12 of 12) */
-  max-width: 1488px;
-  margin: 0 auto;
-  padding: 0.5rem 0 3rem;
+  /* 1240px was 10 of 12 grid columns: one more column on each side (12 of 12). Kept with paddings: the images of
+     the hero go from edge to edge behind the page. Its own layer, so they can be drawn under everything in it. */
+  position: relative;
+  z-index: 0;
+  padding: 0.5rem max(0px, calc((100% - 1488px) / 2)) 3rem;
   font-family: 'DM Sans', -apple-system, 'Segoe UI', Roboto, sans-serif;
   color: var(--home-text);
 }
@@ -912,30 +1058,73 @@ body.dark-mode .home {
 }
 
 /* Hero */
-.home-eyebrow {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  font-size: 0.8rem;
-  font-weight: 500;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--home-muted);
+/* The images of the carousel: over the gutters of the container and up to the navigation, under everything of the
+   page, blurred, with a veil so the text stays readable, fading into the page (light or dark) in their lower part */
+.home-backdrop {
+  position: absolute;
+  z-index: -1;
+  top: -1.75rem;
+  left: -15px;
+  right: -15px;
+  /* Without the measure of the hero (set as a style): about its height */
+  height: 18rem;
+  overflow: hidden;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(to bottom, #000 72%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 72%, transparent 100%);
 }
-.home-eyebrow-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--home-dot);
+.home-hero-image {
+  position: absolute;
+  /* Larger than the area so the blurred edges stay outside of it */
+  inset: -24px;
+  background-position: center;
+  background-size: cover;
+  filter: blur(8px);
+  opacity: 0;
+  transition: opacity 2s ease-in-out;
+}
+.home-hero-image.active {
+  opacity: 1;
+}
+.home-hero-veil {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.72);
+}
+body.dark-mode .home-hero-veil {
+  background: rgba(31, 34, 35, 0.78);
+}
+/* The texts in the same place (the block takes the longest one); the title and text change with the image, the
+   old one fading out while the new one fades in. One column wider than the text was (780px + 124px). */
+.home-hero-slides {
+  display: grid;
+  max-width: 904px;
+}
+.home-hero-text {
+  grid-area: 1 / 1;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 1s ease-in-out;
+}
+.home-hero-text.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-hero-image,
+  .home-hero-text {
+    transition: none;
+  }
 }
 .home-title {
   font-size: 2.9rem;
   font-weight: 500;
+  /* Fixed (the titles are not h1 elements, see the hero) */
+  line-height: 1.2;
   letter-spacing: -0.01em;
   margin: 0.75rem 0 1rem;
 }
 .home-lead {
-  max-width: 780px;
   font-size: 1.25rem;
   line-height: 1.6;
   color: var(--home-muted);
@@ -995,7 +1184,10 @@ body.dark-mode .home {
   grid-template-columns: repeat(5, 1fr);
   gap: 1.25rem;
 }
+/* A link as a whole: no underline, the colours of the card */
 .home-crop-card {
+  color: inherit;
+  text-decoration: none;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1006,6 +1198,8 @@ body.dark-mode .home {
   transition: box-shadow 0.15s, transform 0.15s;
 }
 .home-crop-card:hover {
+  color: inherit;
+  text-decoration: none;
   box-shadow: 0 6px 20px var(--home-shadow);
   transform: translateY(-2px);
 }
@@ -1028,15 +1222,6 @@ body.dark-mode .home {
   color: var(--home-muted);
   margin-top: 0.3rem;
 }
-.home-crop-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  margin-top: 1.1rem;
-  font-size: 0.9rem;
-  font-weight: 500;
-  color: var(--home-green);
-}
 
 /* Crop without accessions: the card and everything inside it is greyed out and not interactive */
 .home-crop-card.disabled {
@@ -1047,9 +1232,6 @@ body.dark-mode .home {
 .home-crop-card.disabled:hover {
   box-shadow: none;
   transform: none;
-}
-.home-crop-link.disabled {
-  pointer-events: none;
 }
 
 .home-crop-wheat { background: var(--home-wheat-bg); border-color: var(--home-wheat-border); color: var(--home-wheat-fg); }
@@ -1212,6 +1394,13 @@ body.dark-mode .home {
   font-size: 0.9rem;
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s;
+}
+/* The line under the others: closer to them, its button as wide as one of three on the line above */
+.home-add-actions-more {
+  padding-top: 0;
+}
+.home-add-actions-more .home-add-action {
+  flex: 0 0 calc((100% - 1.5rem) / 3);
 }
 .home-add-action:hover {
   background: var(--home-surface-hover);

@@ -2,7 +2,7 @@
   <div class="custom-page search-page">
     <!-- The search, centred: the same module as on the home page (SearchModule), its results shown here -->
     <div class="search-page-top">
-      <h1 class="search-page-title">Search</h1>
+      <h1 class="search-page-title">{{ $t('inputPlaceholderSearch') }}</h1>
       <SearchModule inline
                     :initialTerm="initialTerm"
                     :initialScope="initialScope"
@@ -59,7 +59,7 @@ import MapDefinitionTable from '@/components/tables/MapDefinitionTable'
 import DatasetAttributeTable from '@/components/tables/DatasetAttributeTable'
 import PedigreeResults from '@/components/search/PedigreeResults'
 import ColumnsMixin from '@/const/database-columns.js'
-import { apiPostGermplasmTable, apiPostGermplasmTableIds, apiPostGermplasmPolygonTable, apiPostGermplasmPolygonTableIds, apiPostGermplasmAttributeTable, apiPostPedigreeTable } from '@/mixins/api/germplasm'
+import { apiPostGroupGermplasmTable, apiPostGroupGermplasmTableIds, apiPostGermplasmTable, apiPostGermplasmTableIds, apiPostGermplasmPolygonTable, apiPostGermplasmPolygonTableIds, apiPostGermplasmAttributeTable, apiPostPedigreeTable } from '@/mixins/api/germplasm'
 import { apiPostDatasetTable, apiPostDatasetAttributeTable } from '@/mixins/api/dataset'
 import { apiPostTraitTable, apiPostTraitTableIds, apiPostTrialsDataTable, apiPostTrialsDataTableIds } from '@/mixins/api/trait'
 import { apiPostClimateTable } from '@/mixins/api/climate'
@@ -84,8 +84,22 @@ const TABLES = [
   { key: 'locations', title: 'Locations', component: LocationTable, api: apiPostLocationTable, idsApi: apiPostLocationTableIds, polygonApi: apiPostLocationPolygonTable, polygonIdsApi: apiPostLocationPolygonTableIds, searchable: 'TABLE_COLUMNS_LOCATION_SEARCHABLE' },
   { key: 'traits', title: 'Traits', component: TraitTable, api: apiPostTraitTable, idsApi: apiPostTraitTableIds, allColumns: ['traitName', 'traitNameShort', 'traitDescription'] },
   { key: 'climates', title: 'Climates', component: ClimateTable, api: apiPostClimateTable, allColumns: ['climateName', 'climateNameShort', 'climateDescription'] },
-  { key: 'maps', title: 'Genotypic maps', component: MapTable, api: apiPostMapsTable, allColumns: ['mapName', 'mapDescription'] }
+  { key: 'maps', title: 'Genotypic maps', component: MapTable, api: apiPostMapsTable, allColumns: ['mapName', 'mapDescription'] },
+  // The members of a germplasm group (a flagship crop of the home page): only opened with a group ("groupOnly"), never
+  // searched with everything
+  { key: 'groupGermplasm', title: 'Germplasm', component: GermplasmTable, groupApi: apiPostGroupGermplasmTable, groupIdsApi: apiPostGroupGermplasmTableIds, groupOnly: true }
 ]
+
+// The request functions of a table for a search: those of its group, of the area drawn (polygons) or the usual ones
+const getTableApis = (table, search) => {
+  if (table.groupApi) {
+    return {
+      api: (data, onSuccess, onError) => table.groupApi(search.groupId, data, onSuccess, onError),
+      idsApi: (data, onSuccess, onError) => table.groupIdsApi(search.groupId, data, onSuccess, onError)
+    }
+  }
+  return search.polygons ? { api: table.polygonApi, idsApi: table.polygonIdsApi } : { api: table.api, idsApi: table.idsApi }
+}
 
 // Comparators each type of column takes (as on the legacy search page); other types (text) take any of them
 const VALID_COMPARATORS_FOR_TYPE = {
@@ -182,8 +196,7 @@ export default {
         .filter(table => this.countsLoaded ? (this.search.counts[table.key] || 0) > 0 : !this.search.all)
         .map(table => {
           const search = this.search.tables[table.key]
-          const api = search.polygons ? table.polygonApi : table.api
-          const idsApi = search.polygons ? table.polygonIdsApi : table.idsApi
+          const { api, idsApi } = getTableApis(table, search)
           return {
             key: table.key,
             title: table.title,
@@ -203,7 +216,7 @@ export default {
       this.countsLoaded = false
       // Everything: every table, with the text in its main columns
       if (event.scope === 'all') {
-        const tables = TABLES.reduce((all, table) => ({
+        const tables = TABLES.filter(table => !table.groupOnly).reduce((all, table) => ({
           ...all,
           [table.key]: { filter: getAllFilter(table, event.term, event.comparator) }
         }), {})
@@ -216,7 +229,8 @@ export default {
         id: this.searchCount,
         all: false,
         crumbs: event.crumbs,
-        tables: { [event.tableName]: { filter: event.filter || [], polygons: event.polygons || null, openDetails: event.openDetails || null } },
+        // A flagship crop: the members of its group (groupId)
+        tables: { [event.tableName]: { filter: event.filter || [], polygons: event.polygons || null, openDetails: event.openDetails || null, groupId: event.groupId || null } },
         counts: {}
       }
       // Counted too, to tell when nothing was found
@@ -237,6 +251,8 @@ export default {
           scope: query.searchScope,
           tableName: query.searchTable,
           filter: JSON.parse(query.searchFilter),
+          // The members of a group (a flagship crop of the home page)
+          groupId: query.searchGroup ? parseInt(query.searchGroup) : null,
           crumbs: query.searchCrumbs ? JSON.parse(query.searchCrumbs) : [query.searchScope]
         })
       } catch (e) {
@@ -249,7 +265,7 @@ export default {
       // The tables of the search (an area drawn: their polygon search)
       Promise.all(TABLES.filter(table => search.tables[table.key]).map(table => new Promise(resolve => {
         const tableSearch = search.tables[table.key]
-        const api = tableSearch.polygons ? table.polygonApi : table.api
+        const { api } = getTableApis(table, tableSearch)
         api(withSearch({ page: 1, limit: 1, prevCount: -1 }, tableSearch), result => resolve([table.key, (result && result.count) || 0]), { codes: [], callback: () => resolve([table.key, 0]) })
       }))).then(counts => {
         // A newer search meanwhile: that one counts
@@ -309,6 +325,12 @@ export default {
   border-color: var(--cp-border) var(--cp-border) var(--cp-surface);
   background: var(--cp-surface);
   color: var(--cp-text);
+}
+/* Dark mode: the dark theme gives the selected tab a lighter line at the bottom; it stays open on its content */
+body.dark-mode .search-page-tabs >>> .search-page-tabs-nav .nav-link.active,
+body.dark-mode .search-page-tabs >>> .search-page-tabs-nav .nav-link.active:focus {
+  border-color: var(--cp-border) var(--cp-border) var(--cp-surface);
+  background: var(--cp-surface);
 }
 /* Name of a tab: cut with "..." when long (many tabs) */
 .search-page-tab-title {

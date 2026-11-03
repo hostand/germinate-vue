@@ -214,6 +214,11 @@ $grid-breakpoints: (
 // Academic icons (ORCID, Google Scholar, DOI, ...): <i class="ai ai-orcid" /> or the AcademicIcon component
 @import '~academicons/css/academicons.min.css';
 
+/* Popovers (title and text) in the font of the new pages */
+.popover {
+  font-family: 'DM Sans', -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
 .card-columns {
   @include media-breakpoint-only(sm) {
     column-count: 1;

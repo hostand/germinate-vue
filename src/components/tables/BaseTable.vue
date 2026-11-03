@@ -1,8 +1,9 @@
 <template>
   <div class="base-table mb-3" :id="id">
     <div>
-      <!-- Filter display -->
-      <div v-if="filter" class="mb-2">
+      <!-- Filter display: as the breadcrumb of the Search page, or as badges -->
+      <SearchCrumbs v-if="filterCrumbs && filter && filter.length > 0" :crumbs="filterCrumbTexts" class="base-table-crumbs" />
+      <div v-else-if="filter" class="mb-2">
         <span v-for="(f, index) in filter" :key="f.column.name">
           <!-- Comparison -->
           <b-badge :variant="isValidFilter(f) ? 'info' : 'danger'" class="mr-2" v-b-tooltip="isValidFilter(f) ? null : $t('tooltipTableFilterInvalid')" >
@@ -215,6 +216,7 @@ import TableFilter from '@/components/tables/TableFilter'
 import Tour from '@/components/util/Tour'
 import { apiPutGroup, apiPatchGroupMembers, apiGetGroupTypes } from '@/mixins/api/group'
 import { operators, comparators } from '@/mixins/search'
+import SearchCrumbs from '@/components/search/SearchCrumbs'
 import { groupTypes } from '@/mixins/types'
 import { getDateTimeString } from '@/mixins/formatting'
 import { uuidv4, getTableColumnStyle, downloadBlob } from '@/mixins/util'
@@ -228,6 +230,11 @@ const emitter = require('tiny-emitter/instance')
 export default {
   name: 'base-table',
   props: {
+    // The filters above the table as the breadcrumb of the Search page (instead of badges)
+    filterCrumbs: {
+      type: Boolean,
+      default: false
+    },
     showAllItems: {
       type: Boolean,
       default: null
@@ -358,12 +365,17 @@ export default {
         return this.columns.some(c => c.key === 'selected')
       }
     },
+    // The text of each filter, as on the badges, for the breadcrumb
+    filterCrumbTexts: function () {
+      return (this.filter || []).map(f => (this.filterLabel && this.filterLabel(f)) || this.getFilterText(f))
+    },
     reformattedColumns: function () {
       if (this.columns) {
         return this.columns.map(c => {
           const result = Object.assign({}, c)
 
-          let clazz = result.class || ''
+          // The key as a class too, so a page can style a column (e.g. bt-col-germplasmPuid)
+          let clazz = `${result.class || ''} bt-col-${c.key}`
           if (this.options && this.options.tableName) {
             clazz = `${clazz} ${getTableColumnStyle(this.options.tableName, c.key)}`
           }
@@ -384,6 +396,7 @@ export default {
   components: {
     MdiIcon,
     GroupEditAddModal,
+    SearchCrumbs,
     MarkedItems,
     TableFilter,
     Tour
@@ -456,6 +469,12 @@ export default {
         count: this.pagination.totalCount
       })
     },
+    // As the delete button of the table filter
+    clearFilter: function () {
+      if (this.$refs.tableFilter) {
+        this.$refs.tableFilter.clearFilter()
+      }
+    },
     refresh: function () {
       this.pagination.totalCount = -1
       this.selectedItems = []
@@ -481,6 +500,12 @@ export default {
       } else {
         this.$store.dispatch('removeMarkedIds', { type: this.itemType, ids: [id] })
       }
+    },
+    // "'Column' comparator 'values'" of a filter
+    getFilterText: function (f) {
+      const column = this.columns.find(c => c.key === f.column)
+      const comparator = comparators[f.comparator]
+      return `'${column ? column.label : f.column}' ${comparator ? comparator.text() : f.comparator} '${(f.values || []).filter(v => v !== null).join(', ')}'`
     },
     isValidFilter: function (filter) {
       if (filter.column.type === Number) {

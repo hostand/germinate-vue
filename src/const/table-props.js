@@ -42,6 +42,11 @@ export default {
     }
   },
   FULL: {
+    // The filters above the table as the breadcrumb of the Search page (instead of badges)
+    filterCrumbs: {
+      type: Boolean,
+      default: false
+    },
     downloadTable: {
       type: Function,
       default: null

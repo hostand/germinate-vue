@@ -1,10 +1,8 @@
 <template>
-  <div>
-    <div :class="`my-3 ${storeActiveStory ? '' : 'pt-3'} d-flex justify-content-between align-items-center`">
-      <div class="d-flex align-items-center">
-        <b-img-lazy width="48" height="48" :src="`${storeBaseUrl}image/src-svg/crop.svg`" onerror="this.onerror=null;this.src='null';" alt="Crop logo" />
-        <h5 class="my-0 ml-3">{{ $t('germinateTitle') }}</h5>
-      </div>
+  <!-- No title above the pages (logo, name of the database, line): only a space between the navigation and the page,
+       and the selected projects when there are some -->
+  <div :class="['page-header-space', { 'page-header-story': storeActiveStory }]">
+    <div class="d-flex justify-content-end mb-3" v-if="selectedProjects && selectedProjects.length > 0">
       <div class="d-flex flex-row flex-wrap justify-content-end">
         <!-- Selected projects -->
         <h5 v-if="selectedProjects && selectedProjects.length > 0"
@@ -34,26 +32,9 @@
             <span :class="{ 'text-danger': selectedProjects.length >= 1 }"><MdiIcon :path="mdiDelete" /></span>
           </b-badge>
         </h5>
-        <!-- Badges for marked items -->
-        <h5 v-for="itemType in Object.keys(markedItemTypes)"
-            :key="`item-type-${itemType}`"
-            class="d-flex align-items-stretch mx-1 marked-item-badges">
-          <router-link :to="{ name: Pages.markedItemsType, params: { itemType: itemType } }" class="d-flex align-items-stretch" v-b-tooltip="`${markedItemTypes[itemType].text()}: ${storeMarkedIds[itemType].length.toLocaleString()}`">
-            <b-badge :style="{ backgroundColor: markedItemTypes[itemType].color(), color: getHighContrastTextColor(markedItemTypes[itemType].color()) }">
-              <MdiIcon :path="markedItemTypes[itemType].path" />
-            </b-badge>
-            <b-badge>{{ getNumberWithSuffix(storeMarkedIds[itemType].length, 1) }}</b-badge>
-          </router-link>
-          <b-badge :href="storeMarkedIds[itemType].length < 1 ? null : '#'"
-                   :disabled="storeMarkedIds[itemType].length < 1"
-                   @click.prevent="storeMarkedIds[itemType].length < 1 ? null : clearMarkedItems(itemType)"
-                   v-b-tooltip="$t('chartTooltipMarkedItemsClear')">
-            <span :class="{ 'text-danger': storeMarkedIds[itemType].length >= 1 }"><MdiIcon :path="mdiDelete" /></span>
-          </b-badge>
-        </h5>
+        <!-- Marked items: in the top navigation (MarkedItemsDropdown) -->
       </div>
     </div>
-    <hr />
   </div>
 </template>
 
@@ -165,6 +146,14 @@ export default {
 </script>
 
 <style scoped>
+/* The space between the navigation and the page */
+.page-header-space {
+  padding-top: 1.75rem;
+}
+/* Under the navigation of a story: a little less */
+.page-header-space.page-header-story {
+  padding-top: 1rem;
+}
 #popover-target-projects:hover {
   cursor: pointer;
 }
