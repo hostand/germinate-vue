@@ -1,0 +1,80 @@
+/*
+ * Modals in the look of the custom pages: give the b-modal modal-class="cp-modal" and content-class="custom-page" (the
+ * tokens of custom-page.css), and use the "cp-modal-button" buttons (outlined, "is-primary" in green).
+ */
+/* Custom look: a rounded card in the font and colours of the custom pages, no lines between header, body and footer */
+.cp-modal .modal-content {
+  border: 1px solid var(--cp-border);
+  border-radius: 16px;
+  background: var(--cp-surface);
+  color: var(--cp-text);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.18);
+  font-family: 'DM Sans', -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+.cp-modal .modal-header,
+.cp-modal .modal-footer {
+  border: none;
+  padding: 1.1rem 1.5rem;
+}
+.cp-modal .modal-header {
+  padding-bottom: 0.25rem;
+}
+.cp-modal .modal-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+.cp-modal .modal-header .close {
+  color: var(--cp-muted);
+  text-shadow: none;
+  opacity: 1;
+}
+.cp-modal .modal-header .close:hover {
+  color: var(--cp-text);
+}
+.cp-modal .modal-body {
+  padding: 1rem 1.5rem;
+}
+.cp-modal .modal-footer {
+  gap: 0.5rem;
+  padding-top: 0.25rem;
+}
+.cp-modal .modal-footer > * {
+  margin: 0;
+}
+.cp-modal .col-form-label,
+.cp-modal legend {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--cp-text-subtle);
+}
+/* Buttons: outlined, the main one in green */
+.cp-modal-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  height: 40px;
+  padding: 0 1.1rem;
+  border: 1px solid var(--cp-border);
+  border-radius: 10px;
+  background: var(--cp-surface);
+  color: var(--cp-text);
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+.cp-modal-button:hover,
+.cp-modal-button:focus {
+  border-color: var(--cp-muted);
+  background: var(--cp-surface-hover);
+}
+.cp-modal-button.is-primary {
+  border-color: var(--cp-button);
+  background: var(--cp-button);
+  color: var(--cp-on-button);
+}
+.cp-modal-button.is-primary:hover,
+.cp-modal-button.is-primary:focus {
+  border-color: var(--cp-button-hover);
+  background: var(--cp-button-hover);
+}

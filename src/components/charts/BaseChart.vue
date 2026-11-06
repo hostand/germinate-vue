@@ -3,16 +3,25 @@
     <div class="text-right">
       <!-- Chart options -->
       <b-button-group>
-        <b-dropdown no-caret right v-b-tooltip.hover="$t('chartTooltipOptions')" id="additional-options">
+        <b-dropdown no-caret right v-b-tooltip.hover="$t('chartTooltipOptions')" id="additional-options" :menu-class="customLook ? 'top-nav-menu cp-chart-menu' : null">
           <template v-slot:button-content>
-            <MdiIcon :path="mdiDotsVertical" />
+            <i class="fa-solid fa-ellipsis-vertical" aria-hidden="true" v-if="customLook" />
+            <MdiIcon :path="mdiDotsVertical" v-else />
             <slot name="buttonContent" />
           </template>
-          <!-- Download options -->
-          <b-dropdown-item @click="getFilename('png')" v-if="supportsPngDownload"><MdiIcon :path="mdiFileImage" /> {{ $t('buttonDownloadPng') }}</b-dropdown-item>
-          <b-dropdown-item @click="getFilename('svg')" v-if="supportsSvgDownload"><MdiIcon :path="mdiFileCode" /> {{ $t('buttonDownloadSvg') }}</b-dropdown-item>
-          <b-dropdown-item @click="downloadSource()" v-if="sourceFile"><MdiIcon :path="mdiFileDocument" /> {{ $t('buttonDownloadFile') }}</b-dropdown-item>
-          <b-dropdown-item @click="$refs.customChartColorModal.show()" v-if="canChangeColors"><MdiIcon :path="mdiPalette" /> {{ $t('buttonChangeChartColors') }}</b-dropdown-item>
+          <!-- Download options (custom look: the rows of the tools menu of the passport page, Font Awesome icons) -->
+          <template v-if="customLook">
+            <b-dropdown-item link-class="top-nav-menu-item" @click="getFilename('png')" v-if="supportsPngDownload"><i class="fa-solid fa-image fa-fw" aria-hidden="true" /> {{ $t('buttonDownloadPng') }}</b-dropdown-item>
+            <b-dropdown-item link-class="top-nav-menu-item" @click="getFilename('svg')" v-if="supportsSvgDownload"><i class="fa-solid fa-file-code fa-fw" aria-hidden="true" /> {{ $t('buttonDownloadSvg') }}</b-dropdown-item>
+            <b-dropdown-item link-class="top-nav-menu-item" @click="downloadSource()" v-if="sourceFile"><i class="fa-solid fa-file-lines fa-fw" aria-hidden="true" /> {{ $t('buttonDownloadFile') }}</b-dropdown-item>
+            <b-dropdown-item link-class="top-nav-menu-item" @click="$refs.customChartColorModal.show()" v-if="canChangeColors"><i class="fa-solid fa-palette fa-fw" aria-hidden="true" /> {{ $t('buttonChangeChartColors') }}</b-dropdown-item>
+          </template>
+          <template v-else>
+            <b-dropdown-item @click="getFilename('png')" v-if="supportsPngDownload"><MdiIcon :path="mdiFileImage" /> {{ $t('buttonDownloadPng') }}</b-dropdown-item>
+            <b-dropdown-item @click="getFilename('svg')" v-if="supportsSvgDownload"><MdiIcon :path="mdiFileCode" /> {{ $t('buttonDownloadSvg') }}</b-dropdown-item>
+            <b-dropdown-item @click="downloadSource()" v-if="sourceFile"><MdiIcon :path="mdiFileDocument" /> {{ $t('buttonDownloadFile') }}</b-dropdown-item>
+            <b-dropdown-item @click="$refs.customChartColorModal.show()" v-if="canChangeColors"><MdiIcon :path="mdiPalette" /> {{ $t('buttonChangeChartColors') }}</b-dropdown-item>
+          </template>
           <!-- Additional options -->
           <slot name="additionalMenuItems" />
         </b-dropdown>
@@ -38,7 +47,7 @@
       </b-form>
     </b-modal>
 
-    <CustomChartColorModal ref="customChartColorModal" v-on:colors-changed="onColorsChanged" />
+    <CustomChartColorModal ref="customChartColorModal" :customLook="customLook" v-on:colors-changed="onColorsChanged" />
   </div>
 </template>
 
@@ -73,6 +82,11 @@ export default {
     ])
   },
   props: {
+    // In the look of the custom pages: the menu as the tools menu of the passport page, Font Awesome icons
+    customLook: {
+      type: Boolean,
+      default: false
+    },
     width: {
       type: Function,
       default: () => 1280
@@ -166,6 +180,24 @@ export default {
 </script>
 
 <style>
+/* Custom look: the options menu as the tools menu of the passport page (top-nav-dropdown.css): no lines between the
+   options, the texts on the left */
+.dropdown-menu.top-nav-menu.cp-chart-menu {
+  min-width: 12rem;
+  margin-top: 10px;
+  text-align: left;
+}
+.cp-chart-menu .top-nav-menu-item {
+  justify-content: flex-start;
+  border-top: none;
+}
+.cp-chart-menu > li:first-child .top-nav-menu-item {
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
+}
+.cp-chart-menu .top-nav-menu-item > i {
+  color: var(--cp-green, #3b6b35);
+}
 .text-center .plotly .svg-container {
   margin-left: auto!important;
   margin-right: auto!important;

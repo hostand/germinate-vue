@@ -2,7 +2,7 @@
   <div :class="`${selectionMode === 'point' ? 'point-search' : ''}`">
     <!-- The map itself -->
     <l-map
-      :class="`location-map ${border}`"
+      :class="`location-map ${border}${customLook ? ' location-map-custom' : ''}`"
       :center="center"
       ref="map"
       @click="onClick"
@@ -45,7 +45,7 @@
     <!-- Add color gradient for heatmapping -->
     <ColorGradient v-if="mapType === 'heatmap'" ref="gradient" />
     <!-- Popup content -->
-    <div v-if="location" ref="popupContent" class="p-3">
+    <div v-if="location" ref="popupContent" :class="customLook ? 'lm-popup' : 'p-3'">
       <dl class="row">
         <dt class="col-4 text-right">{{ $t('tableColumnLocationName') }}</dt>
         <dd class="col-8 location-name">
@@ -165,6 +165,11 @@ export default {
     border: {
       type: String,
       default: 'border'
+    },
+    // In the look of the custom pages: the details popup as a rounded card, labels above the values
+    customLook: {
+      type: Boolean,
+      default: false
     },
     // Base layer to start with ("osm", "theme" or "satellite"). By default the layer last chosen by the user is used.
     baseLayer: {
@@ -638,6 +643,7 @@ export default {
 }
 </script>
 
+<style src="@/assets/location-map-popup.css"></style>
 <style>
 .location-map {
   position: relative;
@@ -680,6 +686,7 @@ export default {
 .location-map dl.row {
   margin-bottom: 0;
 }
+
 .location-map #settings-button {
   width: 28px;
   height: 28px;

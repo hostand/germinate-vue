@@ -120,18 +120,16 @@
           </div>
 
           <div v-show="open.publications">
-            <div class="home-recent-item" v-for="publication in recentPublications" :key="'recent-publication-' + publication.id">
-              <!-- Opens the DOI in a new window. A publication with a DOI has the DOI icon on top, like a small notification badge. -->
-              <a v-if="publication.url" :href="publication.url" target="_blank" rel="noopener noreferrer" class="home-recent-icon home-recent-link" :title="publication.url">
-                <MdiIcon :path="icons.openInNew" :size="16" />
-                <span class="home-recent-doi" v-if="publication.hasDoi" aria-hidden="true"><i class="ai ai-doi" /></span>
-              </a>
-              <span v-else class="home-recent-icon home-recent-link disabled"><MdiIcon :path="icons.openInNew" :size="16" /></span>
+            <!-- The whole row opens the publication on the publications page, in its Details tab -->
+            <div class="home-recent-item home-publication-item" v-for="publication in recentPublications" :key="'recent-publication-' + publication.id"
+                 role="link" tabindex="0" @click="openPublication(publication)" @keydown.enter="openPublication(publication)">
+              <!-- The icon of the publications (sidebar menu) -->
+              <span class="home-recent-icon home-recent-link home-publication-icon" aria-hidden="true"><i class="fa-solid fa-book" /></span>
               <div class="home-recent-body">
                 <div class="home-recent-title" :title="publication.title">{{ publication.title }}</div>
                 <div class="home-recent-meta" v-if="publication.journal">{{ publication.journal }}</div>
                 <!-- Takes the publication off the home page: removes its links to the database and to accessions -->
-                <b-button v-if="canAddContent" variant="link" class="home-recent-delete text-danger" @click="deleteRecentPublication(publication)">{{ $t('buttonDelete') }}</b-button>
+                <b-button v-if="canAddContent" variant="link" class="home-recent-delete text-danger" @click.stop="deleteRecentPublication(publication)" @keydown.enter.stop>{{ $t('buttonDelete') }}</b-button>
               </div>
               <div class="home-recent-side">
                 <!-- Crossref: with its icon, in the size of the text -->
@@ -891,6 +889,10 @@ export default {
     },
     // Germinate cannot delete a publication itself, so this removes its links to the database (which takes it off this
     // list) and to accessions. Links to datasets, groups and experiments are not known here and are kept.
+    // The publication in the Details tab of the publications page
+    openPublication: function (publication) {
+      this.$router.push({ name: Pages.publicationDetails, params: { publicationId: publication.id } })
+    },
     deleteRecentPublication: function (publication) {
       this.$bvModal.msgBoxConfirm(this.$t('modalTitleSure'), {
         okVariant: 'danger',
@@ -1549,18 +1551,21 @@ body.dark-mode .home-hero-veil {
 .home-recent-link.disabled {
   opacity: 0.5;
 }
-/* DOI mark on the open-in-new icon, at its top left like a small notification badge (the icon alone, in black) */
-.home-recent-doi {
-  position: absolute;
-  top: -8px;
-  left: -9px;
-  display: inline-flex;
-  color: #000000;
-  font-size: 18px;
-  line-height: 1;
+/* Publication rows open the publication: hover as the news rows */
+.home-publication-item {
+  cursor: pointer;
 }
-body.dark-mode .home-recent-doi {
-  color: #e8e6e3;
+.home-publication-item:hover,
+.home-publication-item:focus {
+  background: var(--home-surface-hover);
+  outline: none;
+}
+.home-publication-item:hover .home-recent-link,
+.home-publication-item:focus .home-recent-link {
+  color: var(--home-text);
+}
+.home-publication-icon .fa-book {
+  font-size: 14px;
 }
 /* Icon inside a badge (Crossref): a bit bigger than its text, which keeps its size */
 .home-badge-icon {

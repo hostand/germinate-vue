@@ -1,7 +1,7 @@
 <template>
   <!-- Recently viewed germplasm, the same list as "Recently viewed items" on the germplasm page. Hidden when empty. -->
-  <section class="rvp" v-if="items.length > 0">
-    <div class="rvp-header" @click="open = !open">
+  <section :class="['rvp', { 'rvp-bare': bare }]" v-if="items.length > 0">
+    <div class="rvp-header" @click="open = !open" v-if="!bare">
       <h2 class="rvp-title">{{ $t('widgetRecentItemsTitle') }}</h2>
       <!-- Clear sits left of the collapse chevron -->
       <div class="rvp-tools">
@@ -14,7 +14,7 @@
       </div>
     </div>
 
-    <div v-show="open">
+    <div v-show="open || bare">
       <!-- Accession numbers side by side, wrapping onto new lines, most recent first -->
       <div class="rvp-items">
         <template v-for="item in itemsOnPage">
@@ -55,6 +55,11 @@ export default {
     MdiIcon
   },
   props: {
+    // Only the items (and the pages), without frame, title, Clear and chevron: inside a block of the page
+    bare: {
+      type: Boolean,
+      default: false
+    },
     // Germplasm open on the page, highlighted and not linked
     currentId: {
       type: Number,
@@ -142,6 +147,24 @@ export default {
   border: 1px solid var(--cp-border);
   border-radius: 12px;
   overflow: hidden;
+}
+.rvp-bare {
+  border: none;
+  border-radius: 0;
+  background: transparent;
+}
+.rvp-bare .rvp-items {
+  gap: 0.55rem;
+  padding: 0;
+}
+/* Inside a block of the page: bigger chips */
+.rvp-bare .rvp-item {
+  padding: 0.35rem 0.95rem;
+  font-size: 0.95rem;
+}
+.rvp-bare .rvp-pager {
+  padding-left: 0;
+  padding-right: 0;
 }
 .rvp-header {
   display: flex;

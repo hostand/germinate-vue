@@ -230,6 +230,11 @@ const emitter = require('tiny-emitter/instance')
 export default {
   name: 'base-table',
   props: {
+    // Page and sorting not read from nor written to the URL (another table of the same name on the page)
+    noUrlParams: {
+      type: Boolean,
+      default: false
+    },
     // The filters above the table as the breadcrumb of the Search page (instead of badges)
     filterCrumbs: {
       type: Boolean,
@@ -425,7 +430,7 @@ export default {
       }
     },
     updateQuery: async function (newValue) {
-      if (this.storeUrlParameters) {
+      if (this.storeUrlParameters && !this.noUrlParams) {
         const query = Object.assign({}, this.$route.query)
         query[`${this.options.tableName}-page`] = newValue
 
@@ -433,7 +438,7 @@ export default {
       }
     },
     updateSort: async function (ctx) {
-      if (this.storeUrlParameters) {
+      if (this.storeUrlParameters && !this.noUrlParams) {
         const query = Object.assign({}, this.$route.query)
         if (ctx.sortBy) {
           query[`${this.options.tableName}-sort`] = ctx.sortBy
@@ -754,7 +759,7 @@ export default {
     },
     readUrlParams: function () {
       // Check the URL query parameters and adjust the pagination and sorting
-      if (this.$route.query) {
+      if (this.$route.query && !this.noUrlParams) {
         if (this.$route.query[`${this.options.tableName}-page`]) {
           this.pagination.currentPage = +this.$route.query[`${this.options.tableName}-page`]
         }

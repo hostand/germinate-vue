@@ -1,24 +1,23 @@
 <template>
-  <div>
-    <h1>{{ $t('pageMarkersTitle') }}</h1>
-    <hr />
-    <p>{{ $t('pageMarkersText') }}</p>
+  <!-- Markers in the look of the custom pages: only the title and the table -->
+  <div class="custom-page markers-page">
+    <header class="cp-page-header">
+      <h1 class="cp-page-title">{{ $t('pageMarkersTitle') }}</h1>
+    </header>
 
-    <RecentItems itemType="markers" />
-
-    <MarkerTable :getData="getData" :getIds="getIds"/>
+    <div class="mk-table">
+      <MarkerTable :getData="getData" :getIds="getIds"/>
+    </div>
   </div>
 </template>
 
 <script>
 import MarkerTable from '@/components/tables/MarkerTable'
-import RecentItems from '@/components/util/RecentItems'
 import { apiPostMarkerTable, apiPostMarkerTableIds } from '@/mixins/api/genotype.js'
 
 export default {
   components: {
-    MarkerTable,
-    RecentItems
+    MarkerTable
   },
   methods: {
     getData: function (data, callback) {
@@ -31,6 +30,12 @@ export default {
 }
 </script>
 
-<style>
-
+<style src="@/assets/custom-page.css"></style>
+<style scoped>
+.markers-page {
+  padding: 0.5rem 0 3rem;
+}
+.mk-table {
+  margin-top: 2rem;
+}
 </style>

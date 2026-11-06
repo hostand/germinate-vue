@@ -1,8 +1,11 @@
 <template>
+  <!-- show-one-child: a single menu of the first level open at a time. It closes when another one opens or when a page
+       outside of it is opened (on a route change, the open menus not containing the current page close). -->
   <sidebar-menu :menu="menu"
                 :width="width"
                 widthCollapsed="65px"
                 :collapsed="collapsed"
+                :show-one-child="true"
                 @item-click="onItemClick"
                 @toggle-collapse="ev => $emit('toggle-collapse', ev)">
     <span slot="toggle-icon">
@@ -18,7 +21,6 @@
 <script>
 import MdiIcon from '@/components/icons/MdiIcon'
 import SidebarIcon from '@/components/icons/SidebarIcon'
-import SidebarLogoComponent from '@/components/structure/SidebarLogoComponent'
 
 import { mapGetters } from 'vuex'
 import { SidebarMenu } from 'vue-sidebar-menu'
@@ -26,7 +28,7 @@ import 'vue-sidebar-menu/dist/vue-sidebar-menu.css'
 
 import { getNumberWithSuffix } from '@/mixins/formatting'
 
-import { mdiArrowCollapseLeft, mdiArrowCollapseRight, mdiViewGridPlusOutline, mdiChartAreaspline, mdiBookOpenPageVariant, mdiChartGantt, mdiChartSankey, mdiChevronRight, mdiDatabase, mdiDna, mdiEarth, mdiFileDownload, mdiFolderTable, mdiFormatIndentIncrease, mdiGroup, mdiHarddisk, mdiHome, mdiImageMultiple, mdiInformation, mdiInformationOutline, mdiMagnify, mdiMap, mdiMapSearch, mdiNewspaperVariant, mdiPulse, mdiReorderVertical, mdiShovel, mdiSprout, mdiTagMultiple, mdiTagTextOutline, mdiWeatherSnowyRainy, mdiClipboardList, mdiApplicationBrackets, mdiTableArrowLeft, mdiTelevisionPlay } from '@mdi/js'
+import { mdiArrowCollapseLeft, mdiArrowCollapseRight, mdiViewGridPlusOutline, mdiChartAreaspline, mdiChartGantt, mdiChevronRight, mdiClipboardList } from '@mdi/js'
 
 import { apiGetOverviewStats } from '@/mixins/api/stats'
 import { apiPostFileResourceTable } from '@/mixins/api/dataset'
@@ -50,7 +52,6 @@ const videoFilter = [{
 }]
 
 const emitter = require('tiny-emitter/instance')
-const germinateLogo = 'M 11.999836,0 C 5.384778,0 -3.9999998e-7,5.38515 0,12.00026 -3.9999998e-7,18.61531 5.384778,24.00011 11.999836,24.00011 18.614894,24.00011 24,18.61531 24,12.00026 24,5.38515 18.614894,0 11.999836,0 Z m 0,2.09227 c 5.484271,0 9.907984,4.42367 9.907984,9.90799 0,5.48425 -4.423713,9.90754 -9.907984,9.90754 -5.4842703,0 -9.9076558,-4.42329 -9.9076558,-9.90754 0,-5.48432 4.4233855,-9.90799 9.9076558,-9.90799 z M 9.5003025,5.50579 c -2.4997191,0 -2.4997043,0 -3.7494633,2.16472 L 4.500991,9.83539 c -1.2498943,2.16476 -1.2498943,2.16487 0,4.32945 l 1.2498482,2.16476 c 1.261759,2.16476 1.2617442,2.16476 3.7494633,2.16476 2.4996545,0 2.4997185,0 3.7495455,-2.16476 h -8.1e-5 c 1.249812,-2.16476 1.249787,-2.16469 0,-4.32934 v -1.1e-4 H 10.750152 8.2505363 l 1.2497662,2.16469 H 12 L 10.750152,16.3296 H 8.2505363 L 7.0006881,14.16484 5.7508392,12.00015 7.0006881,9.83539 8.2505363,7.67051 h 2.4996157 2.499696 L 12,5.50579 Z m 4.9993125,0 1.249849,2.16472 1.249848,2.16488 h -2.499697 l -1.249767,2.16476 h 2.499616 l 1.249848,2.16469 -1.249848,2.16476 -1.249849,2.16476 h 2.499697 l 1.249849,-2.16476 1.249766,-2.16476 c 1.249826,-2.16476 1.249826,-2.16469 0,-4.32945 L 18.249161,7.67051 16.999312,5.50579 Z'
 
 export default {
   components: {
@@ -98,17 +99,14 @@ export default {
         {
           href: { name: Pages.home },
           title: this.$t('menuHome'),
-          icon: {
-            element: SidebarIcon,
-            attributes: {
-              path: mdiHome
-            }
-          }
+          icon: { element: 'i', class: 'fa-solid fa-house-chimney fa-fw' }
         },
         {
           href: { name: Pages.projects },
           title: this.$t('menuProjects'),
           identifiers: ['projects'],
+          // Only for logged in users with privileges (data curator or administrator)
+          hidden: !userIsAtLeast(this.storeToken ? this.storeToken.userType : null, USER_TYPE_DATA_CURATOR),
           badge: {
             text: (this.storeSelectedProjects && this.storeSelectedProjects.length > 0) ? `${this.storeSelectedProjects.length}/${this.getBadgeCount(this.badgeCounts, 'projects')}` : this.getBadgeCount(this.badgeCounts, 'projects'),
             class: 'vsm--badge vsm--badge_default'
@@ -122,23 +120,13 @@ export default {
         },
         {
           title: this.$t('menuData'),
-          icon: {
-            element: SidebarIcon,
-            attributes: {
-              path: mdiHarddisk
-            }
-          },
+          icon: { element: 'i', class: 'fa-solid fa-hard-drive fa-fw' },
           child: [
             {
               title: this.$t('menuGermplasm'),
               href: { name: Pages.germplasm },
               identifiers: ['germplasm'],
-              icon: {
-                element: SidebarIcon,
-                attributes: {
-                  path: mdiSprout
-                }
-              },
+              icon: { element: 'i', class: 'fa-solid fa-seedling fa-fw' },
               badge: {
                 text: this.getBadgeCount(this.badgeCounts, 'germplasm'),
                 class: 'vsm--badge vsm--badge_default'
@@ -146,12 +134,7 @@ export default {
             },
             {
               title: this.$t('menuGenotypicData'),
-              icon: {
-                element: SidebarIcon,
-                attributes: {
-                  path: mdiDna
-                }
-              },
+              icon: { element: 'i', class: 'fa-solid fa-dna fa-fw' },
               child: [
                 {
                   title: this.$t('menuGenotypicMarkers'),
@@ -161,13 +144,8 @@ export default {
                     class: 'vsm--badge vsm--badge_default'
                   },
                   href: { name: Pages.markers },
-                  icon: {
-                    element: SidebarIcon,
-                    attributes: {
-                      path: mdiFormatIndentIncrease,
-                      rotate: 90
-                    }
-                  }
+                  // The arrow pointing down
+                  icon: { element: 'i', class: 'fa-solid fa-indent fa-rotate-90 fa-fw' }
                 },
                 {
                   title: this.$t('menuGenotypicMaps'),
@@ -177,12 +155,7 @@ export default {
                     class: 'vsm--badge vsm--badge_default'
                   },
                   href: { name: Pages.maps },
-                  icon: {
-                    element: SidebarIcon,
-                    attributes: {
-                      path: mdiReorderVertical
-                    }
-                  }
+                  icon: { element: 'i', class: 'fa-solid fa-align-justify fa-rotate-90 fa-fw' }
                 },
                 {
                   title: this.$t('menuGenotypicDataExport'),
@@ -192,12 +165,7 @@ export default {
                     class: 'vsm--badge vsm--badge_default'
                   },
                   href: { name: Pages.export, params: { datasetType: 'genotype' } },
-                  icon: {
-                    element: SidebarIcon,
-                    attributes: {
-                      path: mdiDna
-                    }
-                  }
+                  icon: { element: 'i', class: 'fa-solid fa-dna fa-fw' }
                 },
                 {
                   title: this.$t('menuAlleleFrequencyDataExport'),
@@ -207,23 +175,13 @@ export default {
                     class: 'vsm--badge vsm--badge_default'
                   },
                   href: { name: Pages.export, params: { datasetType: 'allelefreq' } },
-                  icon: {
-                    element: SidebarIcon,
-                    attributes: {
-                      path: mdiPulse
-                    }
-                  }
+                  icon: { element: 'i', class: 'fa-solid fa-file-waveform fa-fw' }
                 }
               ]
             },
             {
               title: this.$t('menuTrialsData'),
-              icon: {
-                element: SidebarIcon,
-                attributes: {
-                  path: mdiTagMultiple
-                }
-              },
+              icon: { element: 'i', class: 'fa-solid fa-tags fa-fw' },
               child: [
                 {
                   title: this.$t('menuTrialsTraits'),
@@ -233,12 +191,7 @@ export default {
                     class: 'vsm--badge vsm--badge_default'
                   },
                   href: { name: Pages.traits },
-                  icon: {
-                    element: SidebarIcon,
-                    attributes: {
-                      path: mdiTagTextOutline
-                    }
-                  }
+                  icon: { element: 'i', class: 'fa-solid fa-tag fa-fw' }
                 },
                 {
                   title: this.$t('menuTrialsDataExport'),
@@ -248,12 +201,7 @@ export default {
                     class: 'vsm--badge vsm--badge_default'
                   },
                   href: { name: Pages.export, params: { datasetType: 'trials' } },
-                  icon: {
-                    element: SidebarIcon,
-                    attributes: {
-                      path: mdiShovel
-                    }
-                  }
+                  icon: { element: 'i', class: 'fa-solid fa-person-digging fa-fw' }
                 },
                 {
                   title: this.$t('menuTrialsCreate'),
@@ -271,12 +219,7 @@ export default {
             },
             {
               title: this.$t('menuGeography'),
-              icon: {
-                element: SidebarIcon,
-                attributes: {
-                  path: mdiEarth
-                }
-              },
+              icon: { element: 'i', class: 'fa-solid fa-earth-americas fa-fw' },
               child: [
                 {
                   title: this.$t('menuLocations'),
@@ -286,34 +229,19 @@ export default {
                     class: 'vsm--badge vsm--badge_default'
                   },
                   href: { name: Pages.locations },
-                  icon: {
-                    element: SidebarIcon,
-                    attributes: {
-                      path: mdiMap
-                    }
-                  }
+                  icon: { element: 'i', class: 'fa-solid fa-map-location-dot fa-fw' }
                 },
                 {
                   title: this.$t('menuGeographicSearch'),
                   identifiers: ['geographic-search'],
                   href: { name: Pages.geographicSearch },
-                  icon: {
-                    element: SidebarIcon,
-                    attributes: {
-                      path: mdiMapSearch
-                    }
-                  }
+                  icon: { element: 'i', class: 'fa-solid fa-magnifying-glass-location fa-fw' }
                 }
               ]
             },
             {
               title: this.$t('menuClimateData'),
-              icon: {
-                element: SidebarIcon,
-                attributes: {
-                  path: mdiWeatherSnowyRainy
-                }
-              },
+              icon: { element: 'i', class: 'fa-solid fa-cloud-sun-rain fa-fw' },
               child: [
                 {
                   title: this.$t('menuClimateClimates'),
@@ -323,12 +251,7 @@ export default {
                     class: 'vsm--badge vsm--badge_default'
                   },
                   href: { name: Pages.climates },
-                  icon: {
-                    element: SidebarIcon,
-                    attributes: {
-                      path: mdiWeatherSnowyRainy
-                    }
-                  }
+                  icon: { element: 'i', class: 'fa-solid fa-cloud-sun-rain fa-fw' }
                 },
                 {
                   title: this.$t('menuClimateDataExport'),
@@ -338,12 +261,7 @@ export default {
                     class: 'vsm--badge vsm--badge_default'
                   },
                   href: { name: Pages.export, params: { datasetType: 'climate' } },
-                  icon: {
-                    element: SidebarIcon,
-                    attributes: {
-                      path: mdiChartSankey
-                    }
-                  }
+                  icon: { element: 'i', class: 'fa-solid fa-tarp-droplet fa-fw' }
                 }
               ]
             },
@@ -366,12 +284,7 @@ export default {
                 class: 'vsm--badge vsm--badge_default'
               },
               href: { name: Pages.datasets },
-              icon: {
-                element: SidebarIcon,
-                attributes: {
-                  path: mdiDatabase
-                }
-              }
+              icon: { element: 'i', class: 'fa-solid fa-database fa-fw' }
             },
             {
               title: this.$t('menuExperiments'),
@@ -381,12 +294,7 @@ export default {
                 class: 'vsm--badge vsm--badge_default'
               },
               href: { name: Pages.experiments },
-              icon: {
-                element: SidebarIcon,
-                attributes: {
-                  path: mdiFolderTable
-                }
-              }
+              icon: { element: 'i', class: 'fa-solid fa-flask-vial fa-fw' }
             },
             {
               title: this.$t('menuDataResources'),
@@ -396,12 +304,7 @@ export default {
                 class: 'vsm--badge vsm--badge_default'
               },
               href: { name: Pages.dataResources },
-              icon: {
-                element: SidebarIcon,
-                attributes: {
-                  path: mdiFileDownload
-                }
-              }
+              icon: { element: 'i', class: 'fa-solid fa-file-fragment fa-fw' }
             },
             {
               // Data resources page filtered to templates. Hidden together with the data resources page.
@@ -412,12 +315,7 @@ export default {
                 class: 'vsm--badge vsm--badge_default'
               },
               href: { name: Pages.dataResources, query: { 'fileresources-filter': JSON.stringify(templateFilter) } },
-              icon: {
-                element: SidebarIcon,
-                attributes: {
-                  path: mdiTableArrowLeft
-                }
-              }
+              icon: { element: 'i', class: 'fa-solid fa-file-invoice fa-fw' }
             },
             {
               title: this.$t('menuDataStories'),
@@ -427,12 +325,7 @@ export default {
                 class: 'vsm--badge vsm--badge_default'
               },
               href: { name: Pages.stories },
-              icon: {
-                element: SidebarIcon,
-                attributes: {
-                  path: mdiBookOpenPageVariant
-                }
-              }
+              icon: { element: 'i', class: 'fa-solid fa-comment-dots fa-fw' }
             },
             {
               title: this.$t('menuDataStatistics'),
@@ -455,12 +348,7 @@ export default {
             class: 'vsm--badge vsm--badge_default'
           },
           href: { name: Pages.publications },
-          icon: {
-            element: SidebarIcon,
-            attributes: {
-              path: mdiNewspaperVariant
-            }
-          }
+          icon: { element: 'i', class: 'fa-solid fa-book fa-fw' }
         },
         {
           title: this.$t('menuGroups'),
@@ -470,12 +358,7 @@ export default {
             class: 'vsm--badge vsm--badge_default'
           },
           href: { name: Pages.groups },
-          icon: {
-            element: SidebarIcon,
-            attributes: {
-              path: mdiGroup
-            }
-          }
+          icon: { element: 'i', class: 'fa-solid fa-object-group fa-fw' }
         },
         {
           title: this.$t('menuImages'),
@@ -485,12 +368,7 @@ export default {
             class: 'vsm--badge vsm--badge_default'
           },
           href: { name: Pages.images },
-          icon: {
-            element: SidebarIcon,
-            attributes: {
-              path: mdiImageMultiple
-            }
-          }
+          icon: { element: 'i', class: 'fa-solid fa-image fa-fw' }
         },
         {
           title: this.$t('menuMedia'),
@@ -500,68 +378,21 @@ export default {
             class: 'vsm--badge vsm--badge_default'
           },
           href: { name: Pages.media },
-          icon: {
-            element: SidebarIcon,
-            attributes: {
-              path: mdiTelevisionPlay
-            }
-          }
+          icon: { element: 'i', class: 'fa-solid fa-file-video fa-fw' }
         },
         {
           title: this.$t('menuSearch'),
           identifiers: ['search'],
           href: { name: Pages.search },
-          icon: {
-            element: SidebarIcon,
-            attributes: {
-              path: mdiMagnify
-            }
-          }
+          icon: { element: 'i', class: 'fa-solid fa-magnifying-glass fa-fw' }
         },
         {
+          // A single entry to the about page of the project; About Germinate is a tab of it, the export formats page
+          // (about/export-formats) and the original about page (about/project-legacy) stay reachable by their address
           title: this.$t('menuAbout'),
-          icon: {
-            element: SidebarIcon,
-            attributes: {
-              path: mdiInformation
-            }
-          },
-          child: [
-            {
-              title: this.$t('menuAboutProject'),
-              href: { name: Pages.aboutProject },
-              identifiers: ['about-project'],
-              icon: {
-                element: SidebarIcon,
-                attributes: {
-                  path: mdiInformationOutline
-                }
-              }
-            },
-            {
-              title: this.$t('menuAboutGerminate'),
-              href: { name: Pages.aboutGerminate },
-              icon: {
-                element: SidebarIcon,
-                attributes: {
-                  path: germinateLogo
-                }
-              }
-            },
-            {
-              title: this.$t('menuAboutExportFormat'),
-              identifiers: ['about-export-formats'],
-              href: { name: Pages.aboutExportFormats },
-              icon: {
-                element: SidebarIcon,
-                attributes: {
-                  path: mdiApplicationBrackets
-                }
-              }
-            }
-          ]
-        }, {
-          component: SidebarLogoComponent
+          href: { name: Pages.aboutProject },
+          identifiers: ['about-project'],
+          icon: { element: 'i', class: 'fa-solid fa-circle-info fa-fw' }
         }
       ]
 
@@ -569,7 +400,7 @@ export default {
 
       // const currentUserType = this.storeToken ? this.storeToken.userType : null
 
-      return tempNav.filter(function f (o) {
+      const menu = tempNav.filter(function f (o) {
         if (o.identifiers) {
           if (o.identifiers.some(i => hiddenPages.includes(i))) {
             return false
@@ -588,6 +419,25 @@ export default {
 
         return true
       })
+
+      // The active item: by the path of the page only, so that its query (a tab, a page of a table: ?tab=map) doesn't
+      // make the item lose its highlight. Items sharing a path (Data resources and Templates, which differ by their
+      // query) keep the comparison of the whole address.
+      const items = []
+      const collect = list => list.forEach(o => {
+        if (o.href && typeof o.href === 'object' && !o.external) {
+          items.push({ item: o, path: this.$router.resolve(o.href).route.path })
+        }
+        if (o.child) {
+          collect(o.child)
+        }
+      })
+      collect(menu)
+      items.forEach(entry => {
+        entry.item.exactPath = items.filter(other => other.path === entry.path).length === 1
+      })
+
+      return menu
     }
   },
   methods: {
@@ -689,5 +539,92 @@ export default {
   .vsm--mobile-item {
     max-width: 400px !important;
   }
+}
+
+/* The font of the new pages (loaded with the dropdowns of the top navigation) */
+.v-sidebar-menu,
+.v-sidebar-menu .vsm--link,
+.v-sidebar-menu .vsm--badge {
+  font-family: 'DM Sans', -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* The icons alone, without the square behind them (both themes, also when open or hovered) */
+.v-sidebar-menu .vsm--link_level-1 .vsm--icon,
+.v-sidebar-menu.vsm_expanded .vsm--item_open .vsm--link_level-1 .vsm--icon,
+.v-sidebar-menu.vsm_collapsed .vsm--link_level-1.vsm--link_hover .vsm--icon,
+.v-sidebar-menu.vsm_collapsed .vsm--link_level-1:hover .vsm--icon {
+  background-color: transparent;
+}
+/* Font Awesome icons: as big as the others */
+.v-sidebar-menu i.vsm--icon {
+  font-size: 1.25em;
+}
+/* A little space above the first item (Home) */
+.v-sidebar-menu > .vsm--scroll-wrapper > .vsm--list {
+  padding-top: 0.75rem;
+}
+/* The icons a little bigger */
+.v-sidebar-menu .vsm--icon svg.mdi-icon {
+  width: 1.45em;
+  height: 1.45em;
+  vertical-align: middle;
+}
+
+/* Light theme: in the colours of the new pages (light surface, dark text, green icons and highlights) */
+body:not(.dark-mode) .v-sidebar-menu {
+  /* A little darker than the top navigation (#f8f9fa), to tell them apart */
+  background-color: #eceee9;
+}
+body:not(.dark-mode) .v-sidebar-menu .vsm--link {
+  color: #1f2120;
+}
+body:not(.dark-mode) .v-sidebar-menu .vsm--icon {
+  color: #3b6b35;
+}
+body:not(.dark-mode) .v-sidebar-menu .vsm--link_hover,
+body:not(.dark-mode) .v-sidebar-menu .vsm--link:hover {
+  background-color: #dde9d7;
+  color: #1f2120;
+}
+body:not(.dark-mode) .v-sidebar-menu .vsm--link.vsm--link_active,
+body:not(.dark-mode) .v-sidebar-menu .vsm--link_level-1.vsm--link_exact-active,
+body:not(.dark-mode) .v-sidebar-menu .vsm--link_level-1.vsm--link_active {
+  box-shadow: 3px 0 0 0 #3b6b35 inset;
+  color: #2a4f26;
+  font-weight: 500;
+}
+body:not(.dark-mode) .v-sidebar-menu.vsm_expanded .vsm--item_open .vsm--link_level-1 {
+  background-color: #dde9d7;
+  color: #2a4f26;
+}
+body:not(.dark-mode) .v-sidebar-menu .vsm--dropdown .vsm--list {
+  background-color: #e3e5df;
+}
+body:not(.dark-mode) .v-sidebar-menu .vsm--header {
+  color: #4a4d4b;
+}
+body:not(.dark-mode) .v-sidebar-menu .vsm--badge_default {
+  color: #1f2120;
+  background-color: #d6d8d2;
+}
+body:not(.dark-mode) .v-sidebar-menu .vsm--toggle-btn {
+  color: #3b6b35;
+  background-color: #e3e5df;
+}
+body:not(.dark-mode) .v-sidebar-menu .vsm--toggle-btn:hover {
+  background-color: #dde9d7;
+}
+/* Collapsed: the item shown on hover, on green */
+body:not(.dark-mode) .v-sidebar-menu .vsm--mobile-bg {
+  background-color: #3b6b35;
+}
+body:not(.dark-mode) .v-sidebar-menu .vsm--link_mobile-item,
+body:not(.dark-mode) .v-sidebar-menu .vsm--link_mobile-item:hover,
+body:not(.dark-mode) .v-sidebar-menu.vsm_collapsed .vsm--link_level-1.vsm--link_hover .vsm--icon,
+body:not(.dark-mode) .v-sidebar-menu.vsm_collapsed .vsm--link_level-1:hover .vsm--icon {
+  color: #ffffff;
+}
+body:not(.dark-mode) .v-sidebar-menu .vsm--mobile-item .vsm--dropdown .vsm--list .vsm--link {
+  color: #1f2120;
 }
 </style>

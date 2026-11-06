@@ -55,6 +55,21 @@ function requireAuth (to, from, next) {
   next()
 }
 
+// Pages only for logged in users with privileges (data curator or administrator), whatever the authentication mode:
+// without being logged in, the login page (when there is one), else "forbidden"
+function requirePrivileged (to, from, next) {
+  const authMode = store.getters.storeServerSettings ? store.getters.storeServerSettings.authMode : 'NONE'
+  const token = store.getters.storeToken
+  if (!token && authMode !== 'NONE') {
+    store.dispatch('setOriginalTarget', to.path)
+    next({ name: 'login' })
+  } else if (!token || !userIsAtLeast(token.userType, USER_TYPE_DATA_CURATOR)) {
+    next({ name: '403' })
+  } else {
+    requireAuth(to, from, next)
+  }
+}
+
 const routes = [
   {
     path: '/login',
@@ -102,13 +117,13 @@ const routes = [
         path: 'projects',
         name: Pages.projects,
         component: () => import(/* webpackChunkName: "projects" */ '@/views/Projects'),
-        beforeEnter: requireAuth
+        beforeEnter: requirePrivileged
       },
       {
         path: 'projects/:projectId',
         name: Pages.projectDetails,
         component: () => import(/* webpackChunkName: "project-details" */ '@/views/ProjectDetails'),
-        beforeEnter: requireAuth
+        beforeEnter: requirePrivileged
       },
       {
         path: 'admin',
@@ -500,7 +515,14 @@ const routes = [
           {
             path: 'project',
             name: Pages.aboutProject,
-            component: () => import(/* webpackChunkName: "about-project" */ '@/views/about/AboutProject.vue'),
+            // New about page (built on the home page). The original one stays at about/project-legacy as a reference.
+            component: () => import(/* webpackChunkName: "about-project" */ '@/views/about/AboutProjectView.vue'),
+            beforeEnter: requireAuth
+          },
+          {
+            path: 'project-legacy',
+            name: 'about-project-legacy',
+            component: () => import(/* webpackChunkName: "about-project-legacy" */ '@/views/about/AboutProject.vue'),
             beforeEnter: requireAuth
           },
           {

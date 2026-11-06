@@ -6,7 +6,7 @@
       <!-- Something was just marked: the pin is stuck in (it tilts to the side) in green for a moment. Only the icon moves:
            its box keeps its size, so the bar doesn't change. -->
       <span :class="['marked-items-pin', { 'marked-items-pinning': alerting }]">
-        <MdiIcon :path="mdiPinOutline" />
+        <i class="fa-solid fa-thumbtack top-nav-fa-icon" aria-hidden="true" />
         <!-- All the marked items (any type), at the top left of the pin; not while it moves, nor when nothing is marked,
              nor while the menu is open (it shows them) -->
         <span class="marked-items-total" v-if="totalMarked > 0 && !alerting && !menuOpen" :title="totalMarked.toLocaleString()">{{ getNumberWithSuffix(totalMarked, 1) }}</span>
@@ -26,7 +26,7 @@
            @click="openMarkedItems(itemType)"
            @keydown.enter="openMarkedItems(itemType)">
         <!-- The icon of the type, in a pastel version of its colour -->
-        <span class="marked-items-icon" :style="getIconStyle(itemType)"><MdiIcon :path="markedItemTypes[itemType].path" :size="15" /></span>
+        <span class="marked-items-icon" :style="getIconStyle(itemType)"><i :class="['fa-solid', faIcons[itemType]]" aria-hidden="true" v-if="faIcons[itemType]" /><MdiIcon :path="markedItemTypes[itemType].path" :size="15" v-else /></span>
         <span class="marked-items-name">{{ markedItemTypes[itemType].text() }}</span>
         <button type="button" class="marked-items-clear" v-if="getCount(itemType) > 0" :title="$t('chartTooltipMarkedItemsClear')" :aria-label="$t('chartTooltipMarkedItemsClear')" @click.stop="confirming = itemType" @keydown.enter.stop>
           <MdiIcon :path="mdiBroom" :size="16" />
@@ -51,7 +51,7 @@ import MdiIcon from '@/components/icons/MdiIcon'
 import { getNumberWithSuffix } from '@/mixins/formatting'
 import { markedItemTypes } from '@/mixins/types'
 import { Pages } from '@/mixins/pages'
-import { mdiPinOutline, mdiBroom } from '@mdi/js'
+import { mdiBroom } from '@mdi/js'
 
 // How long the pin swings after something was marked
 const ALERT_DURATION = 3000
@@ -82,13 +82,18 @@ export default {
   data: function () {
     return {
       markedItemTypes,
+      // Font Awesome icons of the types (as in the sidebar menu); the others keep the icon of their type
+      faIcons: {
+        germplasm: 'fa-seedling',
+        markers: 'fa-dna',
+        locations: 'fa-map-location-dot'
+      },
       // The type whose clearing is being confirmed
       confirming: null,
       // Something was just marked (the pin swings)
       alerting: false,
       // The menu is open (the total is hidden)
       menuOpen: false,
-      mdiPinOutline,
       mdiBroom
     }
   },
@@ -214,6 +219,7 @@ body.dark-mode .marked-items-entry:focus {
   border-radius: 6px;
   background: var(--marked-icon-bg);
   color: var(--marked-icon-color);
+  font-size: 0.85rem;
 }
 body.dark-mode .marked-items-icon {
   background: var(--marked-icon-bg-dark);
@@ -237,8 +243,11 @@ body.dark-mode .marked-items-icon {
   width: 1.4rem;
   height: 1.4rem;
   overflow: visible;
+  /* On the line of the other icons of the bar */
+  vertical-align: middle;
 }
-.marked-items-pin >>> svg {
+.marked-items-pin > i {
+  display: inline-block;
   transform-origin: 50% 100%;
 }
 /* The total: a small notification badge over the top left corner of the pin (it doesn't change the size of the bar);
@@ -272,7 +281,7 @@ body.dark-mode .marked-items-total {
 body.dark-mode .marked-items-pinning {
   color: #8cc47e;
 }
-.marked-items-pinning >>> svg {
+.marked-items-pinning > i {
   animation: marked-items-pin-in 1.5s ease-in-out 2;
 }
 /* Pushed in (a little down), then tilted to the side on its tip, held, and back up */

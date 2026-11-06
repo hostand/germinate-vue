@@ -1,10 +1,11 @@
 <template>
   <div>
-    <b-form-group label-for="color-by" :label="$t('pageTrialsExportColorByTitle')">
+    <!-- "Color by" and its select beside it, at most 2 of the 12 columns wide -->
+    <b-form-group label-for="color-by" :label="$t('pageTrialsExportColorByTitle')" label-cols="auto" class="glm-color-by">
       <b-form-select id="color-by" :options="colorOptions" v-model="colorBy" />
     </b-form-group>
     <l-map
-      class="location-map border"
+      :class="['location-map', 'border', { 'location-map-custom': customLook }]"
       :center="center"
       ref="map"
       :options="mapOptions"
@@ -29,7 +30,7 @@
     <ColorGradient :min="gradientMinMax.min" :max="gradientMinMax.max" :formatMinMax="gradientMinMax.format" :colors="gradientColors" v-if="colorBy && colorBy.type !== 'text'" ref="gradient" />
 
     <!-- Popup content -->
-    <div v-if="selectedLocation" ref="popupContent" class="p-3">
+    <div v-if="selectedLocation" ref="popupContent" :class="customLook ? 'lm-popup' : 'p-3'">
       <dl class="row">
         <template v-if="selectedGermplasm">
           <dt class="col-4 text-right">{{ $t('tableColumnGermplasmName') }}</dt><dd class="col-8">{{ selectedGermplasm.germplasm.germplasmName }}</dd>
@@ -50,7 +51,7 @@
         </template>
       </dl>
 
-      <div class="mt-2" v-if="selectedGermplasm">
+      <div :class="{ 'mt-2': !customLook }" v-if="selectedGermplasm">
         <!-- Marked item checkbox -->
         <b-checkbox v-model="selectedGermplasm.marked"> {{ $t('tooltipGermplasmMarkedItem') }}</b-checkbox>
       </div>
@@ -95,6 +96,13 @@ export default {
     LControl,
     LMap,
     MdiIcon
+  },
+  props: {
+    // In the look of the custom pages: the details popup as a rounded card (location-map-popup.css)
+    customLook: {
+      type: Boolean,
+      default: false
+    }
   },
   data: function () {
     return {
@@ -514,7 +522,25 @@ export default {
 }
 </script>
 
+<style src="@/assets/location-map-popup.css"></style>
 <style>
+.glm-color-by.form-row {
+  align-items: center;
+}
+.glm-color-by .col-form-label {
+  padding-right: 0.75rem;
+  font-weight: 500;
+}
+.glm-color-by.form-row > .col {
+  flex: 0 0 16.6667%;
+  max-width: 16.6667%;
+  min-width: 12rem;
+}
+.glm-color-by .custom-select {
+  height: 40px;
+  border-radius: 10px;
+  font-family: inherit;
+}
 .location-map {
   position: relative;
   height: 600px !important;

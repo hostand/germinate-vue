@@ -1,0 +1,107 @@
+/*
+ * The details popup of the maps in the look of the custom pages (LocationMap and GermplasmLocationMap with "customLook").
+ * The map gets the class "location-map-custom", the popup content the class "lm-popup". Uses the custom-page.css tokens.
+ */
+/* Custom look (custom-page.css colours): the popup as a rounded card, a list of muted labels and their values */
+.location-map-custom .leaflet-popup-content-wrapper {
+  overflow: hidden;
+  border: 1px solid var(--cp-border);
+  border-radius: 14px;
+  background: var(--cp-surface);
+  color: var(--cp-text);
+  box-shadow: 0 2px 6px rgba(31, 33, 32, 0.08), 0 12px 30px -10px rgba(31, 33, 32, 0.3);
+  font-family: 'DM Sans', -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+.location-map-custom .leaflet-popup-tip {
+  background: var(--cp-surface);
+  box-shadow: 0 3px 10px rgba(31, 33, 32, 0.15);
+}
+.location-map-custom .leaflet-popup-content {
+  width: 280px !important;
+}
+.location-map-custom a.leaflet-popup-close-button {
+  top: 0.55rem;
+  right: 0.55rem;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  color: var(--cp-muted);
+  font-size: 18px;
+  line-height: 22px;
+}
+.location-map-custom a.leaflet-popup-close-button:hover {
+  background: var(--cp-surface-hover);
+  color: var(--cp-text);
+}
+.location-map-custom .lm-popup {
+  padding: 1rem 2.25rem 1.1rem 1.15rem;
+}
+.location-map-custom .lm-popup dl.row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: baseline;
+  gap: 0.5rem 1rem;
+  margin: 0;
+}
+.location-map-custom .lm-popup dl.row > dt,
+.location-map-custom .lm-popup dl.row > dd {
+  flex: none;
+  width: auto;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  text-align: left !important;
+}
+.location-map-custom .lm-popup dl.row > dt {
+  color: var(--cp-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.location-map-custom .lm-popup dl.row > dd {
+  color: var(--cp-text);
+  font-size: 0.92rem;
+  font-weight: 500;
+}
+.location-map-custom .lm-popup dl.row > div {
+  grid-column: 1 / -1;
+  padding: 0 !important;
+}
+.location-map-custom .lm-popup a {
+  color: var(--cp-green);
+}
+/* Buttons in the popup (Update / Cancel when choosing a location) */
+.location-map-custom .lm-popup .btn-group {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+}
+.location-map-custom .lm-popup .btn-group > .btn {
+  height: 36px;
+  padding: 0 1rem;
+  border: 1px solid var(--cp-border);
+  border-radius: 10px !important;
+  background: var(--cp-surface);
+  color: var(--cp-text);
+  font-size: 0.88rem;
+  font-weight: 500;
+  box-shadow: none;
+}
+.location-map-custom .lm-popup .btn-group > .btn:hover {
+  background: var(--cp-surface-hover);
+}
+.location-map-custom .lm-popup .btn-group > .btn-success {
+  border-color: var(--cp-button);
+  background: var(--cp-button);
+  color: var(--cp-on-button);
+}
+.location-map-custom .lm-popup .btn-group > .btn-success:hover {
+  border-color: var(--cp-button-hover);
+  background: var(--cp-button-hover);
+}
+/* Checkbox below the list (germplasm map) */
+.location-map-custom .lm-popup .custom-checkbox {
+  margin-top: 0.85rem;
+  font-size: 0.9rem;
+}

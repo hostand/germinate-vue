@@ -1,7 +1,8 @@
 <template>
-  <div v-if="datasets && datasets.length > 0">
+  <div v-if="datasets && datasets.length > 0" :class="{ 'pedigree-custom': customLook }">
     <h4>{{ $t('pagePassportPedigreeChartTitle') }}</h4>
-    <b-form-group :label="$t('tableColumnDatasetName')" label-for="dataset">
+    <!-- Custom look: the label beside the select, which is a few grid columns wide -->
+    <b-form-group :label="$t('tableColumnDatasetName')" label-for="dataset" :label-cols="customLook ? 'auto' : null" :class="{ 'pedigree-dataset': customLook }">
       <b-form-select :options="datasetOptions" v-model="dataset" id="dataset">
         <template #first>
           <b-form-select-option :value="null" disabled>{{ $t('formLabelPedigreeChartDatasetSelect') }}</b-form-select-option>
@@ -10,12 +11,15 @@
     </b-form-group>
 
     <div v-if="hasPlotData">
-      <BaseChart :id="id" :width="() => 1280" :height="() => 600" :filename="baseFilename" chartType="d3.js" v-on:resize="update" :supportsPngDownload="false" :supportsSvgDownload="false"  v-on:force-redraw="update">
+      <BaseChart :id="id" :width="() => 1280" :height="() => 600" :filename="baseFilename" chartType="d3.js" v-on:resize="update" :supportsPngDownload="false" :supportsSvgDownload="false"  v-on:force-redraw="update" :customLook="customLook">
         <div id="pedigree-chart" slot="chart" ref="pedigreeChart" class="pedigree-chart" />
 
         <template slot="additionalMenuItems">
-          <b-dropdown-divider />
-          <b-dropdown-item @click="downloadPedigreeImage"><MdiIcon :path="mdiFileImage" /> {{ $t('buttonDownloadPng') }}</b-dropdown-item>
+          <b-dropdown-item link-class="top-nav-menu-item" @click="downloadPedigreeImage" v-if="customLook"><i class="fa-solid fa-image fa-fw" aria-hidden="true" /> {{ $t('buttonDownloadPng') }}</b-dropdown-item>
+          <template v-else>
+            <b-dropdown-divider />
+            <b-dropdown-item @click="downloadPedigreeImage"><MdiIcon :path="mdiFileImage" /> {{ $t('buttonDownloadPng') }}</b-dropdown-item>
+          </template>
 
           <a href="#" ref="imageDownloadAnchor" />
         </template>
@@ -24,7 +28,8 @@
           <b-button v-b-tooltip.hover
                     :title="$t('chartTooltipMatrixTour')"
                     @click="showTour()">
-            <MdiIcon :path="mdiHelpCircleOutline" />
+            <i class="fa-regular fa-circle-question" aria-hidden="true" v-if="customLook" />
+            <MdiIcon :path="mdiHelpCircleOutline" v-else />
           </b-button>
         </template>
       </BaseChart>
@@ -32,9 +37,10 @@
       <Tour :steps="popoverContent" ref="tour" />
 
       <!-- Export button -->
-      <b-button @click="downloadPedigree"><MdiIcon :path="mdiDownload" /> {{ $t('buttonDownloadForHelium') }}</b-button>
-      <!-- Information about the export formats -->
-      <p><span class="text-muted" v-html="$t('pageExportFormatsHeliumText')" />&nbsp;<router-link :to="{ name: Pages.aboutExportFormatsType, params: { format: 'pedigree' } }" v-b-tooltip.hover :title="$t('tooltipExportFormatLearnMore')"> <MdiIcon :path="mdiInformationOutline"/></router-link> </p>
+      <button type="button" class="pedigree-download" @click="downloadPedigree" v-if="customLook"><i class="fa-solid fa-download" aria-hidden="true" /> {{ $t('buttonDownloadForHelium') }}</button>
+      <b-button @click="downloadPedigree" v-else><MdiIcon :path="mdiDownload" /> {{ $t('buttonDownloadForHelium') }}</b-button>
+      <!-- Information about the export formats (not in the custom look) -->
+      <p v-if="!customLook"><span class="text-muted" v-html="$t('pageExportFormatsHeliumText')" />&nbsp;<router-link :to="{ name: Pages.aboutExportFormatsType, params: { format: 'pedigree' } }" v-b-tooltip.hover :title="$t('tooltipExportFormatLearnMore')"> <MdiIcon :path="mdiInformationOutline"/></router-link> </p>
     </div>
   </div>
 </template>
@@ -61,6 +67,11 @@ let plotData = null
 
 export default {
   props: {
+    // In the look of the custom pages (passport page)
+    customLook: {
+      type: Boolean,
+      default: false
+    },
     germplasm: {
       type: Object,
       default: () => {}
@@ -355,5 +366,92 @@ body.dark-mode .node polygon:hover {
 
 .pedigree-chart {
   height: 500px;
+}
+
+/* Custom look: "Dataset name" beside the select (3 of the 12 columns, not narrower than 14rem), rounded fields and a
+   green button, in the colours of custom-page.css */
+/* The buttons of the chart (options, help) at the top right, on the line of the title */
+.pedigree-custom {
+  position: relative;
+}
+.pedigree-custom > h4 {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  padding-right: 6rem;
+}
+.pedigree-custom .base-chart > .text-right {
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+.pedigree-custom .base-chart > .text-right > .btn-group {
+  gap: 0.4rem;
+}
+.pedigree-custom .base-chart > .text-right .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  font-size: 1.1rem;
+  border: 1px solid var(--cp-border) !important;
+  border-radius: 10px !important;
+  background: var(--cp-surface);
+  color: var(--cp-text-subtle);
+  box-shadow: none;
+}
+.pedigree-custom .base-chart > .text-right .btn:hover,
+.pedigree-custom .base-chart > .text-right .btn:focus,
+.pedigree-custom .base-chart > .text-right .show > .btn {
+  border-color: var(--cp-muted) !important;
+  background: var(--cp-surface-hover);
+  color: var(--cp-text);
+}
+/* No negative margins of the row: nothing wider than the block */
+.pedigree-custom .pedigree-dataset.form-row {
+  align-items: center;
+  margin-left: 0;
+  margin-right: 0;
+}
+.pedigree-custom .pedigree-dataset .col-form-label {
+  padding-right: 0.75rem;
+  font-weight: 500;
+  color: var(--cp-text-subtle);
+}
+.pedigree-custom .pedigree-dataset.form-row > .col {
+  flex: 0 0 25%;
+  max-width: 25%;
+  min-width: 14rem;
+}
+.pedigree-custom .pedigree-dataset .custom-select {
+  height: 40px;
+  border: 1px solid var(--cp-border);
+  border-radius: 10px;
+  background-color: var(--cp-surface);
+  color: var(--cp-text);
+  font-family: inherit;
+}
+.pedigree-custom .pedigree-download {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 42px;
+  margin-top: 1rem;
+  padding: 0 1.25rem;
+  border: 1px solid var(--cp-button);
+  border-radius: 10px;
+  background: var(--cp-button);
+  color: var(--cp-on-button);
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+.pedigree-custom .pedigree-download:hover,
+.pedigree-custom .pedigree-download:focus {
+  border-color: var(--cp-button-hover);
+  background: var(--cp-button-hover);
 }
 </style>

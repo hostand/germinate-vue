@@ -587,6 +587,7 @@ const userFeedbackSeverityTypes = {
 }
 
 export {
+  mdiGerminate,
   exportFormats,
   publicationTypes,
   dataTypes,

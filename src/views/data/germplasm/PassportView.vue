@@ -44,8 +44,9 @@
     <!-- Tabs: Passport is the default one -->
     <b-tabs class="pp-tabs" nav-class="pp-tabs-nav" content-class="pp-tabs-content" v-model="tabIndex">
       <b-tab active>
+        <!-- The tabs with their icon on the left (as on the germplasm page) -->
         <template #title>
-          Passport<span class="pp-tab-about" id="pp-passport-about" v-if="conservation && !isNew" tabindex="0" aria-label="About"><MdiIcon :path="icons.info" :size="13" /></span>
+          <i class="fa-solid fa-book-atlas pp-tab-icon" aria-hidden="true" />Passport<span class="pp-tab-about" id="pp-passport-about" v-if="conservation && !isNew" tabindex="0" aria-label="About"><MdiIcon :path="icons.info" :size="13" /></span>
         </template>
         <!-- About: the descriptor standard the data follows, CWRI for in-situ germplasm, MCPD otherwise -->
         <b-popover target="pp-passport-about" triggers="hover focus" placement="bottom" :delay="{ show: 0, hide: 300 }" custom-class="pp-about-popover" v-if="conservation && !isNew">
@@ -91,6 +92,7 @@
                              @selection-changed="onMapLocationSelected"
                              @point-placed="onMapPointPlaced"
                              @cancel-selection="stopMapSelection"
+                             customLook
                              ref="expandedMap" />
               </div>
             </section>
@@ -483,7 +485,7 @@
               <div v-show="open.location">
                 <div class="pp-map">
                   <!-- Rebuilt whenever the location arrives or changes, so it always opens at the normal zoom on the location -->
-                  <LocationMap :key="locationMapKey" :locations="location ? [location] : []" baseLayer="osm" :openPopup="false" :showLinks="false" :initialZoom="location ? 6 : 2" ref="map" />
+                  <LocationMap :key="locationMapKey" :locations="location ? [location] : []" baseLayer="osm" :openPopup="false" :showLinks="false" :initialZoom="location ? 6 : 2" customLook ref="map" />
                 </div>
 
                 <!-- A new germplasm: the location chosen, linked once the germplasm is created -->
@@ -704,7 +706,8 @@
 
       <!-- Metadata: the additional attributes of the germplasm, in the style of the Overview. Only when there are any. -->
       <!-- A new germplasm: once its mandatory fields are valid -->
-      <b-tab title="Metadata" lazy v-if="isNew ? newMandatoryFilled : (metadataFields.length > 0 || (isDataCurator && germplasm))">
+      <b-tab lazy v-if="isNew ? newMandatoryFilled : (metadataFields.length > 0 || (isDataCurator && germplasm))">
+        <template #title><i class="fa-solid fa-list pp-tab-icon" aria-hidden="true" />Metadata</template>
         <div class="pp-tab-panel">
           <section :class="['pp-card', 'pp-panel', { 'pp-panel-lists': isNew || isEditingMetadata || addingMetadata }]">
             <div class="pp-panel-header pp-panel-header-plain">
@@ -878,14 +881,16 @@
       </b-tab>
 
       <!-- Image gallery of the accession, same features as the images of the original passport page -->
-      <b-tab :title="$t('pagePassportImageTitle')" lazy v-if="!isNew">
+      <b-tab lazy v-if="!isNew">
+        <template #title><i class="fa-solid fa-image pp-tab-icon" aria-hidden="true" />{{ $t('pagePassportImageTitle') }}</template>
         <div class="pp-tab-panel">
           <PassportImageGallery v-if="germplasm" referenceTable="germinatebase" :foreignId="germplasm.germplasmId" @images-changed="loadReferenceImages" />
         </div>
       </b-tab>
 
       <!-- Pedigree: same tables and chart as the pedigree section of the original passport page -->
-      <b-tab :title="$t('datasetTypePedigree')" lazy v-if="!isNew">
+      <b-tab lazy v-if="!isNew">
+        <template #title><i class="fa-solid fa-sitemap pp-tab-icon" aria-hidden="true" />{{ $t('datasetTypePedigree') }}</template>
         <div class="pp-tab-panel" v-if="germplasm">
           <p class="pp-tab-intro" v-html="$t('pagePassportPedigreeText')" />
 
@@ -907,14 +912,15 @@
           <!-- The chart shows itself only when there are pedigree datasets -->
           <section class="pp-card pp-tab-card pp-pedigree-chart">
             <div class="pp-scroll">
-              <PedigreeChart :germplasm="germplasm" />
+              <PedigreeChart :germplasm="germplasm" customLook />
             </div>
           </section>
         </div>
       </b-tab>
 
       <!-- Entity: same content as the entity data section of the original passport page -->
-      <b-tab title="Entity" lazy v-if="!isNew">
+      <b-tab lazy v-if="!isNew">
+        <template #title><i class="fa-solid fa-cubes-stacked pp-tab-icon" aria-hidden="true" />Entity</template>
         <div class="pp-tab-panel" v-if="germplasm">
           <p class="pp-tab-intro" v-html="$t('pagePassportEntityText')" />
 
@@ -941,7 +947,8 @@
       </b-tab>
 
       <!-- Trait performance: only when the germplasm has trait data, like the section of the original passport page -->
-      <b-tab title="Trait Performance" lazy v-if="traitStatsCount > 0">
+      <b-tab lazy v-if="traitStatsCount > 0">
+        <template #title><i class="fa-solid fa-chart-line pp-tab-icon" aria-hidden="true" />Trait Performance</template>
         <div class="pp-tab-panel" v-if="germplasm">
           <p class="pp-tab-intro">{{ $t('pagePassportTraitStatsText') }}</p>
 
@@ -980,9 +987,9 @@ import GermplasmTraitStats from '@/components/germplasm/GermplasmTraitStats'
 
 import { mapGetters } from 'vuex'
 
-import { apiPostGermplasmTable, apiPostGermplasmDatasetTable, apiGetGermplasmMcpd, apiPostGermplasmGroupTable, apiPostGermplasmAttributeTable, apiPostPedigreeTable, apiPostPedigreedefinitionTable, apiPostEntityTable, apiGetGermplasmStatsTraits, apiPatchGermplasmLocation } from '@/mixins/api/germplasm'
+import { apiPostGermplasmTable, apiPostGermplasmDatasetTable, apiGetGermplasmMcpd, apiPostGermplasmGroupTable, apiPostGermplasmAttributeTable, apiPostPedigreeTable, apiPostPedigreedefinitionTable, apiPostEntityTable, apiGetGermplasmStatsTraits, apiPatchGermplasmLocation, apiExportPassport } from '@/mixins/api/germplasm'
 import { findFlagshipCrop } from '@/mixins/crops'
-import { MAX_JAVA_INTEGER } from '@/mixins/api/base'
+import { MAX_JAVA_INTEGER, handleError } from '@/mixins/api/base'
 import { apiPostGroupTable, apiPatchGroupMembers } from '@/mixins/api/group'
 import { getImageUrl } from '@/mixins/image'
 import { MCPD_SAMPSTAT, MCPD_COLLSRC, MCPD_STORAGE, MCPD_SITEPROT, MCPD_POPSRC, MCPD_CONSACTION, formatMcpdCodes, getCountryFlagCode, getCountryName } from '@/mixins/mcpd'
@@ -995,7 +1002,8 @@ import { EDITABLE_MCPD_FIELDS, SUBTAXA_RANKS, parseSubtaxa, CODE_DOMAINS, format
 import { SUGGESTION_FIELDS, getMcpdSuggestions, getAllMcpdValues, clearMcpdSuggestions } from '@/mixins/mcpd-suggestions'
 import VueTypeaheadBootstrap from 'vue-typeahead-bootstrap'
 import { getHighContrastTextColor } from '@/mixins/colors'
-import { isPageAvailable } from '@/mixins/util'
+import { isPageAvailable, downloadBlob } from '@/mixins/util'
+import { getDateTimeString } from '@/mixins/formatting'
 import { Pages } from '@/mixins/pages'
 import { userIsAtLeast, USER_TYPE_DATA_CURATOR, USER_TYPE_ADMINISTRATOR } from '@/mixins/api/auth'
 
@@ -3647,8 +3655,33 @@ export default {
       link.click()
       document.body.removeChild(link)
     },
+    // The passport data of this accession: the export of the Download tab of the germplasm page (a zip file), only for
+    // its id
     downloadPassport: function () {
-      // To do
+      if (!this.germplasm) {
+        return
+      }
+      emitter.emit('show-loading', true)
+      const request = {
+        individualIds: [this.germplasm.germplasmId],
+        groupIds: null,
+        includeAttributes: false
+      }
+      const name = (this.germplasm.germplasmName || 'germplasm').replace(/[^\w.-]+/g, '_')
+      apiExportPassport(request, result => {
+        downloadBlob({
+          blob: result,
+          filename: `${name}-passport-${getDateTimeString()}`,
+          extension: 'zip'
+        })
+        emitter.emit('show-loading', false)
+      }, {
+        codes: [],
+        callback: error => {
+          emitter.emit('show-loading', false)
+          handleError(error)
+        }
+      })
     },
     toggleMarked: function () {
       if (!this.germplasm) {
@@ -4671,6 +4704,23 @@ body.dark-mode .pp-tabs >>> .pp-tabs-nav .nav-link.active,
 body.dark-mode .pp-tabs >>> .pp-tabs-nav .nav-link.active:focus {
   border-color: var(--cp-border) var(--cp-border) var(--cp-surface);
   background: var(--cp-surface);
+}
+/* Icon and text on one line, the icon a little smaller than the text, of a fixed width; the active one in the green of
+   the icons of the sidebar menu */
+.pp-tabs >>> .pp-tabs-nav .nav-link {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1.5;
+}
+.pp-tab-icon {
+  width: 1.1em;
+  margin-right: 0.5rem;
+  font-size: 0.95em;
+  line-height: 1;
+  text-align: center;
+}
+.pp-tabs >>> .pp-tabs-nav .nav-link.active .pp-tab-icon {
+  color: var(--cp-green);
 }
 .pp-tab-panel {
   margin-top: 1.25rem;

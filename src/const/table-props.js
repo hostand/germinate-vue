@@ -42,6 +42,11 @@ export default {
     }
   },
   FULL: {
+    // Page and sorting not read from nor written to the URL (another table of the same name on the page)
+    noUrlParams: {
+      type: Boolean,
+      default: false
+    },
     // The filters above the table as the breadcrumb of the Search page (instead of badges)
     filterCrumbs: {
       type: Boolean,
