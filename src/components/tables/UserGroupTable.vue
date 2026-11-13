@@ -40,7 +40,7 @@ import { mapGetters } from 'vuex'
 import MdiIcon from '@/components/icons/MdiIcon'
 import BaseTable from '@/components/tables/BaseTable'
 import defaultProps from '@/const/table-props.js'
-import { getNumberWithSuffix } from '@/mixins/formatting'
+import { getNumberWithSuffix, formatDateTime } from '@/mixins/formatting'
 import { USER_TYPE_ADMINISTRATOR } from '@/mixins/api/auth'
 
 import { mdiRenameBox, mdiDelete } from '@mdi/js'
@@ -126,7 +126,7 @@ export default {
           type: Date,
           sortable: true,
           label: this.$t('tableColumnUserGroupCreatedOn'),
-          formatter: value => value ? new Date(value).toLocaleDateString() : null
+          formatter: value => formatDateTime(value)
         }, {
           key: 'count',
           type: Number,

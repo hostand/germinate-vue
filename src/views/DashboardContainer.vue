@@ -51,7 +51,9 @@
 
           <PageHeader />
 
-          <router-view :key="`${$route.path}-${routeReloadCount}`" class="pb-3" />
+          <!-- Rebuilt when the page changes; a page with the selected item in a tab (meta.viewKey: traits, maps,
+               publications) stays the same page when the item changes -->
+          <router-view :key="`${$route.meta.viewKey || $route.path}-${routeReloadCount}`" class="pb-3" />
         </b-container>
 
         <!-- Footer: a green wave (SVG) over the page, then the links, the text of the fork, the version and the icons -->

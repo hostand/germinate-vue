@@ -76,7 +76,6 @@
               <span class="ab-crl-text">{{ $t(level.text) }}</span>
             </li>
           </ol>
-          <p class="ab-note"><i class="fa-solid fa-circle-info" aria-hidden="true" /> {{ $t('pageAboutProjectPlatformNote') }}</p>
 
           <div class="ab-keywords">
             <span class="ab-keyword" v-for="keyword in keywords" :key="keyword"><i class="fa-solid fa-tag" aria-hidden="true" /> {{ $t(keyword) }}</span>
@@ -88,12 +87,38 @@
            alphabetical order. Their grey SVG logo; a click opens their description. -->
       <b-tab>
         <template #title><i class="fa-solid fa-handshake ab-tab-icon" aria-hidden="true" />{{ $t('pageAboutProjectTabPartners') }}</template>
-        <div class="ab-panel">
-          <div class="ab-partners" v-if="partners && partners.length > 0">
-            <button type="button" class="ab-partner" v-for="(partner, index) in partners" :key="`partner-${index}`" :title="partner.name" @click="showPartner(partner)">
-              <img :src="getPartnerLogo(partner)" :alt="partner.name" loading="lazy" @error="onLogoError(partner)" />
-              <span class="ab-partner-name">{{ partner.name }}</span>
+        <div class="ab-panel ab-partners-panel">
+          <!-- Administrators: add a partner -->
+          <div class="ab-panel-actions" v-if="isAdmin">
+            <button type="button" class="ab-action-button is-primary" @click="$refs.addPartnerModal.show()">
+              <i class="fa-solid fa-plus" aria-hidden="true" /> {{ $t('modalTitleAddAboutPartner') }}
             </button>
+          </div>
+          <div class="ab-partners" v-if="partners && partners.length > 0">
+            <div :class="['ab-partner-item', { editing: editedPartner === partner }]" v-for="(partner, index) in partners" :key="`partner-${index}`">
+              <!-- Editing the name (administrators): the logo, then the field with save and cancel -->
+              <template v-if="editedPartner === partner">
+                <div class="ab-partner is-static">
+                  <img :src="getPartnerLogo(partner)" :alt="partner.name" loading="lazy" @error="onLogoError(partner)" />
+                </div>
+                <form class="ab-partner-edit" @submit.prevent="savePartnerName(partner)">
+                  <input class="ab-partner-input" type="text" v-model.trim="editedName" :aria-label="$t('formLabelAboutPartnerName')" ref="partnerNameInput" @keydown.esc="cancelPartnerEdit" />
+                  <button type="submit" class="ab-icon-button is-primary" :disabled="!editedName || savingPartners" :title="$t('buttonSubmit')" :aria-label="$t('buttonSubmit')">
+                    <b-spinner small v-if="savingPartners" /><i class="fa-solid fa-check" aria-hidden="true" v-else />
+                  </button>
+                  <button type="button" class="ab-icon-button" :disabled="savingPartners" @click="cancelPartnerEdit" :title="$t('buttonCancel')" :aria-label="$t('buttonCancel')"><i class="fa-solid fa-xmark" aria-hidden="true" /></button>
+                </form>
+              </template>
+              <button type="button" class="ab-partner" :title="partner.name" @click="showPartner(partner)" v-else>
+                <img :src="getPartnerLogo(partner)" :alt="partner.name" loading="lazy" @error="onLogoError(partner)" />
+                <span class="ab-partner-name">{{ partner.name }}</span>
+              </button>
+              <!-- Administrators: edit the name, delete -->
+              <div class="ab-partner-actions" v-if="isAdmin && editedPartner !== partner">
+                <button type="button" class="ab-icon-button" @click="editPartner(partner)" :disabled="savingPartners" :title="$t('buttonEdit')" :aria-label="$t('buttonEdit')"><i class="fa-solid fa-pen" aria-hidden="true" /></button>
+                <button type="button" class="ab-icon-button is-danger" @click="deletePartner(partner)" :disabled="savingPartners" :title="$t('buttonDelete')" :aria-label="$t('buttonDelete')"><i class="fa-solid fa-trash" aria-hidden="true" /></button>
+              </div>
+            </div>
           </div>
           <p class="ab-note" v-else-if="partners === null"><b-spinner small /></p>
           <p class="ab-funding"><i class="fa-solid fa-euro-sign" aria-hidden="true" /> <i18n path="pageAboutProjectFundingLine" tag="span"><template #grant><a :href="grantUrl" target="_blank" rel="noopener noreferrer">101135314 <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true" /></a></template></i18n></p>
@@ -168,10 +193,12 @@
         <!-- The Germinate icon of the former About Germinate menu entry -->
         <template #title><MdiIcon :path="mdiGerminate" className="ab-tab-svg" aria-hidden="true" />Germinate</template>
         <div class="ab-panel ab-germinate">
-          <AboutGerminate />
+          <AboutGerminateCustom />
         </div>
       </b-tab>
     </b-tabs>
+
+    <AddPartnerModal ref="addPartnerModal" v-if="isAdmin" @partner-added="loadPartners" />
 
     <!-- A partner: the logo, the name, the description and its website -->
     <b-modal ref="partnerModal" :title="$t('pageAboutProjectPartnerModalTitle')" modal-class="cp-modal ab-partner-modal" content-class="custom-page" centered size="lg">
@@ -196,7 +223,9 @@
 import { mapGetters } from 'vuex'
 import HomeView from '@/views/HomeView'
 import { parseHeroText } from '@/mixins/hero-text'
-import { apiGetTemplateAboutConfig } from '@/mixins/api/misc'
+import { apiGetTemplateAboutConfig, apiPatchTemplateAboutConfig } from '@/mixins/api/misc'
+import { handleError } from '@/mixins/api/base'
+import { userIsAtLeast, USER_TYPE_ADMINISTRATOR } from '@/mixins/api/auth'
 import { mdiGerminate } from '@/mixins/types'
 import { ABOUT_CONTEXT, ABOUT_OBJECTIVES, ABOUT_WORK_PACKAGES, ABOUT_KEYWORDS } from '@/const/about-project'
 
@@ -210,7 +239,9 @@ export default {
   name: 'about-project-view',
   extends: HomeView,
   components: {
-    AboutGerminate: () => import('@/views/about/AboutGerminate')
+    // The Germinate tab in the look of this page (the original page stays at /about/germinate)
+    AboutGerminateCustom: () => import('@/components/about/AboutGerminateCustom'),
+    AddPartnerModal: () => import('@/components/modals/AddPartnerModal')
   },
   data: function () {
     return {
@@ -223,8 +254,13 @@ export default {
       // The latest news of the project website; null when they can't be loaded
       news: null,
       newsLoading: true,
-      // From about.json; null while loading
+      // From about.json; null while loading. "partnerEntries": the entries of the file as they are, in its order (what
+      // is written back when a partner is edited or deleted)
       partners: null,
+      partnerEntries: [],
+      editedPartner: null,
+      editedName: null,
+      savingPartners: false,
       selectedPartner: null,
       objectives: ABOUT_OBJECTIVES,
       workPackages: ABOUT_WORK_PACKAGES,
@@ -234,8 +270,13 @@ export default {
   computed: {
     ...mapGetters([
       'storeBaseUrl',
-      'storeDarkMode'
+      'storeDarkMode',
+      'storeToken'
     ]),
+    // Adding, editing and deleting partners: administrators only (as the server)
+    isAdmin: function () {
+      return !!this.storeToken && userIsAtLeast(this.storeToken.userType, USER_TYPE_ADMINISTRATOR)
+    },
     // The title and text of this page
     heroTexts: function () {
       return parseHeroText(this.$t('pageAboutProjectHeroText'))
@@ -253,7 +294,9 @@ export default {
     // given as "svg" and "svgDark"; the image itself when there is no SVG.
     loadPartners: function () {
       apiGetTemplateAboutConfig(result => {
-        this.partners = (result || []).filter(p => p && p.name).map(p => {
+        this.partnerEntries = Array.isArray(result) ? result : []
+        this.editedPartner = null
+        this.partners = this.partnerEntries.filter(p => p && p.name).map(p => {
           const image = p.image || ''
           const base = image ? image.replace(/\.[^.]+$/, '').replace(/-\d+x\d+$/, '') : null
           const svg = p.svg || (base ? `${base}-color.svg` : null)
@@ -265,13 +308,66 @@ export default {
             image,
             svg,
             svgDark,
-            fallback: false
+            fallback: false,
+            entry: p
           }
         }).sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
       }, {
         codes: [404],
         callback: () => {
+          this.partnerEntries = []
           this.partners = []
+        }
+      })
+    },
+    editPartner: function (partner) {
+      this.editedPartner = partner
+      this.editedName = partner.name
+      this.$nextTick(() => {
+        const input = this.$refs.partnerNameInput
+        const element = Array.isArray(input) ? input[0] : input
+        if (element) {
+          element.focus()
+          element.select()
+        }
+      })
+    },
+    cancelPartnerEdit: function () {
+      this.editedPartner = null
+      this.editedName = null
+    },
+    // The list of the file written back (all its entries, in its order), then read again
+    savePartnerEntries: function (entries) {
+      this.savingPartners = true
+      apiPatchTemplateAboutConfig(entries, () => {
+        this.savingPartners = false
+        this.loadPartners()
+      }, {
+        codes: [],
+        callback: error => {
+          this.savingPartners = false
+          handleError(error)
+        }
+      })
+    },
+    savePartnerName: function (partner) {
+      if (!this.editedName || this.savingPartners) {
+        return
+      }
+      if (this.editedName === partner.name) {
+        this.cancelPartnerEdit()
+        return
+      }
+      this.savePartnerEntries(this.partnerEntries.map(entry => entry === partner.entry ? Object.assign({}, entry, { name: this.editedName }) : entry))
+    },
+    deletePartner: function (partner) {
+      this.$bvModal.msgBoxConfirm(this.$t('modalTitleSure'), {
+        okVariant: 'danger',
+        okTitle: this.$t('genericYes'),
+        cancelTitle: this.$t('genericNo')
+      }).then(value => {
+        if (value) {
+          this.savePartnerEntries(this.partnerEntries.filter(entry => entry !== partner.entry))
         }
       })
     },
@@ -319,6 +415,10 @@ export default {
     },
     // The logo for the current mode (light or dark)
     getPartnerLogo: function (partner) {
+      // A partner added with an SVG image: that image, in both modes
+      if (/\.svg$/i.test(partner.image || '') && !partner.entry.svg && !partner.fallback) {
+        return `${this.storeBaseUrl}image/src-svg/${encodeURIComponent(partner.image)}`
+      }
       const svg = this.storeDarkMode ? partner.svgDark : partner.svg
       if (partner.fallback || !svg) {
         return this.getPartnerImage(partner.image)
@@ -590,20 +690,16 @@ body.dark-mode .about-page .ab-skeleton-line::after {
   font-size: 0.75em;
 }
 
-/* CRL: nine numbered steps on a line (wrapping on smaller screens), joined by a thin line */
+/* CRL: the nine steps in three rows of three (one column on smaller screens); in each, the number on the left and the
+   title and text beside it */
 .about-page .ab-crl {
   display: grid;
-  grid-template-columns: repeat(9, minmax(0, 1fr));
-  gap: 0.75rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
   margin: 1.5rem 0 0;
   padding: 0;
   list-style: none;
   counter-reset: none;
-}
-@media (max-width: 1399px) {
-  .about-page .ab-crl {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
 }
 @media (max-width: 767px) {
   .about-page .ab-crl {
@@ -612,36 +708,48 @@ body.dark-mode .about-page .ab-skeleton-line::after {
 }
 .about-page .ab-crl-step {
   position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  padding: 1rem;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: auto 1fr;
+  column-gap: 1rem;
+  row-gap: 0.4rem;
+  align-items: start;
+  padding: 1.35rem 1.5rem;
   border: 1px solid var(--home-border);
-  border-radius: 14px;
+  border-radius: 16px;
   background: var(--home-surface);
+  transition: box-shadow 0.15s ease;
+}
+.about-page .ab-crl-step:hover {
+  box-shadow: 0 10px 24px -14px var(--home-shadow);
 }
 .about-page .ab-crl-number {
   display: inline-flex;
+  grid-row: 1 / 3;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   background: var(--home-neutral-bg);
   color: var(--home-text-subtle);
-  font-size: 0.9rem;
+  font-size: 1.15rem;
   font-weight: 700;
 }
 .about-page .ab-crl-title {
+  align-self: center;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
   color: var(--home-text);
-  font-size: 0.95rem;
+  font-size: 1.12rem;
   font-weight: 600;
   line-height: 1.3;
 }
 .about-page .ab-crl-text {
   color: var(--home-muted);
-  font-size: 0.82rem;
-  line-height: 1.45;
+  font-size: 0.95rem;
+  line-height: 1.55;
 }
 /* The step of the platform: in green */
 .about-page .ab-crl-step.is-platform {
@@ -674,6 +782,134 @@ body.dark-mode .about-page .ab-crl-step.is-platform .ab-crl-number {
 .about-page .ab-keyword > i {
   color: var(--home-muted);
   font-size: 0.75em;
+}
+
+/* Partners tab: the add button at the top right of its content */
+.about-page .ab-partners-panel {
+  position: relative;
+}
+.about-page .ab-panel-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin: -0.5rem 0 1.25rem;
+}
+.about-page .ab-action-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 42px;
+  padding: 0 1.15rem;
+  border: 1px solid var(--home-border);
+  border-radius: 10px;
+  background: var(--home-surface);
+  color: var(--home-text);
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.about-page .ab-action-button.is-primary {
+  border-color: var(--home-button);
+  background: var(--home-button);
+  color: var(--home-on-button);
+}
+.about-page .ab-action-button.is-primary:hover,
+.about-page .ab-action-button.is-primary:focus {
+  border-color: var(--home-button-hover);
+  background: var(--home-button-hover);
+}
+/* A partner: its card, and for administrators the edit and delete buttons at its top right */
+.about-page .ab-partner-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.about-page .ab-partner-actions {
+  position: absolute;
+  top: 0.35rem;
+  right: 0.35rem;
+  display: flex;
+  gap: 0.3rem;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.about-page .ab-partner-item:hover .ab-partner-actions,
+.about-page .ab-partner-item:focus-within .ab-partner-actions {
+  opacity: 1;
+}
+/* Without hover (touch screens): always visible */
+@media (hover: none) {
+  .about-page .ab-partner-actions {
+    opacity: 1;
+  }
+}
+.about-page .ab-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--home-border);
+  border-radius: 8px;
+  background: var(--home-surface);
+  color: var(--home-text-subtle);
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+.about-page .ab-icon-button:hover:not(:disabled),
+.about-page .ab-icon-button:focus:not(:disabled) {
+  border-color: var(--home-muted);
+  color: var(--home-text);
+}
+.about-page .ab-icon-button.is-danger:hover:not(:disabled),
+.about-page .ab-icon-button.is-danger:focus:not(:disabled) {
+  border-color: #dc3545;
+  color: #dc3545;
+}
+body.dark-mode .about-page .ab-icon-button.is-danger:hover:not(:disabled),
+body.dark-mode .about-page .ab-icon-button.is-danger:focus:not(:disabled) {
+  border-color: #f07b86;
+  color: #f07b86;
+}
+.about-page .ab-icon-button.is-primary {
+  border-color: var(--home-button);
+  background: var(--home-button);
+  color: var(--home-on-button);
+}
+.about-page .ab-icon-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+/* Editing the name: the field and its buttons under the logo */
+.about-page .ab-partner.is-static {
+  cursor: default;
+}
+.about-page .ab-partner.is-static:hover {
+  background: transparent;
+  transform: none;
+}
+.about-page .ab-partner-edit {
+  display: flex;
+  gap: 0.35rem;
+  padding: 0 0.5rem 0.75rem;
+}
+.about-page .ab-partner-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 32px;
+  padding: 0 0.6rem;
+  border: 1px solid var(--home-green);
+  border-radius: 8px;
+  background: var(--home-surface);
+  color: var(--home-text);
+  font: inherit;
+  font-size: 0.85rem;
+}
+.about-page .ab-partner-input:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--home-green-soft);
 }
 
 /* Partners: the logos five per row (fewer on smaller screens), their name below, no frame */

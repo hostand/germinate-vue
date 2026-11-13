@@ -16,7 +16,7 @@
       <!-- Map description -->
       <template v-slot:cell(mapDescription)="data">
         <!-- If the description is HTML and contains a link, just show it -->
-        <div v-if="isLink(data.item)"> <span v-html="data.item.mapDescription" />&nbsp;<MdiIcon :path="mdiOpenInNew" /></div>
+        <div v-if="isLink(data.item)"> <span v-html="data.item.mapDescription" />&nbsp;<i class="fa-solid fa-arrow-up-right-from-square bt-external" aria-hidden="true" /></div>
         <!-- Otherwise display the description as text -->
         <span v-else>{{ data.item.mapDescription }}</span>
       </template>
@@ -25,12 +25,11 @@
 </template>
 
 <script>
-import MdiIcon from '@/components/icons/MdiIcon'
 import BaseTable from '@/components/tables/BaseTable'
 import defaultProps from '@/const/table-props.js'
 
-import { mdiOpenInNew } from '@mdi/js'
 import { Pages } from '@/mixins/pages'
+import { formatNumber } from '@/mixins/formatting'
 
 export default {
   name: 'MapTable',
@@ -40,7 +39,6 @@ export default {
   data: function () {
     return {
       Pages,
-      mdiOpenInNew,
       options: {
         idColumn: 'mapId',
         tableName: 'maps'
@@ -73,14 +71,13 @@ export default {
           sortable: true,
           class: 'text-right',
           label: this.$t('tableColumnMapMarkerCount'),
-          formatter: value => (value !== null && value !== undefined) ? value.toLocaleString() : null
+          formatter: value => formatNumber(value)
         }
       ]
     }
   },
   components: {
-    BaseTable,
-    MdiIcon
+    BaseTable
   },
   methods: {
     isLink: function (map) {

@@ -302,7 +302,7 @@ export default {
           title: { font: { color: this.storeDarkMode ? 'white' : 'black' } },
           tickfont: { color: this.storeDarkMode ? 'white' : 'black' },
           showgrid: true,
-          gridcolor: this.storeDarkMode ? 'rgba(1.0, 1.0, 1.0, 0.1)' : 'rgba(0.0, 0.0, 0.0, 0.1)'
+          gridcolor: this.storeDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
         },
         paper_bgcolor: 'transparent',
         plot_bgcolor: 'transparent',

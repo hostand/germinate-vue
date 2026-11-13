@@ -3,7 +3,7 @@
     <div class="text-right">
       <!-- Chart options -->
       <b-button-group>
-        <b-dropdown no-caret right v-b-tooltip.hover="$t('chartTooltipOptions')" id="additional-options" :menu-class="customLook ? 'top-nav-menu cp-chart-menu' : null">
+        <b-dropdown no-caret right v-b-tooltip.hover="$t('chartTooltipOptions')" id="additional-options" :disabled="optionsDisabled" :menu-class="customLook ? 'top-nav-menu cp-chart-menu' : null">
           <template v-slot:button-content>
             <i class="fa-solid fa-ellipsis-vertical" aria-hidden="true" v-if="customLook" />
             <MdiIcon :path="mdiDotsVertical" v-else />
@@ -122,6 +122,11 @@ export default {
     canChangeColors: {
       type: Boolean,
       default: true
+    },
+    // The options menu disabled (e.g. no chart drawn)
+    optionsDisabled: {
+      type: Boolean,
+      default: false
     }
   },
   watch: {

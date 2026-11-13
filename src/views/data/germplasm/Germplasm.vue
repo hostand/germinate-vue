@@ -10,7 +10,7 @@
     <b-tabs class="gp-tabs" nav-class="gp-tabs-nav" content-class="gp-tabs-content" v-model="tabIndex">
       <!-- The tabs with their icon on the left -->
       <b-tab>
-        <template #title><i class="fa-solid fa-seedling gp-tab-icon" aria-hidden="true" />List</template>
+        <template #title><i class="fa-solid fa-seedling gp-tab-icon" aria-hidden="true" />{{ $t('genericList') }}</template>
         <div class="gp-tab-panel">
           <GermplasmTableComponent customLook />
         </div>
@@ -66,7 +66,7 @@
               <RecentlyViewedPanel bare ref="recentPanel" />
             </div>
           </section>
-          <GermplasmTable :getData="getRecentData" :getIds="getRecentIds" :downloadTable="downloadRecentTable" :key="recentIds.join(',')" conservationColumn filterCrumbs noUrlParams />
+          <GermplasmTable :getData="getRecentData" :getIds="getRecentIds" :downloadTable="downloadRecentTable" :key="recentIds.join(',')" conservationColumn filterCrumbs noUrlParams modernLook />
         </div>
       </b-tab>
     </b-tabs>
@@ -435,25 +435,45 @@ body.dark-mode .gp-card-clear:focus {
 }
 
 /* Tables: within the width of the page, no scrolling to the side (only when even this doesn't fit). Smaller text and
-   paddings, the texts wrap; the synonyms (long lists of codes) may break anywhere. */
+   paddings, the texts wrap; the synonyms (long lists of codes) may break anywhere. The new look (bt-modern) keeps its
+   own text and paddings, the cells wrap as well. */
 .germplasm-page .base-table table.b-table {
   width: 100%;
 }
-.germplasm-page .base-table table.b-table > thead > tr > th,
-.germplasm-page .base-table table.b-table > tbody > tr > td {
+.germplasm-page .base-table:not(.bt-modern) table.b-table > thead > tr > th,
+.germplasm-page .base-table:not(.bt-modern) table.b-table > tbody > tr > td {
   padding-left: 0.25rem;
   padding-right: 0.25rem;
   white-space: normal;
   overflow-wrap: break-word;
 }
-.germplasm-page .base-table table.b-table > thead > tr > th {
+/* The new look, many columns: the heads may wrap too, a little less room around the texts */
+.germplasm-page .base-table.bt-modern table.b-table > thead > tr > th,
+.germplasm-page .base-table.bt-modern table.b-table > tbody > tr > td {
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+  white-space: normal;
+  overflow-wrap: break-word;
+}
+.germplasm-page .base-table.bt-modern table.b-table > thead > tr > th {
+  font-size: 0.78rem;
+}
+.germplasm-page .base-table.bt-modern table.b-table > tbody > tr > td {
+  font-size: 0.8rem;
+}
+.germplasm-page .base-table.bt-modern table.b-table > thead > tr > th.bt-col-marked,
+.germplasm-page .base-table.bt-modern table.b-table > tbody > tr > td.bt-col-marked {
+  padding-left: 0.85rem;
+  white-space: nowrap;
+}
+.germplasm-page .base-table:not(.bt-modern) table.b-table > thead > tr > th {
   font-size: 0.75rem;
 }
-.germplasm-page .base-table table.b-table > tbody > tr > td {
+.germplasm-page .base-table:not(.bt-modern) table.b-table > tbody > tr > td {
   font-size: 0.78rem;
 }
 /* Room of the sort arrows */
-.germplasm-page .base-table table.b-table.table > thead > tr > [aria-sort]:not(.b-table-sort-icon-left) {
+.germplasm-page .base-table:not(.bt-modern) table.b-table.table > thead > tr > [aria-sort]:not(.b-table-sort-icon-left) {
   padding-right: 0.8rem;
   background-size: 0.5em 1em;
   background-position: right 0.15rem center;

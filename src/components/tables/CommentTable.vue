@@ -10,7 +10,7 @@
                v-on="$listeners">
       <!-- Comment type -->
       <template v-slot:cell(commentType)="data">
-        <span class="text-nowrap"><span :style="`color: ${commentTypes[data.item.commentType].color()};`"><MdiIcon :path="commentTypes[data.item.commentType].path" /></span> {{ commentTypes[data.item.commentType].text() }}</span>
+        <span class="bt-chip" :style="{ '--bt-chip-color': commentTypes[data.item.commentType].color() }"><MdiIcon :path="commentTypes[data.item.commentType].path" /> {{ commentTypes[data.item.commentType].text() }}</span>
       </template>
       <!-- Additional actions column holding the delete button -->
       <template v-slot:cell(actions)="data">
@@ -44,6 +44,7 @@ import { apiPutComment, apiDeleteComment } from '@/mixins/api/misc'
 import { commentTypes } from '@/mixins/types'
 
 import { mdiPlusBox, mdiDelete } from '@mdi/js'
+import { formatDateTime } from '@/mixins/formatting'
 
 export default {
   name: 'CommentTable',
@@ -133,7 +134,7 @@ export default {
         type: Date,
         sortable: true,
         label: this.$t('tableColumnCommentUpdatedOn'),
-        formatter: value => value ? new Date(value).toLocaleString() : null
+        formatter: value => formatDateTime(value)
       }, {
         key: 'actions',
         type: undefined,

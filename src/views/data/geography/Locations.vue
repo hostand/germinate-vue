@@ -9,7 +9,7 @@
     <b-tabs class="lc-tabs" nav-class="lc-tabs-nav" v-model="tabIndex">
       <!-- All locations in a table -->
       <b-tab>
-        <template #title><i class="fa-solid fa-location-dot lc-tab-icon" aria-hidden="true" />List</template>
+        <template #title><i class="fa-solid fa-location-dot lc-tab-icon" aria-hidden="true" />{{ $t('genericList') }}</template>
         <div class="lc-tab-panel">
           <LocationTable :getData="getData"
                          :getIds="getIds"

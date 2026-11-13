@@ -1,5 +1,25 @@
 export default {
   BASE: {
+    // The new look of the tables (see BaseTable), the look of all of them
+    modernLook: {
+      type: Boolean,
+      default: true
+    },
+    // The table filter (help, columns, filter) in the toolbar
+    filterEnabled: {
+      type: Boolean,
+      default: true
+    },
+    // The filter button shown but disabled (the table shows a fixed selection)
+    filterLocked: {
+      type: Boolean,
+      default: false
+    },
+    // Columns with less than half of their values filled in hidden when the table loads (see BaseTable)
+    autoHideColumns: {
+      type: Boolean,
+      default: true
+    },
     filterOn: {
       type: Array,
       default: null
@@ -42,6 +62,26 @@ export default {
     }
   },
   FULL: {
+    // The new look of the tables (see BaseTable), the look of all of them
+    modernLook: {
+      type: Boolean,
+      default: true
+    },
+    // The table filter (help, columns, filter) in the toolbar
+    filterEnabled: {
+      type: Boolean,
+      default: true
+    },
+    // The filter button shown but disabled (the table shows a fixed selection)
+    filterLocked: {
+      type: Boolean,
+      default: false
+    },
+    // Columns with less than half of their values filled in hidden when the table loads (see BaseTable)
+    autoHideColumns: {
+      type: Boolean,
+      default: true
+    },
     // Page and sorting not read from nor written to the URL (another table of the same name on the page)
     noUrlParams: {
       type: Boolean,

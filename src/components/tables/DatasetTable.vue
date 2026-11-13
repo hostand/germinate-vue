@@ -1,13 +1,15 @@
 <template>
-  <div>
+  <div :class="['dataset-table-root', { 'dt-select-highlight': selectHighlight }]">
     <BaseTable v-bind="$props"
               :getData="getDataWithDetails"
               :columns="columns"
               :options="options"
-              :tableActions="userIsDataCurator ? localTableActions : null"
+              :tableActions="userIsDataCurator && allowEditing ? localTableActions : null"
               primary-key="datasetId"
               class="dataset-table"
               ref="datasetTable"
+              @data-changed="measureCells"
+              @filter-removed="autoDetailsDismissed = true"
               v-on="$listeners">
       <!-- HEAD: Database object count -->
       <template v-slot:head(dataObjectCount)="data">
@@ -29,25 +31,23 @@
         <span v-else>{{ data.item.datasetId }}</span>
       </template>
       <!-- Dataset name -->
+      <!-- Name and description: cut on one line by the table (BaseTable) -->
       <template v-slot:cell(datasetName)="data">
-        <span v-if="disableLinks" :title="data.item.datasetName">{{ truncateAfterWords(data.item.datasetName, 10) }}</span>
-        <!-- If clickHandler is provided, just let it handle clicks -->
-        <a href="#" @click.prevent="clickHandler(data.item)" v-else-if="clickHandler && (typeof clickHandler === 'function')" :title="data.item.datasetName">{{ truncateAfterWords(data.item.datasetName, 10) }}</a>
-        <!-- Else, if there's a hyperlink for an external dataset, show that -->
-        <span v-else-if="data.item.hyperlink && data.item.isExternal"><a target="_blank" rel="noopener noreferrer" :href="data.item.hyperlink" :title="data.item.datasetName">{{ truncateAfterWords(data.item.datasetName, 10) }} </a>
-        <MdiIcon :path="mdiOpenInNew" />
-        </span>
-        <!-- Else, if we can link to the target page, let's do so -->
-        <router-link :to="{ name: datasetTypes[data.item.datasetType].pageName, params: { datasetIds: data.item.datasetId.toString() } }" v-else-if="!data.item.isExternal && isPageAvailable(data.item.datasetType) && (!data.item.licenseName || isAccepted(data.item)) && datasetTypes[data.item.datasetType].pageName" :title="data.item.datasetName">{{ truncateAfterWords(data.item.datasetName, 10) }}</router-link>
-        <!-- If none are true, just show the name -->
-        <span v-else :title="data.item.datasetName">{{ truncateAfterWords(data.item.datasetName, 10) }}</span>
+            <span v-if="disableLinks" :title="data.item.datasetName">{{ data.item.datasetName }}</span>
+            <!-- If clickHandler is provided, just let it handle clicks -->
+            <a href="#" @click.prevent="clickHandler(data.item)" v-else-if="clickHandler && (typeof clickHandler === 'function')" :title="data.item.datasetName">{{ data.item.datasetName }}</a>
+            <!-- Else, if there's a hyperlink for an external dataset, show that -->
+            <span v-else-if="data.item.hyperlink && data.item.isExternal"><a target="_blank" rel="noopener noreferrer" :href="data.item.hyperlink" :title="data.item.datasetName">{{ data.item.datasetName }} </a>
+            <MdiIcon :path="mdiOpenInNew" />
+            </span>
+            <!-- Else, if we can link to the target page, let's do so -->
+            <router-link :to="{ name: datasetTypes[data.item.datasetType].pageName, params: { datasetIds: data.item.datasetId.toString() } }" v-else-if="!data.item.isExternal && isPageAvailable(data.item.datasetType) && (!data.item.licenseName || isAccepted(data.item)) && datasetTypes[data.item.datasetType].pageName" :title="data.item.datasetName">{{ data.item.datasetName }}</router-link>
+            <!-- If none are true, just show the name -->
+            <span v-else :title="data.item.datasetName">{{ data.item.datasetName }}</span>
       </template>
       <!-- Dataset description -->
       <template v-slot:cell(datasetDescription)="data">
-        <span :title="data.item.datasetDescription" v-if="data.item.datasetDescription">{{ truncateAfterWords(data.item.datasetDescription, 10) }}</span>
-        <a href="#" class="table-icon-link" @click.prevent="showFullDatasetDescription(data.item.datasetDescription)" v-b-tooltip="$t('buttonReadMore')" v-if="isTruncatedAfterWords(data.item.datasetDescription, 10)" >&nbsp;
-          <MdiIcon :path="mdiPageNext" />
-        </a>
+        <span :title="data.item.datasetDescription" v-if="data.item.datasetDescription">{{ data.item.datasetDescription }}</span>
       </template>
       <!-- Experiment name -->
       <template v-slot:cell(experimentName)="data">
@@ -62,23 +62,36 @@
         <span v-for="country in getCountries(data.item.locations)" :key="`country-flag-${country}`" class="table-country text-nowrap mr-2" v-b-tooltip.hover :title="getCountryName(country)"><i :class="'fi fi-' + country.toLowerCase()" v-if="country"/> <span> {{ country }}</span></span>
       </template>
       <!-- Display the number of locations associated with this dataset -->
+      <!-- Locations: a single one by its name (after the flag of its country when it has one); several as a chip with
+           their number. A click shows them on a map when they have coordinates. -->
       <template v-slot:cell(locations)="data">
         <template v-if="data.item.locations !== undefined && data.item.locations !== null && data.item.locations.length > 0">
-          <template v-if="data.item.locations[0].locationLatitude && data.item.locations[0].locationLongitude">
-            <a href="#" class="text-decoration-none text-nowrap" @click.prevent="showDetails('location', data)" v-b-tooltip.hover :title="$t('tableTooltipDatasetLocations')">
-              <MdiIcon :path="mdiMapMarker" />
-              <span>{{ data.item.locations.length }}</span>
-            </a>
-          </template>
-          <div v-else>
-            <MdiIcon :path="mdiMapMarker" />
-            <span>{{ data.item.locations.length }}</span>
+          <div :class="['dt-clamp', { expanded: isCellExpanded('locations', data.item), cut: isCellCut('locations', data.item) }]" :ref="`clamp-locations-${data.item.datasetId}`" v-if="data.item.locations.length === 1">
+            <span class="dt-clamp-text">
+              <a href="#" class="dt-location" @click.prevent="showDetails('location', data)" :title="data.item.locations[0].locationName" v-if="hasCoordinates(data.item.locations)">
+                <i :class="`fi fi-${data.item.locations[0].countryCode2.toLowerCase()}`" :title="data.item.locations[0].countryName" v-if="data.item.locations[0].countryCode2" /> {{ data.item.locations[0].locationName }}<template v-if="data.item.locations[0].countryCode3"> ({{ data.item.locations[0].countryCode3 }})</template>
+              </a>
+              <span class="dt-location" :title="data.item.locations[0].locationName" v-else>
+                <i :class="`fi fi-${data.item.locations[0].countryCode2.toLowerCase()}`" :title="data.item.locations[0].countryName" v-if="data.item.locations[0].countryCode2" /> {{ data.item.locations[0].locationName }}<template v-if="data.item.locations[0].countryCode3"> ({{ data.item.locations[0].countryCode3 }})</template>
+              </span>
+            </span>
+            <button type="button" class="dt-clamp-toggle" v-if="isCellCut('locations', data.item) || isCellExpanded('locations', data.item)" @click="toggleCell('locations', data.item)" :aria-label="$t('buttonReadMore')">
+              <i class="fa-solid fa-chevron-down" aria-hidden="true" />
+            </button>
           </div>
+          <template v-else>
+            <a href="#" class="bt-chip dt-location-chip" :style="{ '--bt-chip-color': locationChipColor }" @click.prevent="showDetails('location', data)" v-b-tooltip.hover :title="$t('tableTooltipDatasetLocations')" v-if="hasCoordinates(data.item.locations)">
+              <MdiIcon :path="mdiMapMarker" /><span class="bt-chip-count" :style="{ color: locationChipCountColor }">{{ data.item.locations.length }}</span>
+            </a>
+            <span class="bt-chip" :style="{ '--bt-chip-color': locationChipColor }" v-else>
+              <MdiIcon :path="mdiMapMarker" /><span class="bt-chip-count" :style="{ color: locationChipCountColor }">{{ data.item.locations.length }}</span>
+            </span>
+          </template>
         </template>
       </template>
       <!-- Dataset type icon -->
       <template v-slot:cell(datasetType)="data">
-        <b-badge class="w-100" :style="`color: ${getHighContrastTextColor(datasetTypes[data.item.datasetType].color())}; background-color: ${datasetTypes[data.item.datasetType].color()};`"><MdiIcon :path="datasetTypes[data.item.datasetType].path" /> {{ datasetTypes[data.item.datasetType].text() }}</b-badge>
+        <b-badge class="bt-chip" :style="{ '--bt-chip-color': datasetTypes[data.item.datasetType].color() }"><MdiIcon :path="datasetTypes[data.item.datasetType].path" /> {{ datasetTypes[data.item.datasetType].text() }}</b-badge>
       </template>
       <!-- Data point count -->
       <template v-slot:cell(dataPointCount)="data">
@@ -89,96 +102,88 @@
         <div v-if="data.item.licenseName">
           <!-- Show the license modal -->
           <a href="#" @click.prevent="onLicenseClicked(data.item)" class="text-nowrap">
-            <span>{{ data.item.licenseName }} </span>
+            <i class="fa-brands fa-creative-commons dt-license-icon" aria-hidden="true" v-if="isCreativeCommons(data.item)" /><span>{{ data.item.licenseName }} </span>
           </a>
           <!-- Show the status -->
           <span class="text-success" v-if="isAccepted(data.item)"><MdiIcon :path="mdiCheck" /></span>
-          <span class="text-danger" v-else><MdiIcon :path="mdiNewBox" /></span>
         </div>
       </template>
-      <!-- Dataset state -->
-      <template v-slot:cell(datasetState)="data">
-        <span v-b-tooltip.hover :title="datasetStates[data.item.datasetState].text()"><MdiIcon :path="datasetStates[data.item.datasetState].path" /></span>
+      <!-- Status (external datasets, instead of the options): the state of the dataset as a badge; edit and delete for
+           data curators -->
+      <template v-slot:cell(status)="data">
+        <div class="dt-actions">
+          <span class="dt-state" v-if="datasetStates[data.item.datasetState]">
+            <i :class="['fa-solid', stateIcons[data.item.datasetState]]" aria-hidden="true" /> {{ datasetStates[data.item.datasetState].text() }}
+          </span>
+          <template v-if="userIsDataCurator && allowEditing">
+            <button type="button" class="dt-action" @click="onDatasetEditClicked(data.item)" v-b-tooltip.hover :title="$t('tableTooltipDatasetEdit')" :aria-label="$t('tableTooltipDatasetEdit')">
+              <i class="fa-solid fa-pen-to-square" aria-hidden="true" />
+            </button>
+            <button type="button" class="dt-action is-danger" @click="onDatasetDeleteClicked(data.item)" v-b-tooltip.hover :title="$t('tableTooltipDatasetDelete')" :aria-label="$t('tableTooltipDatasetDelete')">
+              <i class="fa-solid fa-trash-can" aria-hidden="true" />
+            </button>
+          </template>
+        </div>
       </template>
-      <!-- External dataset? -->
-      <template v-slot:cell(isExternal)="data">
-        <span v-if="data.item.isExternal !== undefined" v-b-tooltip.hover :title="data.item.isExternal ? $t('datasetExternal') : $t('datasetInternal')"><MdiIcon :path="data.item.isExternal ? mdiLinkBoxVariantOutline : mdiTextBoxOutline" /></span>
-      </template>
-      <!-- Show publications -->
-      <template v-slot:cell(publications)="data">
-        <a href="#" class="text-decoration-none" v-if="data.item.publications !== 0 || userIsDataCurator" @click.prevent="showPublications(data.item)">
-          <span v-b-tooltip.hover :title="$t('tableTooltipDatasetPublications')"><MdiIcon :path="mdiTextBoxCheckOutline"/></span>
-        </a>
-        <MdiIcon :path="mdiTextBoxCheckOutline" className="text-muted" v-else/>
-      </template>
-      <!-- Show collaborators -->
-      <template v-slot:cell(collaborators)="data">
-        <a href="#" class="text-decoration-none" v-if="data.item.collaborators !== 0" @click.prevent="showDetails('collaborators', data)">
-          <span class="text-nowrap" v-b-tooltip.hover :title="$t('tableTooltipDatasetCollaborators')"><MdiIcon :path="mdiAccountMultiple"/> <span> {{ data.item.collaborators }}</span></span>
-        </a>
-        <MdiIcon :path="mdiAccountMultiple" className="text-muted" v-else/>
-      </template>
-      <!-- Display the number of institutions associated with this dataset -->
-      <template v-slot:cell(institutions)="data">
-        <template v-if="data.item.institutions !== undefined && data.item.institutions !== null && data.item.institutions.length > 0">
-          <div>
-            <a href="#" class="text-decoration-none text-nowrap" @click.prevent="showDetails('institutions', data)" v-b-tooltip.hover :title="$t('tableTooltipDatasetLocations')">
-              <MdiIcon :path="mdiCity" />
-              <span>{{ data.item.institutions.length }}</span>
-            </a>
-          </div>
-        </template>
-      </template>
-      <!-- Show attributes -->
-      <template v-slot:cell(attributes)="data">
-        <a href="#" class="text-decoration-none" v-if="(data.item.attributes !== 0 || data.item.dublinCore) && (!data.item.licenseName || isAccepted(data.item))" @click.prevent="showDetails('attributes', data)">
-          <span v-b-tooltip.hover :title="$t('tableTooltipDatasetAttributes')"><MdiIcon :path="mdiFilePlus"/></span>
-        </a>
-        <MdiIcon :path="mdiFilePlus" className="text-muted" v-else/>
-      </template>
-      <!-- Show file resources -->
-      <template v-slot:cell(fileresourceIds)="data">
-        <b-button class="text-nowrap" @click="showFileresources(data.item)" v-if="data.item.fileresourceIds && (data.item.fileresourceIds.length > 0) && dataResourcesVisible && (!data.item.licenseName || isAccepted(data.item))"><MdiIcon :path="mdiAttachment"/> {{ $t('buttonShow') }}</b-button>
-      </template>
-      <!-- Download the dataset -->
-      <template v-slot:cell(download)="data">
-        <a href="#" class="text-decoration-none" v-if="!data.item.isExternal && (!data.item.licenseName || isAccepted(data.item))" @click.prevent="downloadDataset(data.item)">
-          <span v-b-tooltip.hover :title="$t('tableTooltipDatasetDownload')"><MdiIcon :path="mdiDownload"/></span>
-        </a>
-        <MdiIcon :path="mdiDownload" className="text-muted" v-else/>
-      </template>
-      <!-- Edit dataset -->
-      <template v-slot:cell(edit)="data">
-        <a href="#" class="text-decoration-none" @click.prevent="onDatasetEditClicked(data.item)" v-if="userIsDataCurator">
-          <span v-b-tooltip.hover :title="$t('tableTooltipDatasetEdit')"><MdiIcon :path="mdiSquareEditOutline"/></span>
-        </a>
-      </template>
-      <!-- Delete dataset -->
-      <template v-slot:cell(delete)="data">
-        <a href="#" class="text-decoration-none" @click.prevent="onDatasetDeleteClicked(data.item)" v-if="userIsDataCurator">
-          <span v-b-tooltip.hover :title="$t('tableTooltipDatasetDelete')"><MdiIcon className="text-danger" :path="mdiDelete"/></span>
-        </a>
+      <!-- The options of the dataset: a button opening one menu for all the rows (moreMenu, placed above the button,
+           outside of the scrolling table); edit and delete for data curators -->
+      <template v-slot:cell(actions)="data">
+        <div class="dt-actions">
+          <button type="button" :class="['dt-more-toggle', { open: moreMenu && moreMenu.item === data.item }]" :data-dt-more="data.item.datasetId" @click.stop="toggleMoreMenu($event, data)" aria-haspopup="menu" :aria-expanded="moreMenu && moreMenu.item === data.item ? 'true' : 'false'">
+            <!-- The option marked in the menu (its details shown below the row) names the button -->
+            <span class="dt-more-toggle-label">{{ getMoreLabel(data.item) }}</span>
+            <i class="fa-solid fa-chevron-up" aria-hidden="true" />
+          </button>
+          <template v-if="userIsDataCurator && allowEditing">
+            <button type="button" class="dt-action" @click="onDatasetEditClicked(data.item)" v-b-tooltip.hover :title="$t('tableTooltipDatasetEdit')" :aria-label="$t('tableTooltipDatasetEdit')">
+              <i class="fa-solid fa-pen-to-square" aria-hidden="true" />
+            </button>
+            <button type="button" class="dt-action is-danger" @click="onDatasetDeleteClicked(data.item)" v-b-tooltip.hover :title="$t('tableTooltipDatasetDelete')" :aria-label="$t('tableTooltipDatasetDelete')">
+              <i class="fa-solid fa-trash-can" aria-hidden="true" />
+            </button>
+          </template>
+        </div>
       </template>
 
       <!-- Row details is where the dataset locations are shown on a map -->
       <template v-slot:row-details="data">
         <template v-if="detailType === 'location'">
-          <LocationMap :locations="data.item.locations" v-if="data.item.locations && data.item.locations.length > 0" :showLinks="false"/>
+          <LocationMap :locations="data.item.locations" v-if="data.item.locations && data.item.locations.length > 0" :showLinks="false" customLook />
         </template>
-        <div v-else-if="detailType === 'collaborators'" class="border-top border-primary bg-white p-3">
+        <div v-else-if="detailType === 'collaborators'" class="dt-details">
           <!-- Collaborators modal -->
           <CollaboratorDetails :dataset="data.item" v-if="data.item && data.item.collaborators !== 0" />
         </div>
-        <div v-else-if="detailType === 'attributes'" class="border-top border-primary bg-white p-3">
+        <div v-else-if="detailType === 'attributes'" class="dt-details">
           <!-- Attribute modal -->
           <AttributeDetails :dataset="data.item" v-if="data.item && (data.item.dublinCore !== undefined || data.item.attributes !== 0)" />
         </div>
-        <div v-else-if="detailType === 'institutions'" class="border-top border-primary bg-white p-3">
+        <div v-else-if="detailType === 'fileresources'" class="dt-details">
+          <!-- Linked data resources -->
+          <FileresourceDetails :dataset="data.item" v-if="data.item && data.item.fileresourceIds && data.item.fileresourceIds.length > 0" />
+        </div>
+        <div v-else-if="detailType === 'institutions'" class="dt-details">
           <!-- Institution table -->
           <InstitutionDetails :dataset="data.item" v-if="data.item && data.item.institutions && data.item.institutions.length > 0" />
         </div>
       </template>
     </BaseTable>
+
+    <!-- The options of a dataset: internal / external and its state, then what can be seen of it (the menu stays open)
+         and the download (the menu closes) -->
+    <div class="bt-tokens dt-more-menu" v-if="moreMenu" :style="moreMenu.style" ref="moreMenu" role="menu" @click.stop>
+      <div class="dt-more-head">
+        <span class="dt-more-kind">{{ moreMenu.item.isExternal ? $t('datasetMenuExternal') : $t('datasetMenuInternal') }}</span>
+        <span class="dt-more-state" v-if="datasetStates[moreMenu.item.datasetState]">
+          <i :class="['fa-solid', stateIcons[moreMenu.item.datasetState]]" aria-hidden="true" /> {{ datasetStates[moreMenu.item.datasetState].text() }}
+        </span>
+      </div>
+      <button type="button" :class="['dt-more-item', { 'is-active': option.active }]" role="menuitem" v-for="option in moreOptions" :key="`dt-more-${option.key}`" :disabled="option.disabled" :aria-pressed="option.active ? 'true' : null" @click="option.action">
+        <i :class="['fa-solid', option.icon, 'fa-fw']" aria-hidden="true" />
+        <span class="dt-more-label">{{ option.text }}</span>
+        <span class="dt-more-count" v-if="option.count">{{ formatNumber(option.count) }}</span>
+      </button>
+    </div>
 
     <!-- License modal -->
     <LicenseModal :license="license" :dataset="dataset" :isAccepted="dataset.acceptedBy && dataset.acceptedBy.length > 0" ref="licenseModal" v-if="dataset" />
@@ -199,6 +204,7 @@ import BaseTable from '@/components/tables/BaseTable'
 import LicenseModal from '@/components/modals/LicenseModal'
 import CollaboratorDetails from '@/components/tables/details/CollaboratorDetails'
 import InstitutionDetails from '@/components/tables/details/InstitutionDetails'
+import FileresourceDetails from '@/components/tables/details/FileresourceDetails'
 import GenotypeExportModal from '@/components/modals/GenotypeExportModal'
 import DatasetEditModal from '@/components/modals/DatasetEditModal'
 import PublicationsModal from '@/components/modals/PublicationsModal'
@@ -207,26 +213,50 @@ import AttributeDetails from '@/components/tables/details/AttributeDetails'
 import defaultProps from '@/const/table-props'
 import { apiPostDatasetExport, apiGetDatasetSourceFile, apiPostLicenseTable, apiDeleteDataset } from '@/mixins/api/dataset'
 import { apiPostGenotypeDatasetExport } from '@/mixins/api/genotype'
+import { apiGetCountries } from '@/mixins/api/location'
 import { apiPostPedigreeDatasetExport } from '@/mixins/api/germplasm'
-import { datasetStates, datasetTypes } from '@/mixins/types'
+import { datasetStates, datasetTypes, locationTypes } from '@/mixins/types'
 import { getHighContrastTextColor } from '@/mixins/colors'
 import { isPageAvailable, downloadBlob } from '@/mixins/util'
 import { userIsAtLeast, USER_TYPE_DATA_CURATOR } from '@/mixins/api/auth'
-import { getDateTimeString, isTruncatedAfterWords, truncateAfterWords, getNumberWithSuffix } from '@/mixins/formatting'
+import { getDateTimeString, isTruncatedAfterWords, truncateAfterWords, getNumberWithSuffix, formatDateTime, formatDate, formatNumber } from '@/mixins/formatting'
 
-import { mdiHelpCircle, mdiOpenInNew, mdiPageNext, mdiInformationOutline, mdiCity, mdiPlusBox, mdiDelete, mdiAttachment, mdiMapMarker, mdiCheck, mdiNewBox, mdiTextBoxCheckOutline, mdiAccountMultiple, mdiFilePlus, mdiDownload, mdiSquareEditOutline, mdiLinkBoxVariantOutline, mdiTextBoxOutline } from '@mdi/js'
+import { mdiHelpCircle, mdiOpenInNew, mdiInformationOutline, mdiCity, mdiPlusBox, mdiDelete, mdiAttachment, mdiMapMarker, mdiCheck, mdiNewBox, mdiTextBoxCheckOutline, mdiAccountMultiple, mdiFilePlus, mdiDownload, mdiSquareEditOutline, mdiLinkBoxVariantOutline, mdiTextBoxOutline } from '@mdi/js'
 import { Pages } from '@/mixins/pages'
+import { followAnchor } from '@/mixins/anchored-menu'
 
 const emitter = require('tiny-emitter/instance')
 
 const countries = require('i18n-iso-countries')
 countries.registerLocale(require('i18n-iso-countries/langs/en.json'))
 
+// The countries of the database by their id (the locations of the datasets only have the id), loaded once
+let countriesById = null
+const getCountriesById = () => {
+  if (!countriesById) {
+    countriesById = new Promise(resolve => {
+      apiGetCountries(result => {
+        const byId = {}
+        ;(result || []).filter(c => c.id > 0 && c.countryCode2).forEach(c => { byId[c.id] = c })
+        resolve(byId)
+      }, {
+        codes: [],
+        callback: () => {
+          countriesById = null
+          resolve({})
+        }
+      })
+    })
+  }
+  return countriesById
+}
+
 export default {
   name: 'DatasetTable',
   props: {
     ...defaultProps.FULL,
-    // Details shown on every row when the data arrives: 'collaborators', 'location', 'attributes' or 'institutions'
+    // Details shown on every row when the data arrives: 'collaborators', 'location', 'attributes', 'institutions' or
+    // 'fileresources'
     openDetails: {
       type: String,
       default: null
@@ -250,10 +280,24 @@ export default {
     datasetType: {
       type: String,
       default: null
+    },
+    // External datasets: a Status column (the state of the dataset) instead of the options menu
+    external: {
+      type: Boolean,
+      default: false
+    },
+    // Adding, editing and deleting datasets (data curators); off where the datasets are only shown (e.g. those of a
+    // trait): that is done on the datasets page
+    allowEditing: {
+      type: Boolean,
+      default: true
     }
   },
   data: function () {
     return {
+      // The column of the checkboxes drawing the eye for a moment (highlightSelection)
+      selectHighlight: false,
+      selectHighlightTimer: null,
       Pages,
       datasetStates,
       datasetTypes,
@@ -261,7 +305,6 @@ export default {
       mdiHelpCircle,
       mdiCity,
       mdiOpenInNew,
-      mdiPageNext,
       mdiInformationOutline,
       mdiMapMarker,
       mdiCheck,
@@ -276,13 +319,25 @@ export default {
       mdiTextBoxOutline,
       options: {
         idColumn: 'datasetId',
-        tableName: 'datasets',
-        rowVariant: this.getRowVariant
+        tableName: 'datasets'
       },
       dataset: null,
       license: null,
       previousDetailsRow: null,
-      detailType: 'location'
+      detailType: 'location',
+      // The details shown on every row (openDetails, the address) no more once the user took a filter away
+      autoDetailsDismissed: false,
+      // Name and description cells ("<column>-<datasetId>") shown in full, and those cut on their line (measured)
+      expandedCells: {},
+      cutCells: {},
+      // The options menu: its dataset (item), the row (for its details) and where it is
+      moreMenu: null,
+      // The Font Awesome icons of the dataset states
+      stateIcons: {
+        public: 'fa-lock-open',
+        private: 'fa-lock',
+        hidden: 'fa-eye-slash'
+      }
     }
   },
   computed: {
@@ -291,6 +346,75 @@ export default {
       'storeToken',
       'storeSelectedProjects'
     ]),
+    // The location chips: in the colour of the dataset locations, the count in a contrasting colour
+    locationChipColor: function () {
+      return locationTypes.datasets.color() || 'currentColor'
+    },
+    locationChipCountColor: function () {
+      const color = locationTypes.datasets.color()
+      return color ? getHighContrastTextColor(color) : null
+    },
+    // The options of the dataset of the menu: what can be seen of it (count; disabled when not allowed) and the download.
+    // Those with nothing to count only for data curators (who can add to them); the details shown below the row marked.
+    moreOptions: function () {
+      if (!this.moreMenu) {
+        return []
+      }
+      const item = this.moreMenu.item
+      const data = this.moreMenu.data
+      const allowed = !item.licenseName || this.isAccepted(item)
+      const fileresources = item.fileresourceIds ? item.fileresourceIds.length : 0
+      const institutions = item.institutions ? item.institutions.length : 0
+      return [{
+        key: 'fileresources',
+        icon: 'fa-paperclip',
+        text: this.$t('datasetMenuLinkedResources'),
+        count: fileresources,
+        disabled: fileresources === 0 || !this.dataResourcesVisible || !allowed,
+        action: () => this.showRowDetails('fileresources', data)
+      }, {
+        key: 'publications',
+        icon: 'fa-book',
+        text: this.$t('pagePublicationsTitle'),
+        count: item.publications,
+        disabled: !item.publications && !this.userIsDataCurator,
+        action: () => this.showPublications(item)
+      }, {
+        key: 'institutions',
+        icon: 'fa-building-flag',
+        text: this.$t('modalTitleInstitutions'),
+        count: institutions,
+        disabled: institutions === 0,
+        action: () => this.showRowDetails('institutions', data)
+      }, {
+        key: 'collaborators',
+        icon: 'fa-users',
+        text: this.$t('tableTooltipDatasetCollaborators'),
+        count: item.collaborators,
+        disabled: !item.collaborators,
+        action: () => this.showRowDetails('collaborators', data)
+      }, {
+        key: 'attributes',
+        icon: 'fa-ellipsis-vertical',
+        text: this.$t('pagePassportAttributeTitle'),
+        count: item.attributes,
+        disabled: (!item.attributes && !item.dublinCore) || !allowed,
+        action: () => this.showRowDetails('attributes', data)
+      }, {
+        key: 'download',
+        icon: 'fa-download',
+        text: this.$t('tableTooltipDatasetDownload'),
+        count: null,
+        disabled: item.isExternal || !allowed,
+        action: () => {
+          this.closeMoreMenu()
+          this.downloadDataset(item)
+        }
+      }].filter(option => option.count === null || option.count > 0 || this.userIsDataCurator)
+        .map(option => Object.assign(option, {
+          active: ['fileresources', 'institutions', 'collaborators', 'attributes'].includes(option.key) && item._showDetails === true && this.detailType === option.key
+        }))
+    },
     dataResourcesVisible: function () {
       return isPageAvailable(Pages.dataResources)
     },
@@ -345,6 +469,7 @@ export default {
           key: 'experimentName',
           type: String,
           sortable: true,
+          defaultHidden: true,
           label: this.$t('tableColumnExperimentName')
         }, {
           key: 'datasetType',
@@ -370,6 +495,7 @@ export default {
           key: 'countries',
           type: undefined,
           sortable: false,
+          defaultHidden: true,
           label: this.$t('tableColumnDatasetCountryName')
         }, {
           key: 'locations',
@@ -381,19 +507,13 @@ export default {
           type: Date,
           sortable: true,
           label: this.$t('tableColumnDatasetStartDate'),
-          formatter: value => value ? new Date(value).toLocaleDateString() : null
+          formatter: value => formatDate(value)
         }, {
           key: 'endDate',
           type: Date,
           sortable: true,
           label: this.$t('tableColumnDatasetEndDate'),
-          formatter: value => value ? new Date(value).toLocaleDateString() : null
-        }, {
-          key: 'createdOn',
-          type: Date,
-          sortable: true,
-          label: this.$t('tableColumnDatasetCreatedOn'),
-          formatter: value => value ? new Date(value).toLocaleDateString() : null
+          formatter: value => formatDate(value)
         }, {
           key: 'dataObjectCount',
           type: Number,
@@ -408,79 +528,35 @@ export default {
           class: 'text-right',
           label: this.$t('tableColumnDatasetPointCount')
         }, {
-          key: 'fileresourceIds',
-          type: 'json',
-          sortable: false,
-          class: 'px-1',
-          label: this.$t('tableColumnDatasetFileresources')
-        }, {
-          key: 'isExternal',
-          type: Boolean,
-          sortable: false,
-          class: 'px-1',
-          label: this.$t('tableColumnDatasetExternal')
-        }, {
-          key: 'datasetState',
-          type: undefined,
-          sortable: false,
-          class: 'px-1',
-          label: ''
-        }, {
-          key: 'publications',
-          type: undefined,
-          sortable: false,
-          class: 'px-1',
-          label: ''
-        }, {
-          key: 'institutions',
-          type: 'json',
-          sortable: false,
-          label: ''
-        }, {
-          key: 'collaborators',
-          type: undefined,
-          sortable: false,
-          class: 'px-1',
-          label: ''
-        }, {
-          key: 'attributes',
-          type: undefined,
-          sortable: false,
-          class: 'px-1',
-          label: ''
-        }, {
-          key: 'download',
-          type: undefined,
-          sortable: false,
-          class: 'px-1',
-          label: ''
-        }
+          key: 'createdOn',
+          type: Date,
+          sortable: true,
+          label: this.$t('tableColumnDatasetCreatedOn'),
+          formatter: value => formatDateTime(value)
+        }, this.external
+          ? {
+              key: 'status',
+              type: undefined,
+              sortable: false,
+              class: 'dt-actions-cell',
+              label: this.$t('tableColumnDatasetStatus')
+            }
+          : {
+              key: 'actions',
+              type: undefined,
+              sortable: false,
+              class: 'dt-actions-cell',
+              label: ''
+            }
       ]
-
-      if (this.userIsDataCurator) {
-        result.push({
-          key: 'edit',
-          type: undefined,
-          sortable: false,
-          class: 'px-1',
-          label: ''
-        })
-
-        result.push({
-          key: 'delete',
-          type: undefined,
-          sortable: false,
-          class: 'px-1',
-          label: ''
-        })
-      }
 
       if (this.selectable === true) {
         result.unshift({
           key: 'selected',
           type: undefined,
           sortable: false,
-          class: 'table-primary',
+          // One selected only (new look): no blue column, the row is tinted when selected
+          class: this.selectionMode === 'single' ? 'dt-select-cell' : 'table-primary',
           label: ''
         })
       }
@@ -494,6 +570,7 @@ export default {
     BaseTable,
     CollaboratorDetails,
     InstitutionDetails,
+    FileresourceDetails,
     DatasetEditModal,
     GenotypeExportModal,
     LocationMap,
@@ -513,35 +590,185 @@ export default {
     isPageAvailable,
     // The data of the table; with "openDetails" (or "datasets-details" in the URL, e.g. "collaborators"), every row
     // comes with those details shown
+    // The country of each location (code and name, for the flag and the map) is added to the rows
     getDataWithDetails: function (data, callback) {
-      const type = this.openDetails || (this.$route && this.$route.query ? this.$route.query['datasets-details'] : null)
+      const type = this.autoDetailsDismissed ? null : (this.openDetails || (this.$route && this.$route.query ? this.$route.query['datasets-details'] : null))
+      let request
       if (!type) {
-        return this.getData(data, callback)
+        request = this.getData(data, callback)
+      } else {
+        this.detailType = type
+        request = this.getData(data, result => {
+          if (result && result.data) {
+            result.data.forEach(dataset => { dataset._showDetails = true })
+          }
+          if (callback) {
+            callback(result)
+          }
+        })
+      }
+      if (!request || typeof request.then !== 'function') {
+        return request
+      }
+      return Promise.all([request, getCountriesById()]).then(([result, byId]) => {
+        const datasets = result && result.data ? result.data.data : null
+        ;(datasets || []).forEach(dataset => (dataset.locations || []).forEach(location => {
+          const country = byId[location.countryId]
+          if (country) {
+            location.countryCode2 = country.countryCode2
+            location.countryCode3 = country.countryCode3
+            location.countryName = country.countryName
+          }
+        }))
+        return result
+      })
+    },
+    formatNumber,
+    // The options menu of a row: above its button (below it when there is no room above), in this component
+    toggleMoreMenu: function (event, data) {
+      if (this.moreMenu && this.moreMenu.item === data.item) {
+        this.closeMoreMenu()
+        return
+      }
+      this.closeMoreMenu()
+      // First hidden, to know its height; then placed next to its button, and again whenever the table changes (a row
+      // expanded or folded above it, the width): always next to its button
+      this.moreMenu = { item: data.item, data, above: null, style: { left: '0px', width: '260px', top: '0px', visibility: 'hidden' } }
+      document.addEventListener('click', this.closeMoreMenu)
+      document.addEventListener('keydown', this.onMoreMenuKey)
+      this.$nextTick(() => {
+        this.placeMoreMenu()
+        this.stopFollowingMore = followAnchor(this.$el, this.placeMoreMenu)
+      })
+    },
+    // The menu right above its button (below it when there is no room above when it opens), in this component
+    placeMoreMenu: function () {
+      const menu = this.$refs.moreMenu
+      if (!menu || !this.moreMenu) {
+        return
+      }
+      // The button of the row (the rows may have been drawn again since)
+      const button = [...this.$el.querySelectorAll('[data-dt-more]')].find(b => b.getAttribute('data-dt-more') === `${this.moreMenu.item.datasetId}`)
+      if (!button) {
+        this.closeMoreMenu()
+        return
+      }
+      const width = 260
+      const height = menu.offsetHeight
+      const b = button.getBoundingClientRect()
+      const r = this.$el.getBoundingClientRect()
+      if (this.moreMenu.above === null) {
+        this.moreMenu.above = b.top >= height + 8
+      }
+      const left = Math.max(0, Math.min(b.left - r.left, r.width - width))
+      const top = this.moreMenu.above ? b.top - r.top - height - 3 : b.bottom - r.top + 3
+      this.moreMenu.style = { left: `${left}px`, width: `${width}px`, top: `${top}px` }
+    },
+    // The table brought into view, its column of checkboxes highlighted for a moment (e.g. when a dataset has to be
+    // selected first)
+    highlightSelection: function () {
+      if (this.$el && this.$el.scrollIntoView) {
+        this.$el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }
+      clearTimeout(this.selectHighlightTimer)
+      this.selectHighlight = false
+      this.$nextTick(() => {
+        this.selectHighlight = true
+        this.selectHighlightTimer = setTimeout(() => { this.selectHighlight = false }, 2600)
+      })
+    },
+    // The name of the button of the options: the option marked for the row (its details shown below it), else
+    // "More options"
+    getMoreLabel: function (item) {
+      if (item._showDetails === true) {
+        const texts = {
+          fileresources: () => this.$t('datasetMenuLinkedResources'),
+          institutions: () => this.$t('modalTitleInstitutions'),
+          collaborators: () => this.$t('tableTooltipDatasetCollaborators'),
+          attributes: () => this.$t('pagePassportAttributeTitle')
+        }
+        if (texts[this.detailType]) {
+          return texts[this.detailType]()
+        }
+      }
+      return this.$t('datasetMenuMoreOptions')
+    },
+    closeMoreMenu: function () {
+      if (this.stopFollowingMore) {
+        this.stopFollowingMore()
+        this.stopFollowingMore = null
+      }
+      this.moreMenu = null
+      document.removeEventListener('click', this.closeMoreMenu)
+      document.removeEventListener('keydown', this.onMoreMenuKey)
+    },
+    onMoreMenuKey: function (event) {
+      if (event.key === 'Escape') {
+        this.closeMoreMenu()
+      }
+    },
+    // The details below the row (from the menu): shown, another type replacing them; the same type again hides them
+    // One row expanded at a time (the type of details is the same for all rows): the same option again closes it,
+    // another one replaces its content, and the details of another row close
+    showRowDetails: function (type, data) {
+      const shown = data.item._showDetails === true
+      if (!shown || type === this.detailType) {
+        this.$set(data.item, '_showDetails', !shown)
+      }
+      if (!shown) {
+        this.closeOtherDetails(data.item)
       }
       this.detailType = type
-      return this.getData(data, result => {
-        if (result && result.data) {
-          result.data.forEach(dataset => { dataset._showDetails = true })
+    },
+    closeOtherDetails: function (item) {
+      const table = this.$refs.datasetTable
+      ;((table && table.pageItems) || []).forEach(other => {
+        if (other !== item && other._showDetails) {
+          this.$set(other, '_showDetails', false)
         }
-        callback(result)
       })
+    },
+    hasCoordinates: function (locations) {
+      return locations.some(l => l.locationLatitude && l.locationLongitude)
     },
     showDetails: function (type, data) {
       if (!data.detailsShowing || type === this.detailType) {
         this.$nextTick(() => data.toggleDetails())
       }
+      if (!data.detailsShowing) {
+        this.closeOtherDetails(data.item)
+      }
 
       this.detailType = type
     },
-    showFullDatasetDescription: function (description) {
-      this.$bvModal.msgBoxOk(description, {
-        title: this.$t('tableColumnDatasetDescription'),
-        okTitle: this.$t('genericOk')
+    isCellExpanded: function (column, item) {
+      return this.expandedCells[`${column}-${item.datasetId}`] === true
+    },
+    isCellCut: function (column, item) {
+      return this.cutCells[`${column}-${item.datasetId}`] === true
+    },
+    toggleCell: function (column, item) {
+      const key = `${column}-${item.datasetId}`
+      this.$set(this.expandedCells, key, !this.expandedCells[key])
+    },
+    // Which name and description cells are cut on their line (after the rows are shown, and when the width changes)
+    measureCells: function () {
+      this.closeMoreMenu()
+      this.$nextTick(() => {
+        Object.keys(this.$refs).filter(ref => ref.startsWith('clamp-')).forEach(ref => {
+          const element = Array.isArray(this.$refs[ref]) ? this.$refs[ref][0] : this.$refs[ref]
+          const key = ref.replace('clamp-', '')
+          if (!element || this.expandedCells[key]) {
+            return
+          }
+          const text = element.querySelector('.dt-clamp-text')
+          this.$set(this.cutCells, key, text.scrollWidth > text.clientWidth + 1)
+        })
       })
     },
     getCountries: function (locations) {
       if (locations) {
-        return [...new Set(locations.map(l => l.countryName))]
+        return [...new Set(locations.map(l => l.countryCode2).filter(c => c))]
       } else {
         return []
       }
@@ -549,12 +776,10 @@ export default {
     getCountryName: function (code2) {
       return countries.getName(code2, 'en')
     },
-    getRowVariant: function (dataset) {
-      if (!dataset.licenseName) {
-        return null
-      } else {
-        return this.isAccepted(dataset) ? null : 'danger'
-      }
+    // A Creative Commons license (CC ...): its icon before the name
+    isCreativeCommons: function (dataset) {
+      const text = `${dataset.licenseName || ''} ${dataset.licenseDescription || ''}`
+      return /(^|[^a-z])cc([^a-z]|$)|creative\s*commons/i.test(text)
     },
     isAccepted: function (dataset) {
       if (this.storeToken) {
@@ -745,9 +970,12 @@ export default {
   },
   mounted: function () {
     emitter.on('license-accepted', this.onLicenseAccepted)
+    window.addEventListener('resize', this.measureCells)
   },
   beforeDestroy: function () {
     emitter.off('license-accepted', this.onLicenseAccepted)
+    window.removeEventListener('resize', this.measureCells)
+    this.closeMoreMenu()
   }
 }
 </script>
@@ -758,5 +986,248 @@ export default {
 }
 .dataset-table .b-table-details > td {
   padding: 0;
+}
+/* The details below a row (another table, the Dublin Core ...): in the colours of the tables, light or dark */
+.dataset-table .dt-details {
+  padding: 1rem;
+  border-top: 1px solid var(--bt-border);
+  background: var(--bt-head-bg);
+  color: var(--bt-text);
+}
+/* Name and description on one line, "..." where cut; expanded: all of it, on several lines */
+.dataset-table .dt-clamp {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.35rem;
+  width: 100%;
+  max-width: 22rem;
+}
+.dataset-table .dt-clamp-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dataset-table .dt-clamp.expanded .dt-clamp-text {
+  white-space: normal;
+}
+/* The chevron at the right of the cell, whatever the length of the text */
+.dataset-table .dt-clamp-toggle {
+  flex-shrink: 0;
+  margin-left: auto;
+  padding: 0 0.15rem;
+  border: 0;
+  background: transparent;
+  color: var(--bt-muted, #6b6f6c);
+  font-size: 0.65rem;
+  line-height: 1.5rem;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+.dataset-table .dt-clamp.expanded .dt-clamp-toggle {
+  transform: rotate(180deg);
+}
+.dataset-table .dt-location-chip,
+.dataset-table .dt-location-chip:hover {
+  text-decoration: none;
+}
+.dataset-table .dt-location .fi {
+  margin-right: 0.25rem;
+}
+
+/* The options of a row: "More options" (bordered, a chevron up) and the edit / delete icons */
+.dataset-table-root {
+  position: relative;
+}
+.dataset-table .dt-actions-cell {
+  width: 1%;
+}
+/* The column of the checkboxes (one selected only) */
+.dataset-table .dt-select-cell {
+  width: 1%;
+}
+.dt-select-highlight .dataset-table .dt-select-cell {
+  animation: dt-select-pulse 0.85s ease-in-out 3;
+}
+@keyframes dt-select-pulse {
+  0%, 100% {
+    background-color: transparent;
+    box-shadow: none;
+  }
+  50% {
+    background-color: color-mix(in srgb, var(--bt-accent) 22%, transparent);
+    box-shadow: inset 2px 0 0 var(--bt-accent), inset -2px 0 0 var(--bt-accent);
+  }
+}
+/* The state of an external dataset: as in the options menu */
+.dataset-table .dt-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.15rem 0.6rem;
+  border: 1px solid var(--bt-border);
+  border-radius: 999px;
+  background: var(--bt-surface);
+  color: var(--bt-text-subtle);
+  font-size: 0.75rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.dataset-table .dt-state .fa-solid {
+  font-size: 0.65rem;
+}
+.dataset-table .dt-license-icon {
+  margin-right: 0.35rem;
+}
+.dataset-table .dt-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  white-space: nowrap;
+}
+.dataset-table .dt-more-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  min-width: 11rem;
+  height: 32px;
+  padding: 0 0.75rem;
+  border: 1px solid var(--bt-border);
+  border-radius: 8px;
+  background: var(--bt-surface);
+  color: var(--bt-text);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+.dataset-table .dt-more-toggle .dt-more-toggle-label {
+  max-width: 12rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dataset-table .dt-more-toggle:hover,
+.dataset-table .dt-more-toggle.open {
+  border-color: var(--bt-accent);
+}
+.dataset-table .dt-more-toggle .fa-chevron-up {
+  color: var(--bt-muted);
+  font-size: 0.65rem;
+  transition: transform 0.15s ease;
+}
+.dataset-table .dt-more-toggle.open .fa-chevron-up {
+  transform: rotate(180deg);
+}
+.dataset-table .dt-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--bt-icon);
+  font-size: 1rem;
+  cursor: pointer;
+}
+.dataset-table .dt-action:hover {
+  background: var(--bt-icon-hover-bg);
+  color: var(--bt-icon-hover);
+}
+.dataset-table .dt-action.is-danger:hover {
+  color: var(--bt-danger);
+}
+
+/* The options menu: a card above the button, in the font of the tables */
+.dt-more-menu {
+  position: absolute;
+  z-index: 1050;
+  overflow: hidden;
+  border: 1px solid var(--bt-border);
+  border-radius: 12px;
+  background: var(--bt-surface);
+  box-shadow: 0 2px 6px var(--bt-shadow), 0 14px 32px -12px rgba(0, 0, 0, 0.25);
+  color: var(--bt-text);
+  font-family: 'Inter', -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 0.82rem;
+}
+.dt-more-menu .dt-more-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.6rem 0.9rem;
+  background: var(--bt-head-bg);
+}
+.dt-more-menu .dt-more-kind {
+  color: var(--bt-muted);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.dt-more-menu .dt-more-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.15rem 0.55rem;
+  border: 1px solid var(--bt-border);
+  border-radius: 999px;
+  background: var(--bt-surface);
+  color: var(--bt-text-subtle);
+  font-size: 0.72rem;
+  font-weight: 500;
+}
+.dt-more-menu .dt-more-state .fa-solid {
+  font-size: 0.65rem;
+}
+.dt-more-menu .dt-more-item {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  width: 100%;
+  padding: 0.55rem 0.9rem;
+  border: 0;
+  border-top: 1px solid var(--bt-border);
+  background: transparent;
+  color: var(--bt-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.dt-more-menu .dt-more-item:hover:not(:disabled),
+.dt-more-menu .dt-more-item:focus-visible,
+.dt-more-menu .dt-more-item.is-active {
+  background: var(--bt-icon-hover-bg);
+  outline: none;
+}
+.dt-more-menu .dt-more-item:disabled {
+  color: var(--bt-muted);
+  opacity: 0.55;
+  cursor: default;
+}
+.dt-more-menu .dt-more-item .fa-fw {
+  color: var(--bt-icon);
+  font-size: 0.85rem;
+}
+.dt-more-menu .dt-more-label {
+  flex: 1 1 auto;
+}
+.dt-more-menu .dt-more-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.4rem;
+  height: 1.25rem;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: var(--bt-accent-soft);
+  color: var(--bt-accent);
+  font-size: 0.68rem;
+  font-weight: 700;
 }
 </style>

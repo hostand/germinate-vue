@@ -9,11 +9,12 @@
     <b-tabs class="pb-tabs" nav-class="pb-tabs-nav" v-model="tabIndex">
       <!-- All publications -->
       <b-tab>
-        <template #title><i class="fa-solid fa-book pb-tab-icon" aria-hidden="true" />List</template>
+        <template #title><i class="fa-solid fa-book pb-tab-icon" aria-hidden="true" />{{ $t('genericList') }}</template>
         <div class="pb-tab-panel">
           <!-- Data curators add a publication of the database with the [+] below the table, like on the home page -->
           <PublicationTable :getData="getData"
                             :filterOn="filterOn"
+                            modernLook
                             :tableActions="userIsDataCurator ? tableActions : null"
                             ref="publicationTable"
                             @publication-selected="onPublicationSelected" />
@@ -22,13 +23,15 @@
       </b-tab>
 
       <!-- The selected publication; the cross closes it and goes back to the list -->
-      <b-tab v-if="publicationId">
+      <!-- Always there, hidden and disabled while nothing is selected: created with the page, b-tabs keeps it after the
+           List tab (a tab added later may be put first) -->
+      <b-tab :disabled="!publicationId" :title-item-class="publicationId ? null : 'd-none'">
         <template #title>
           <i class="fa-solid fa-file-lines pb-tab-icon" aria-hidden="true" />{{ $t('pagePublicationDetailsTab') }}
           <span class="pb-tab-close" role="button" tabindex="0" :title="$t('buttonClose')" :aria-label="$t('buttonClose')"
                 @click.stop.prevent="closeDetails" @keydown.enter.stop.prevent="closeDetails"><i class="fa-solid fa-xmark" aria-hidden="true" /></span>
         </template>
-        <div class="pb-tab-panel">
+        <div class="pb-tab-panel" v-if="publicationId">
           <p class="pb-loading" v-if="!publication || !details"><b-spinner small /></p>
 
           <template v-else>
@@ -392,7 +395,8 @@ export default {
       }
 
       // The Details tab, once it exists, in focus; the page stays at the top
-      this.$nextTick(() => {
+      // After b-tabs registered the new tab (added in the same tick as the selection)
+      setTimeout(() => {
         this.tabIndex = 1
         this.$nextTick(() => {
           const tab = this.$el.querySelector('.pb-tabs-nav .nav-link.active')
@@ -400,7 +404,7 @@ export default {
             tab.focus({ preventScroll: true })
           }
         })
-      })
+      }, 0)
 
       apiPostPublicationsTable(queryParams, result => {
         if (result && result.data && result.data.length > 0) {

@@ -23,8 +23,12 @@
         <router-link :to="{ name: Pages.climateDetails, params: { climateId: data.item.climateId } }">{{ data.item.climateDescription }}</router-link>
       </template>
       <!-- Dataset type icon -->
-      <template v-slot:cell(dataType)="data">
-        <span class="text-nowrap"><span :style="`color: ${dataTypes[data.item.dataType].color()};`"><MdiIcon :path="dataTypes[data.item.dataType].path" /></span> {{ dataTypes[data.item.dataType].text() }}</span>
+      <!-- New look: a rounded chip in the colour of the type -->
+      <template v-slot:cell(dataType)="data" v-if="modernLook">
+        <span class="bt-chip" :style="{ '--bt-chip-color': dataTypes[data.item.dataType].color() }"><MdiIcon :path="dataTypes[data.item.dataType].path" /> {{ dataTypes[data.item.dataType].text() }}</span>
+      </template>
+      <template v-slot:cell(dataType)="data" v-else>
+        <span class="bt-chip" :style="{ '--bt-chip-color': dataTypes[data.item.dataType].color() }"><MdiIcon :path="dataTypes[data.item.dataType].path" /> {{ dataTypes[data.item.dataType].text() }}</span>
       </template>
     </BaseTable>
   </div>

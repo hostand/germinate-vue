@@ -1,12 +1,7 @@
 <template>
   <div>
     <Collapse :icon="customLook ? null : mdiFilter" :title="$t('widgetGermplasmTableFilterToggle')" :visible="customLook" :showLoading="false" :customLook="customLook" :class="['mb-2', { 'gt-filter-custom': customLook }]" @toggle="collapseVisible = !collapseVisible">
-      <!-- Removes all the filters of the table: only while it has some -->
-      <template v-slot:actions v-if="customLook && activeFilters.length > 0">
-        <button type="button" class="gt-filter-clear" @click="$emit('filtering-cleared')">
-          <MdiIcon :path="mdiFilterRemove" :size="16" /> Clear filters
-        </button>
-      </template>
+      <!-- No "Clear filters" here: the table has its own button that clears its filters -->
       <template v-slot:content>
         <b-row>
           <!-- Custom look: the search of the home page for germplasm, by accession number and name at once -->
@@ -126,7 +121,7 @@ import { entityTypes, datasetTypes } from '@/mixins/types'
 import { getNumberWithSuffix } from '@/mixins/formatting'
 import { getHighContrastTextColor } from '@/mixins/colors'
 
-import { mdiFilter, mdiFilterRemove, mdiCamera, mdiMagnify } from '@mdi/js'
+import { mdiFilter, mdiCamera, mdiMagnify } from '@mdi/js'
 
 // SAMPSTAT code of a biological status name of the database. Compared up to the first bracket, without case, as some
 // database names differ from MCPD in their details (e.g. "Cytogenic stocks" for 422).
@@ -170,7 +165,6 @@ export default {
     return {
       datasetTypes,
       mdiFilter,
-      mdiFilterRemove,
       mdiCamera,
       mdiMagnify,
       collapseVisible: false,
@@ -599,26 +593,44 @@ export default {
 }
 </script>
 
+<style src="@/assets/fonts/inter.css"></style>
+<style>
+/* Custom look: in Inter, the font of the tables (new look), as all that belongs to the table; the fields and buttons
+   inherit it, the icons keep their own font */
+.gt-filter-custom,
+.gt-filter-custom input,
+.gt-filter-custom button,
+.gt-filter-custom select,
+.gt-filter-custom textarea,
+.gt-filter-custom .btn,
+.gt-filter-custom .form-control,
+.gt-filter-custom .dropdown-menu {
+  font-family: 'Inter', -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+/* A little smaller than the page: labels (bold), fields, lists, buttons and their counts. The class twice: above the
+   own rules of the search field and of the lists (scoped, as specific as these) */
+.gt-filter-custom.gt-filter-custom label,
+.gt-filter-custom.gt-filter-custom legend {
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+.gt-filter-custom.gt-filter-custom .form-control,
+.gt-filter-custom.gt-filter-custom .custom-select,
+.gt-filter-custom.gt-filter-custom .btn,
+.gt-filter-custom.gt-filter-custom .dropdown-menu,
+.gt-filter-custom.gt-filter-custom .search-module-compact .home-search-input,
+.gt-filter-custom.gt-filter-custom .germplasm-filter-select,
+.gt-filter-custom.gt-filter-custom .germplasm-filter-select input,
+.gt-filter-custom.gt-filter-custom .germplasm-filter-select .germplasm-filter-name,
+.gt-filter-custom.gt-filter-custom .vbt-autcomplete-list {
+  font-size: 0.9rem;
+}
+.gt-filter-custom.gt-filter-custom .badge,
+.gt-filter-custom.gt-filter-custom .germplasm-filter-select .germplasm-filter-count {
+  font-size: 0.75rem;
+}
+</style>
 <style scoped>
-/* Clear filters, on the bottom edge of the panel (custom look) */
-.gt-filter-clear {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0.3rem 0.75rem;
-  border: 1px solid var(--cp-border);
-  border-radius: 10px;
-  background: var(--cp-surface);
-  color: var(--cp-text);
-  font: inherit;
-  font-size: 0.85rem;
-  font-weight: 500;
-  cursor: pointer;
-}
-.gt-filter-clear:hover {
-  border-color: var(--cp-green);
-  color: var(--cp-green);
-}
 /* Has data of type and Conservation in two equal sub-columns of one column, each at the start of its own */
 .filter-pair {
   display: grid;

@@ -108,7 +108,7 @@ export function plotlyAlleleFreqChart (Plotly) {
           tickfont: { color: darkMode ? 'white' : 'black' },
           zeroline: true,
           showgrid: true,
-          gridcolor: darkMode ? 'rgba(1.0, 1.0, 1.0, 0.1)' : 'rgba(0.0, 0.0, 0.0, 0.1)',
+          gridcolor: darkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
           rangemode: 'tozero',
           automargin: true
         }

@@ -41,7 +41,7 @@ import { mapGetters } from 'vuex'
 import BaseTable from '@/components/tables/BaseTable'
 import defaultProps from '@/const/table-props.js'
 import { userIsAtLeast, USER_TYPE_DATA_CURATOR } from '@/mixins/api/auth'
-import { isTruncatedAfterWords, truncateAfterWords, getNumberWithSuffix } from '@/mixins/formatting'
+import { isTruncatedAfterWords, truncateAfterWords, getNumberWithSuffix, formatDateTime } from '@/mixins/formatting'
 import { apiDeleteFileresource, apiGetDataResource } from '@/mixins/api/dataset'
 import { downloadBlob } from '@/mixins/util'
 
@@ -102,7 +102,7 @@ export default {
           type: Date,
           sortable: true,
           label: this.$t('tableColumnFileresourceCreatedOn'),
-          formatter: value => value ? new Date(value).toLocaleString() : null
+          formatter: value => formatDateTime(value)
         }, {
           key: 'fileresourcetypeId',
           type: String,

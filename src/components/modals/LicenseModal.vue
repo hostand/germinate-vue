@@ -5,7 +5,8 @@
       <a :href="htmlData" target="_blank" rel="noopener noreferrer" style="display: none;" :download="htmlFilename" ref="htmlDownloadLink" />
     </div>
     <div slot="modal-footer">
-      <b-button-group>
+      <!-- The buttons side by side, with a space between them -->
+      <div class="license-modal-buttons">
         <!-- Options to download the license -->
         <b-dropdown>
           <template slot="button-content"><MdiIcon :path="mdiDownload" /> {{ $t('buttonDownload') }}</template>
@@ -19,7 +20,7 @@
           <b-button variant="success" @click="accept"><MdiIcon :path="mdiCheck" /> {{ $t('buttonAccept') }}</b-button>
           <b-button variant="danger" @click="hide"><MdiIcon :path="mdiCancel" /> {{ $t('buttonDecline') }}</b-button>
         </template>
-      </b-button-group>
+      </div>
     </div>
   </b-modal>
 </template>
@@ -113,4 +114,9 @@ export default {
 </script>
 
 <style>
+.license-modal-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
 </style>

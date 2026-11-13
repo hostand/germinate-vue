@@ -12,7 +12,7 @@
                v-on="$listeners">
       <!-- Reference table -->
       <template v-slot:cell(imageRefTable)="data">
-        <b-badge class="w-100" :style="`color: ${getHighContrastTextColor(imageTypes[data.item.imageRefTable].color())}; background-color: ${imageTypes[data.item.imageRefTable].color()};`"><MdiIcon :path="imageTypes[data.item.imageRefTable].path" /> {{ imageTypes[data.item.imageRefTable].text() }}</b-badge>
+        <b-badge class="bt-chip" :style="{ '--bt-chip-color': imageTypes[data.item.imageRefTable].color() }"><MdiIcon :path="imageTypes[data.item.imageRefTable].path" /> {{ imageTypes[data.item.imageRefTable].text() }}</b-badge>
       </template>
       <!-- Image -->
       <template v-slot:cell(image)="data">
@@ -43,7 +43,7 @@
       <!-- Tags -->
       <template v-slot:cell(tags)="data">
         <div v-if="data.item.tags">
-          <b-badge v-for="(tag, index) in data.item.tags" :key="`image-tag-${data.item.imageId}-${index}`" class="mr-1" href="#" @click.native.prevent="$emit('tag-clicked', tag)" :style="`background-color: ${getTagColor(tag)}; color: ${getTextColor(tag)}`">
+          <b-badge v-for="(tag, index) in data.item.tags" :key="`image-tag-${data.item.imageId}-${index}`" class="mr-1 bt-chip" href="#" @click.native.prevent="$emit('tag-clicked', tag)" :style="{ '--bt-chip-color': getTagColor(tag) }">
             {{ tag.tagName }}
           </b-badge>
         </div>
@@ -69,6 +69,7 @@ import { getImageUrl } from '@/mixins/image'
 import { Pages } from '@/mixins/pages'
 
 import { mdiBookInformationVariant, mdiImageText } from '@mdi/js'
+import { formatDateTime } from '@/mixins/formatting'
 
 export default {
   name: 'ImageTable',
@@ -146,7 +147,7 @@ export default {
           type: Date,
           sortable: true,
           label: this.$t('tableColumnImageCreatedOn'),
-          formatter: value => value ? new Date(value).toLocaleString() : null
+          formatter: value => formatDateTime(value)
         }, {
           key: 'image',
           type: undefined,

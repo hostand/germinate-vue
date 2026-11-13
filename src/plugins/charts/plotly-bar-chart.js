@@ -117,7 +117,7 @@ export function plotlyBarChart (Plotly) {
           automargin: true,
           fixedrange: true,
           showgrid: true,
-          gridcolor: darkMode ? 'rgba(1.0, 1.0, 1.0, 0.1)' : 'rgba(0.0, 0.0, 0.0, 0.1)'
+          gridcolor: darkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
         },
         legend: {
           bgcolor: 'rgba(0,0,0,0)',

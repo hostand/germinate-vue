@@ -420,27 +420,69 @@ export default {
         return true
       })
 
-      // The active item: by the path of the page only, so that its query (a tab, a page of a table: ?tab=map) doesn't
-      // make the item lose its highlight. Items sharing a path (Data resources and Templates, which differ by their
-      // query) keep the comparison of the whole address.
+      // The active item is chosen here (setActiveItem), not by the menu (which compares the whole address, its query
+      // included: a filter, a tab, a page of a table would make the item lose its highlight). Read without making the
+      // menu depend on the route: the route watcher updates the items.
+      this.setActiveItem(menu, this.$router.currentRoute)
+
+      return menu
+    }
+  },
+  watch: {
+    // Before the items of the menu update their state (they wait a moment after a route change)
+    $route: function (route) {
+      this.setActiveItem(this.menu, route)
+    }
+  },
+  methods: {
+    /**
+     * Marks the item of the page: the item with the longest path containing the page (its own path, or a page below it
+     * such as a selected map /data/genotypes/maps/1, i.e. its parent). The query (filters, tabs, pages of the tables)
+     * is ignored, except between items sharing their path (Data resources and Templates): there the one whose query
+     * matches the address best. The menu marks the item through its alias (a pattern matching every address) and the
+     * other items get none; their exact address is never compared alone (exactPath off).
+     */
+    setActiveItem: function (menu, route) {
+      if (!menu || !route) {
+        return
+      }
+
       const items = []
       const collect = list => list.forEach(o => {
         if (o.href && typeof o.href === 'object' && !o.external) {
-          items.push({ item: o, path: this.$router.resolve(o.href).route.path })
+          const resolved = this.$router.resolve(o.href).route
+          items.push({ item: o, path: resolved.path.replace(/\/+$/, '') || '/', query: resolved.query || {} })
         }
         if (o.child) {
           collect(o.child)
         }
       })
       collect(menu)
-      items.forEach(entry => {
-        entry.item.exactPath = items.filter(other => other.path === entry.path).length === 1
-      })
 
-      return menu
-    }
-  },
-  methods: {
+      const current = route.path.replace(/\/+$/, '') || '/'
+      const contains = path => current === path || (path !== '/' && current.startsWith(`${path}/`))
+      const candidates = items.filter(entry => contains(entry.path))
+
+      let active = null
+      if (candidates.length > 0) {
+        const longest = Math.max(...candidates.map(entry => entry.path.length))
+        const samePath = candidates.filter(entry => entry.path.length === longest)
+        // Between items sharing the path: the most query values in common with the address, none differing
+        const score = entry => {
+          const keys = Object.keys(entry.query)
+          if (keys.some(key => `${route.query[key]}` !== `${entry.query[key]}`)) {
+            return -1
+          }
+          return keys.length
+        }
+        active = samePath.reduce((best, entry) => (best === null || score(entry) > score(best)) ? entry : best, null)
+      }
+
+      items.forEach(entry => {
+        entry.item.exactPath = false
+        entry.item.alias = entry === active ? /^[\s\S]*$/ : null
+      })
+    },
     // Menu items on the same page that only differ in their query (e.g. "Data resources" and "Templates")
     // would otherwise keep the previous page state, so ask for the page to be rebuilt
     onItemClick: function (event, item) {

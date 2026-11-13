@@ -73,6 +73,21 @@
   background: var(--cp-button);
   color: var(--cp-on-button);
 }
+/* Disabled: faded, no hover */
+.cp-modal-button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.cp-modal-button:disabled:hover,
+.cp-modal-button:disabled:focus {
+  border-color: var(--cp-border);
+  background: var(--cp-surface);
+}
+.cp-modal-button.is-primary:disabled:hover,
+.cp-modal-button.is-primary:disabled:focus {
+  border-color: var(--cp-button);
+  background: var(--cp-button);
+}
 .cp-modal-button.is-primary:hover,
 .cp-modal-button.is-primary:focus {
   border-color: var(--cp-button-hover);

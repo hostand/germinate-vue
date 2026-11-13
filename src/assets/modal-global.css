@@ -1,0 +1,183 @@
+/*
+ * The look of the custom pages (cp-modal.css) for every modal of the application: a rounded card in the font and colours of
+ * the custom pages, no lines between header, body and footer, the buttons of the footer outlined (the main one in green,
+ * the dangerous one in red), the fields rounded. A modal with something of its own keeps it (more specific rules).
+ * Plain rules (a modal styling something of its own wins), but in dark mode those of dark-mode.scss (body.dark-mode
+ * .modal-content ...) are replaced below.
+ */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
+
+/* The tokens of the custom pages, for the modals and the map popups in that look (they are outside of the pages) */
+.modal,
+.location-map-custom {
+  --cp-green: #3b6b35;
+  --cp-green-hover: #2a4f26;
+  --cp-green-soft: #eaf2e6;
+  --cp-button: #3b6b35;
+  --cp-button-hover: #2f5a2a;
+  --cp-on-button: #ffffff;
+  --cp-text: #1f2120;
+  --cp-text-subtle: #4a4d4b;
+  --cp-muted: #6b6f6c;
+  --cp-border: #e2e3df;
+  --cp-surface: #ffffff;
+  --cp-surface-hover: #fafaf8;
+  --cp-neutral-bg: #f0f1ee;
+  --cp-shadow: rgba(0, 0, 0, 0.06);
+  --cp-danger: #c8323f;
+  --cp-danger-hover: #a92733;
+}
+body.dark-mode .modal,
+body.dark-mode .location-map-custom {
+  color-scheme: dark;
+
+  --cp-green: #8cc47e;
+  --cp-green-hover: #a8d69c;
+  --cp-green-soft: rgba(106, 168, 79, 0.16);
+  --cp-button: #4a7f42;
+  --cp-button-hover: #578f4e;
+  --cp-on-button: #ffffff;
+  --cp-text: #e8e6e3;
+  --cp-text-subtle: #c4beb5;
+  --cp-muted: #a39d93;
+  --cp-border: rgb(62, 67, 70);
+  --cp-surface: rgb(31, 34, 35);
+  --cp-surface-hover: rgb(38, 42, 43);
+  --cp-neutral-bg: rgba(255, 255, 255, 0.06);
+  --cp-shadow: rgba(0, 0, 0, 0.4);
+  --cp-danger: #e0606c;
+  --cp-danger-hover: #ea7a84;
+}
+
+/* The card */
+.modal .modal-content {
+  border: 1px solid var(--cp-border);
+  border-radius: 16px;
+  background: var(--cp-surface);
+  color: var(--cp-text);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.18);
+  font-family: 'DM Sans', -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+.modal .modal-header,
+.modal .modal-footer {
+  border: none;
+  padding: 1.1rem 1.5rem;
+}
+.modal .modal-header {
+  padding-bottom: 0.25rem;
+}
+.modal .modal-title {
+  color: var(--cp-text);
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+.modal .modal-header .close {
+  color: var(--cp-muted);
+  text-shadow: none;
+  opacity: 1;
+}
+.modal .modal-header .close:hover {
+  color: var(--cp-text);
+}
+.modal .modal-body {
+  padding: 1rem 1.5rem;
+}
+.modal .modal-footer {
+  gap: 0.5rem;
+  padding-top: 0.25rem;
+}
+.modal .modal-footer > * {
+  margin: 0;
+}
+
+/* Dark mode: instead of the colours of dark-mode.scss for the modals */
+body.dark-mode .modal .modal-content {
+  border-color: var(--cp-border);
+  background-color: var(--cp-surface);
+}
+body.dark-mode .modal .close {
+  color: var(--cp-muted);
+  text-shadow: none;
+}
+
+/* Labels and fields */
+.modal .col-form-label,
+.modal legend {
+  color: var(--cp-text-subtle);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+.modal .form-control,
+.modal .custom-select {
+  border: 1px solid var(--cp-border);
+  border-radius: 10px;
+  background-color: var(--cp-surface);
+  color: var(--cp-text);
+}
+.modal .input-group > .form-control:not(:first-child),
+.modal .input-group > .custom-select:not(:first-child) {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+.modal .input-group > .form-control:not(:last-child),
+.modal .input-group > .custom-select:not(:last-child) {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+.modal .form-control:focus,
+.modal .custom-select:focus {
+  border-color: var(--cp-green);
+  box-shadow: 0 0 0 3px var(--cp-green-soft);
+}
+.modal .custom-control-input:checked ~ .custom-control-label::before {
+  border-color: var(--cp-green);
+  background-color: var(--cp-green);
+}
+
+/* Buttons of the footer (the default OK / Cancel, Yes / No ... of the modals): outlined, the main one in green */
+.modal .modal-footer .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  height: 40px;
+  padding: 0 1.1rem;
+  border: 1px solid var(--cp-border);
+  border-radius: 10px;
+  background: var(--cp-surface);
+  color: var(--cp-text);
+  font-size: 0.92rem;
+  font-weight: 500;
+  box-shadow: none;
+}
+.modal .modal-footer .btn:hover:not(:disabled),
+.modal .modal-footer .btn:focus {
+  border-color: var(--cp-muted);
+  background: var(--cp-surface-hover);
+  color: var(--cp-text);
+}
+.modal .modal-footer .btn:is(.btn-primary, .btn-success, .btn-info) {
+  border-color: var(--cp-button);
+  background: var(--cp-button);
+  color: var(--cp-on-button);
+}
+.modal .modal-footer .btn:is(.btn-primary, .btn-success, .btn-info):hover:not(:disabled),
+.modal .modal-footer .btn:is(.btn-primary, .btn-success, .btn-info):focus {
+  border-color: var(--cp-button-hover);
+  background: var(--cp-button-hover);
+  color: var(--cp-on-button);
+}
+.modal .modal-footer .btn.btn-danger {
+  border-color: var(--cp-danger);
+  background: var(--cp-danger);
+  color: #ffffff;
+}
+.modal .modal-footer .btn.btn-danger:hover:not(:disabled),
+.modal .modal-footer .btn.btn-danger:focus {
+  border-color: var(--cp-danger-hover);
+  background: var(--cp-danger-hover);
+  color: #ffffff;
+}
+.modal .modal-footer .btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}

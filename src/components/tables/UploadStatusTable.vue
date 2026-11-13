@@ -1,24 +1,25 @@
 <template>
   <div v-if="job">
     <p>{{ $t('widgetImportStatusText') }}</p>
-    <b-table :fields="columns"
-              :items="job.feedback"
-              striped
-              responsive
-              hover
-              outlined
-              show-empty
-              sort-by="rowIndex">
-      <!-- Import status icon -->
-      <template v-slot:cell(icon)="data">
-        <span v-if="data.item.status === 'OK'"><span class="text-success"><MdiIcon :path="mdiCheckCircleOutline" /></span></span>
-        <span v-else><span class="text-danger"><MdiIcon :path="mdiAlertCircleOutline" /></span></span>
-      </template>
-      <!-- Import status message -->
-      <template v-slot:cell(status)="data">
-        <span v-if="statusOptions[data.item.status]">{{ statusOptions[data.item.status]() }}</span>
-      </template>
-    </b-table>
+    <!-- In the card of the new look of the tables (table-modern.css) -->
+    <div class="bt-modern bt-plain">
+      <b-table :fields="columns"
+                :items="job.feedback"
+                responsive
+                hover
+                show-empty
+                sort-by="rowIndex">
+        <!-- Import status icon -->
+        <template v-slot:cell(icon)="data">
+          <span v-if="data.item.status === 'OK'"><span class="text-success"><MdiIcon :path="mdiCheckCircleOutline" /></span></span>
+          <span v-else><span class="text-danger"><MdiIcon :path="mdiAlertCircleOutline" /></span></span>
+        </template>
+        <!-- Import status message -->
+        <template v-slot:cell(status)="data">
+          <span v-if="statusOptions[data.item.status]">{{ statusOptions[data.item.status]() }}</span>
+        </template>
+      </b-table>
+    </div>
   </div>
 </template>
 
@@ -120,6 +121,7 @@ export default {
 }
 </script>
 
+<style src="@/assets/table-modern.css"></style>
 <style>
 
 </style>

@@ -87,7 +87,7 @@ export function plotlyMapChart (Plotly) {
           title: { text: c, font: { color: darkMode ? 'white' : 'black' } },
           tickfont: { color: darkMode ? 'white' : 'black' },
           showgrid: true,
-          gridcolor: darkMode ? 'rgba(1.0, 1.0, 1.0, 0.1)' : 'rgba(0.0, 0.0, 0.0, 0.1)'
+          gridcolor: darkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
         }
 
         layout.grid.subplots.push(['xy' + axisIndex])

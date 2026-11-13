@@ -15,7 +15,12 @@
 
       <h5 v-else>{{ $t('headingNoData') }}</h5>
 
-      <b-button v-b-modal.add-publication-modal v-if="storeToken && userIsAtLeast(storeToken.userType, USER_TYPE_DATA_CURATOR)"><MdiIcon :path="mdiPlusBox" /> {{ $t('buttonAddPublication') }}</b-button>
+      <!-- New look (also outside of a modal: the tokens of the custom pages around it) -->
+      <div class="custom-page pw-actions" v-if="storeToken && userIsAtLeast(storeToken.userType, USER_TYPE_DATA_CURATOR)">
+        <button type="button" class="cp-modal-button" v-b-modal.add-publication-modal>
+          <i class="fa-solid fa-plus" aria-hidden="true" /> {{ $t('buttonAddPublication') }}
+        </button>
+      </div>
 
       <b-modal id="add-publication-modal"
               ref="addPublicationModal"
@@ -30,7 +35,10 @@
             {{ newPublication.errorMessage }}
           </b-form-invalid-feedback>
         </b-form-group>
-        <b-button variant="primary" @click="getPublication" :disabled="!newPublication.doi || newPublication.loading"><MdiIcon :path="mdiChevronDoubleDown" /> {{ $t('buttonUpdate') }} <b-spinner small v-if="newPublication.loading" /></b-button>
+        <!-- New look: the rounded, outlined button of the modals -->
+        <button type="button" class="cp-modal-button is-primary" @click="getPublication" :disabled="!newPublication.doi || newPublication.loading">
+          <i class="fa-solid fa-angles-down" aria-hidden="true" /> {{ $t('buttonUpdate') }} <b-spinner small v-if="newPublication.loading" />
+        </button>
 
         <p v-html="newPublication.html" v-if="newPublication.html" />
       </b-modal>
@@ -42,12 +50,9 @@
 import { mapGetters } from 'vuex'
 
 import PublicationCard from '@/components/util/PublicationCard'
-import MdiIcon from '@/components/icons/MdiIcon'
 
 import { apiGetPublications, apiPutPublication, apiPutPublicationReference, apiDeletePublicationReference } from '@/mixins/api/misc'
 import { userIsAtLeast, USER_TYPE_DATA_CURATOR } from '@/mixins/api/auth'
-
-import { mdiChevronDoubleDown, mdiPlusBox } from '@mdi/js'
 
 const { Cite } = require('@citation-js/core')
 require('@citation-js/plugin-doi')
@@ -55,7 +60,6 @@ require('@citation-js/plugin-csl')
 
 export default {
   components: {
-    MdiIcon,
     PublicationCard
   },
   computed: {
@@ -81,8 +85,6 @@ export default {
   },
   data: function () {
     return {
-      mdiChevronDoubleDown,
-      mdiPlusBox,
       loading: true,
       publications: [],
       page: 1,
@@ -200,5 +202,9 @@ export default {
 }
 </script>
 
+<style src="@/assets/cp-modal.css"></style>
 <style>
+.pw-actions {
+  margin-top: 0.5rem;
+}
 </style>

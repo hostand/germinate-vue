@@ -24,19 +24,19 @@
     </template>
     <!-- Dataset name -->
     <template v-slot:cell(datasetName)="data">
-      <span :title="data.item.datasetName">{{ truncateAfterWords(data.item.datasetName, 10) }}</span>
+      <span :title="data.item.datasetName">{{ data.item.datasetName }}</span>
     </template>
     <!-- Location latitude -->
     <template v-slot:cell(latitude)="data">
-      <span v-if="data.item.latitude !== undefined">{{ data.item.latitude.toFixed(2) }}</span>
+      <span v-if="data.item.latitude !== undefined">{{ formatNumber(data.item.latitude, 2) }}</span>
     </template>
     <!-- Location longitude -->
     <template v-slot:cell(longitude)="data">
-      <span v-if="data.item.longitude !== undefined">{{ data.item.longitude.toFixed(2) }}</span>
+      <span v-if="data.item.longitude !== undefined">{{ formatNumber(data.item.longitude, 2) }}</span>
     </template>
     <!-- Location elevation -->
     <template v-slot:cell(elevation)="data">
-      <span v-if="data.item.elevation !== undefined">{{ data.item.elevation.toFixed(2) }}</span>
+      <span v-if="data.item.elevation !== undefined">{{ formatNumber(data.item.elevation, 2) }}</span>
     </template>
     <!-- Germplasm GID link -->
     <template v-slot:cell(germplasmGid)="data">
@@ -44,7 +44,7 @@
     </template>
     <!-- Entity type -->
     <template v-slot:cell(entityType)="data">
-      <span class="text-nowrap"><span :style="`color: ${entityTypes[data.item.entityType].color()};`"><MdiIcon :path="entityTypes[data.item.entityType].path" /></span> {{ entityTypes[data.item.entityType].text() }}</span>
+      <span class="bt-chip" :style="{ '--bt-chip-color': entityTypes[data.item.entityType].color() }"><MdiIcon :path="entityTypes[data.item.entityType].path" /> {{ entityTypes[data.item.entityType].text() }}</span>
     </template>
     <!-- Country flag -->
     <template v-slot:cell(countryName)="data">
@@ -52,15 +52,15 @@
     </template>
     <!-- Trait data type icon -->
     <template v-slot:cell(traitDataType)="data">
-      <span class="text-nowrap"><span :style="`color: ${dataTypes[data.item.traitDataType].color()};`"><MdiIcon :path="dataTypes[data.item.traitDataType].path" /></span> {{ dataTypes[data.item.traitDataType].text() }}</span>
+      <span class="bt-chip" :style="{ '--bt-chip-color': dataTypes[data.item.traitDataType].color() }"><MdiIcon :path="dataTypes[data.item.traitDataType].path" /> {{ dataTypes[data.item.traitDataType].text() }}</span>
     </template>
     <!-- Trait value -->
     <template v-slot:cell(traitValue)="data">
       <span v-if="data.item.traitValue !== undefined && data.item.traitValue !== null">
-        <template v-if="data.item.traitDataType === 'numeric'">{{ (+data.item.traitValue).toFixed(2) }}</template>
-        <template v-else-if="data.item.traitDataType === 'date'">{{ new Date(data.item.traitValue).toLocaleDateString() }}</template>
+        <template v-if="data.item.traitDataType === 'numeric'">{{ formatNumber(+data.item.traitValue, 2) }}</template>
+        <template v-else-if="data.item.traitDataType === 'date'">{{ formatDate(data.item.traitValue) }}</template>
         <template v-else-if="data.item.traitDataType === 'categorical'">{{ data.item.traitValue }}</template>
-        <template v-else>{{ isNaN(data.item.traitValue) ? data.item.traitValue : parseFloat(data.item.traitValue).toFixed(2) }}</template>
+        <template v-else>{{ isNaN(data.item.traitValue) ? data.item.traitValue : formatNumber(parseFloat(data.item.traitValue), 2) }}</template>
       </span>
     </template>
   </BaseTable>
@@ -71,7 +71,7 @@ import MdiIcon from '@/components/icons/MdiIcon'
 import BaseTable from '@/components/tables/BaseTable'
 import defaultProps from '@/const/table-props.js'
 import { entityTypes, dataTypes } from '@/mixins/types.js'
-import { truncateAfterWords } from '@/mixins/formatting'
+import { truncateAfterWords, formatDate, formatNumber } from '@/mixins/formatting'
 import { Pages } from '@/mixins/pages'
 
 export default {
@@ -234,7 +234,7 @@ export default {
           type: Date,
           sortable: true,
           label: this.$t('tableColumnTraitDataRecordingDate'),
-          formatter: value => value ? new Date(value).toLocaleDateString() : null
+          formatter: value => formatDate(value)
         }, {
           key: 'traitValue',
           type: String,
@@ -267,6 +267,8 @@ export default {
     MdiIcon
   },
   methods: {
+    formatNumber,
+    formatDate,
     truncateAfterWords,
     refresh: function () {
       this.$refs.trialsDataTable.refresh()

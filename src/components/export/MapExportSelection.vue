@@ -14,28 +14,28 @@
         <!-- Regions -->
         <b-tab :title="$t('pageMapExportOptionRegions')" class="base-table">
           <p>{{ $t('pageMapExportRegionDescription') }}</p>
-          <b-table :fields="columns"
-                   :items="regions"
-                   head-variant="dark"
-                   striped
-                   responsive
-                   hover
-                   outlined
-                   show-empty
-                   sort-by="chromosome">
-            <template v-slot:cell(chromosome)="data">
-              <b-select :options="chromosomes" v-model="data.item.chromosome" @change="setRegionChromosome($event, props.index)" />
-            </template>
-            <template v-slot:cell(start)="data">
-              <b-input type="number" :min="0" v-model="data.item.start" @change="setRegionStart($event, props.index)" />
-            </template>
-            <template v-slot:cell(end)="data">
-              <b-input type="number" :min="0" v-model="data.item.end" @change="setRegionEnd($event, props.index)"/>
-            </template>
-            <template v-slot:cell(delete)="data">
-              <b-button variant="outline-danger" size="sm" v-b-tooltip.hover :title="$t('buttonDelete')" @click="deleteRegion(data.item)"><MdiIcon :path="mdiDelete" /></b-button>
-            </template>
-          </b-table>
+          <!-- In the card of the new look of the tables (table-modern.css) -->
+          <div class="bt-modern bt-plain">
+            <b-table :fields="columns"
+                     :items="regions"
+                     responsive
+                     hover
+                     show-empty
+                     sort-by="chromosome">
+              <template v-slot:cell(chromosome)="data">
+                <b-select :options="chromosomes" v-model="data.item.chromosome" @change="setRegionChromosome($event, props.index)" />
+              </template>
+              <template v-slot:cell(start)="data">
+                <b-input type="number" :min="0" v-model="data.item.start" @change="setRegionStart($event, props.index)" />
+              </template>
+              <template v-slot:cell(end)="data">
+                <b-input type="number" :min="0" v-model="data.item.end" @change="setRegionEnd($event, props.index)"/>
+              </template>
+              <template v-slot:cell(delete)="data">
+                <b-button variant="outline-danger" size="sm" v-b-tooltip.hover :title="$t('buttonDelete')" @click="deleteRegion(data.item)"><MdiIcon :path="mdiDelete" /></b-button>
+              </template>
+            </b-table>
+          </div>
           <b-button @click="addRegion()" v-b-tooltip.hover :title="$t('tooltipMapExportRegionAdd')"><MdiIcon :path="mdiTableRowPlusAfter" /></b-button>
         </b-tab>
         <!-- Marker interval -->
@@ -296,6 +296,7 @@ export default {
 }
 </script>
 
+<style src="@/assets/table-modern.css"></style>
 <style>
 .base-table table th[aria-sort="none"] {
   padding-right: 0.75em !important;

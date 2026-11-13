@@ -17,15 +17,15 @@
     </template>
     <!-- Location latitude -->
     <template v-slot:cell(locationLatitude)="data">
-      <span v-if="data.item.locationLatitude !== undefined">{{ data.item.locationLatitude.toFixed(2) }}</span>
+      <span v-if="data.item.locationLatitude !== undefined">{{ formatNumber(data.item.locationLatitude, 2) }}</span>
     </template>
     <!-- Location longitude -->
     <template v-slot:cell(locationLongitude)="data">
-      <span v-if="data.item.locationLongitude !== undefined">{{ data.item.locationLongitude.toFixed(2) }}</span>
+      <span v-if="data.item.locationLongitude !== undefined">{{ formatNumber(data.item.locationLongitude, 2) }}</span>
     </template>
     <!-- Location elevation -->
     <template v-slot:cell(locationElevation)="data">
-      <span v-if="data.item.locationElevation !== undefined">{{ data.item.locationElevation.toFixed(2) }}</span>
+      <span v-if="data.item.locationElevation !== undefined">{{ formatNumber(data.item.locationElevation, 2) }}</span>
     </template>
     <!-- Country name -->
     <template v-slot:cell(countryName)="data">
@@ -33,9 +33,7 @@
     </template>
     <!-- Location type -->
     <template v-slot:cell(locationType)="data">
-      <span><span :style="`color: ${locationTypes[data.item.locationType].color()};`">
-        <MdiIcon :path="locationTypes[data.item.locationType].path" /></span> {{ locationTypes[data.item.locationType].text() }}
-      </span>
+      <span class="bt-chip" :style="{ '--bt-chip-color': locationTypes[data.item.locationType].color() }"><MdiIcon :path="locationTypes[data.item.locationType].path" /> {{ locationTypes[data.item.locationType].text() }}</span>
     </template>
   </BaseTable>
 </template>
@@ -45,7 +43,7 @@ import MdiIcon from '@/components/icons/MdiIcon'
 import BaseTable from '@/components/tables/BaseTable'
 import defaultProps from '@/const/table-props.js'
 import { locationTypes } from '@/mixins/types'
-import { truncateAfterWords } from '@/mixins/formatting'
+import { truncateAfterWords, formatNumber } from '@/mixins/formatting'
 import { Pages } from '@/mixins/pages'
 
 export default {
@@ -169,6 +167,7 @@ export default {
     MdiIcon
   },
   methods: {
+    formatNumber,
     truncateAfterWords,
     navigateToGermplasm: function (location) {
       // Set up the filter

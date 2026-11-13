@@ -231,13 +231,18 @@ const routes = [
               {
                 path: 'traits',
                 name: Pages.traits,
+                // The same page with its list and the selected item in a tab: not rebuilt when the item changes
+                meta: { viewKey: 'traits' },
                 component: () => import(/* webpackChunkName: "traits" */ '@/views/data/trials/Traits.vue'),
                 beforeEnter: requireAuth
               },
               {
                 path: 'traits/:traitId',
                 name: Pages.traitDetails,
-                component: () => import(/* webpackChunkName: "trait-details" */ '@/views/data/trials/TraitDetails.vue'),
+                // The same page with its list and the selected item in a tab: not rebuilt when the item changes
+                meta: { viewKey: 'traits' },
+                // The traits page, the trait in a tab of its own (its content: TraitDetails.vue)
+                component: () => import(/* webpackChunkName: "traits" */ '@/views/data/trials/Traits.vue'),
                 beforeEnter: requireAuth
               }
             ]
@@ -273,12 +278,16 @@ const routes = [
               {
                 path: 'maps',
                 name: Pages.maps,
+                // The same page with its list and the selected item in a tab: not rebuilt when the item changes
+                meta: { viewKey: 'maps' },
                 component: () => import(/* webpackChunkName: "maps" */ '@/views/data/genotype/Maps.vue'),
                 beforeEnter: requireAuth
               },
               {
                 path: 'maps/:mapId',
                 name: Pages.mapDetails,
+                // The same page with its list and the selected item in a tab: not rebuilt when the item changes
+                meta: { viewKey: 'maps' },
                 component: () => import(/* webpackChunkName: "map-details" */ '@/views/data/genotype/Maps.vue'),
                 beforeEnter: requireAuth
               }
@@ -464,12 +473,16 @@ const routes = [
       {
         path: 'publications',
         name: Pages.publications,
+        // The same page with its list and the selected item in a tab: not rebuilt when the item changes
+        meta: { viewKey: 'publications' },
         component: () => import(/* webpackChunkName: "publications" */ '@/views/Publications.vue'),
         beforeEnter: requireAuth
       },
       {
         path: 'publications/:publicationId',
         name: Pages.publicationDetails,
+        // The same page with its list and the selected item in a tab: not rebuilt when the item changes
+        meta: { viewKey: 'publications' },
         component: () => import(/* webpackChunkName: "publication-details" */ '@/views/Publications.vue'),
         beforeEnter: requireAuth
       },

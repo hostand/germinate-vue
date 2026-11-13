@@ -1,0 +1,968 @@
+/*
+ * New look of the tables (BaseTable with "modernLook"): one card with a toolbar, the active filters on a line, a light
+ * header with sort icons, thin cell borders and the pagination at the bottom right. Font: Inter, from the project.
+ * Every token is redefined for dark mode ("dark-mode" on the body).
+ */
+@import './fonts/inter.css';
+
+.bt-modern,
+.bt-tokens {
+  --bt-accent: #3b6b35;
+  --bt-accent-hover: #2a4f26;
+  --bt-accent-soft: #eaf2e6;
+  --bt-text: #1f2120;
+  --bt-text-subtle: #4a4d4b;
+  --bt-muted: #6b6f6c;
+  --bt-border: #e2e3df;
+  --bt-surface: #ffffff;
+  --bt-head-bg: #f7f7f5;
+  --bt-row-hover: #f6f9f4;
+  --bt-shadow: rgba(0, 0, 0, 0.06);
+  --bt-danger: #c8323f;
+  --bt-icon: #3d4240;
+  --bt-icon-hover: #1f2120;
+  --bt-icon-hover-bg: #eef0ec;
+
+  margin-bottom: 1rem;
+  border: 1px solid var(--bt-border);
+  border-radius: 12px;
+  background: var(--bt-surface);
+  box-shadow: 0 1px 2px var(--bt-shadow), 0 6px 18px -12px var(--bt-shadow);
+  color: var(--bt-text);
+  font-family: 'Inter', -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 0.85rem;
+}
+.bt-modern > :last-child {
+  border-bottom-left-radius: 11px;
+  border-bottom-right-radius: 11px;
+}
+.bt-modern > .table-responsive:last-child {
+  overflow-y: hidden;
+}
+body.dark-mode .bt-modern,
+body.dark-mode .bt-tokens {
+  --bt-accent: #8cc47e;
+  --bt-accent-hover: #a8d69c;
+  --bt-accent-soft: rgba(106, 168, 79, 0.18);
+  --bt-text: #e8e6e3;
+  --bt-text-subtle: #c4beb5;
+  --bt-muted: #a39d93;
+  --bt-border: rgb(62, 67, 70);
+  --bt-surface: rgb(31, 34, 35);
+  --bt-head-bg: rgb(38, 42, 43);
+  --bt-row-hover: rgba(255, 255, 255, 0.04);
+  --bt-shadow: rgba(0, 0, 0, 0.4);
+  --bt-danger: #f07b86;
+  --bt-icon: #c9c5bf;
+  --bt-icon-hover: #ffffff;
+  --bt-icon-hover-bg: rgba(255, 255, 255, 0.08);
+}
+
+/* Toolbar */
+.bt-modern .bt-toolbar {
+  position: relative;
+  z-index: 5;
+}
+/* A dropdown open (columns, page size): above the toolbars of the tables below it */
+.bt-modern .bt-toolbar:has(.dropdown-menu.show) {
+  z-index: 30;
+}
+.bt-modern .bt-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  padding: 0.6rem 0.9rem;
+}
+.bt-modern .bt-tools,
+.bt-modern .bt-toolbar-end,
+.bt-modern .bt-footer-start {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.bt-modern .bt-toolbar-end {
+  gap: 0.75rem;
+}
+.bt-modern .bt-tools-separator {
+  width: 1px;
+  height: 24px;
+  margin: 0 0.45rem;
+  background: var(--bt-border);
+}
+.bt-modern .bt-count {
+  color: var(--bt-text-subtle);
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+/* Icon buttons */
+.bt-modern .bt-tool {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  height: 34px;
+  padding: 0 0.4rem;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--bt-icon);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.bt-modern .bt-tool:hover:not(:disabled),
+.bt-modern .bt-tool:focus-visible {
+  background: var(--bt-icon-hover-bg);
+  color: var(--bt-icon-hover);
+  outline: none;
+}
+.bt-modern .bt-tool.is-active {
+  background: var(--bt-icon-hover-bg);
+  color: var(--bt-icon-hover);
+}
+.bt-modern .bt-tool.is-danger:hover:not(:disabled),
+.bt-modern .bt-tool.is-danger:focus-visible {
+  color: var(--bt-danger);
+}
+.bt-modern .bt-tool:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.bt-modern .bt-tool svg {
+  width: 1.2rem;
+  height: 1.2rem;
+  fill: currentColor;
+}
+
+/* Bordered dropdown buttons: the columns and the page size */
+.bt-modern .bt-select.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  height: 34px;
+  padding: 0 0.7rem;
+  border: 1px solid var(--bt-border);
+  border-radius: 8px;
+  background: var(--bt-surface);
+  color: var(--bt-text);
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-decoration: none;
+  box-shadow: none;
+}
+.bt-modern .bt-select.btn:hover,
+.bt-modern .bt-select.btn:focus,
+.bt-modern .show > .bt-select.btn {
+  border-color: var(--bt-accent);
+  color: var(--bt-text);
+  text-decoration: none;
+  box-shadow: none;
+}
+.bt-modern .bt-select .fa-table-columns {
+  color: var(--bt-icon);
+  font-size: 1.05rem;
+}
+.bt-modern .bt-select .fa-chevron-down {
+  color: var(--bt-muted);
+  font-size: 0.65rem;
+}
+.bt-modern .dropdown-menu {
+  z-index: 1050;
+  min-width: max-content;
+  border: 1px solid var(--bt-border);
+  border-radius: 10px;
+  background: var(--bt-surface);
+  box-shadow: 0 10px 24px -12px var(--bt-shadow);
+  font-size: 0.85rem;
+}
+.bt-modern .dropdown-item {
+  color: var(--bt-text);
+}
+.bt-modern .b-dropdown-form .custom-control-label {
+  white-space: nowrap;
+}
+.bt-modern .b-dropdown-form .custom-control-input:checked ~ .custom-control-label::before {
+  border-color: var(--bt-accent);
+  background-color: var(--bt-accent);
+}
+.bt-modern .dropdown-item:hover,
+.bt-modern .dropdown-item:focus {
+  background: var(--bt-row-hover);
+  color: var(--bt-text);
+}
+.bt-modern .dropdown-item.active,
+.bt-modern .dropdown-item:active {
+  background: var(--bt-accent-soft);
+  color: var(--bt-accent);
+  font-weight: 600;
+}
+
+/* Active filters, on a line between the toolbar and the table */
+.bt-modern .bt-filter-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.7rem 0.9rem;
+  border-top: 1px solid var(--bt-border);
+  color: var(--bt-text);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+.bt-modern .bt-filter-content {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bt-modern .bt-filter-line.is-expanded .bt-filter-content {
+  white-space: normal;
+}
+.bt-modern .bt-filter-content > span + span {
+  margin-left: 0.4rem;
+}
+.bt-modern .bt-filter-toggle {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--bt-icon);
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+.bt-modern .bt-filter-toggle:hover {
+  background: var(--bt-icon-hover-bg);
+  color: var(--bt-icon-hover);
+}
+.bt-modern .bt-filter-toggle .fa-chevron-down {
+  transition: transform 0.15s ease;
+}
+.bt-modern .bt-filter-line.is-expanded .bt-filter-toggle .fa-chevron-down {
+  transform: rotate(180deg);
+}
+.bt-modern .bt-filter-label {
+  font-weight: 600;
+}
+.bt-modern .bt-filter-item.is-invalid {
+  color: var(--bt-danger);
+  text-decoration: underline dotted;
+}
+.bt-modern .bt-filter-operator {
+  color: var(--bt-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+/* Loading: a thin line moving above the table */
+.bt-modern .bt-progress {
+  position: relative;
+  height: 2px;
+  margin-bottom: -2px;
+  overflow: hidden;
+  z-index: 2;
+}
+.bt-modern .bt-progress-bar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 35%;
+  background: var(--bt-accent);
+  animation: bt-progress 1.1s ease-in-out infinite;
+}
+@keyframes bt-progress {
+  from { left: -35%; }
+  to { left: 100%; }
+}
+
+/* Table */
+.bt-modern .table-responsive {
+  margin-bottom: 0;
+}
+.bt-modern .table {
+  margin-bottom: 0;
+  color: var(--bt-text);
+  font-size: 0.85rem;
+}
+.bt-modern .table th,
+.bt-modern .table td {
+  padding: 0.6rem 1rem;
+  border-top: 0;
+  border-bottom: 1px solid var(--bt-border);
+  border-left: 1px solid var(--bt-border);
+  vertical-align: middle;
+}
+.bt-modern .table th:first-child,
+.bt-modern .table td:first-child {
+  border-left: 0;
+}
+.bt-modern .table tbody tr:last-child td {
+  border-bottom: 0;
+}
+.bt-modern.base-table table thead tr,
+.bt-modern .table thead th {
+  background-color: var(--bt-head-bg);
+}
+.bt-modern .table thead th {
+  border-top: 1px solid var(--bt-border);
+  border-bottom: 1px solid var(--bt-border);
+  color: var(--bt-text);
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.bt-modern .table tbody tr {
+  background: var(--bt-surface);
+}
+.bt-modern .table.table-hover tbody tr:hover {
+  background: var(--bt-row-hover);
+  color: var(--bt-text);
+}
+.bt-modern .table a,
+.bt-modern .table a:hover,
+.bt-modern .table a:focus {
+  color: var(--bt-text);
+  text-decoration: none;
+}
+.bt-modern .table .bt-external {
+  margin-left: 0.25rem;
+  color: var(--bt-icon);
+  font-size: 0.75rem;
+}
+
+/* Rounded chips (e.g. the items a publication references), in the colour of their type */
+.bt-modern .bt-chips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+.bt-modern .bt-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.65rem;
+  border: 1px solid color-mix(in srgb, var(--bt-chip-color) 35%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bt-chip-color) 12%, transparent);
+  color: color-mix(in srgb, var(--bt-chip-color) 55%, var(--bt-text));
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.bt-modern .bt-chip svg {
+  width: 0.95rem;
+  height: 0.95rem;
+  fill: var(--bt-chip-color);
+}
+.bt-modern .table .b-table-empty-row td {
+  padding: 2rem 1rem;
+  color: var(--bt-muted);
+  text-align: center;
+}
+
+/* Sort icons after the column name: up and down when not sorted, an arrow when sorted */
+.bt-modern .table thead th[aria-sort] {
+  padding-right: 1rem !important;
+  background-image: none !important;
+  cursor: pointer;
+}
+.bt-modern .table thead th[aria-sort] > div {
+  display: inline;
+}
+.bt-modern .table thead th[aria-sort]::after {
+  display: inline-block;
+  margin-left: 0.5rem;
+  color: var(--bt-muted);
+  font-family: 'Font Awesome 6 Free';
+  font-size: 0.7rem;
+  font-weight: 900;
+  content: '\f0dc';
+}
+.bt-modern .table thead th[aria-sort="ascending"]::after {
+  color: var(--bt-accent);
+  content: '\f062';
+}
+.bt-modern .table thead th[aria-sort="descending"]::after {
+  color: var(--bt-accent);
+  content: '\f063';
+}
+
+/* Footer: actions on the left, pagination on the right */
+.bt-modern .bt-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  padding: 0.5rem 0.9rem;
+  border-top: 1px solid var(--bt-border);
+}
+.bt-modern .bt-pagination {
+  gap: 0.25rem;
+  margin: 0 0 0 auto;
+}
+.bt-modern .bt-pagination .page-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  height: 32px;
+  padding: 0 0.6rem;
+  border: 0;
+  border-radius: 8px !important;
+  background: transparent;
+  color: var(--bt-text-subtle);
+  font-size: 0.8rem;
+  font-weight: 500;
+  box-shadow: none;
+}
+.bt-modern .bt-pagination .page-link:hover {
+  background: var(--bt-row-hover);
+  color: var(--bt-text);
+}
+.bt-modern .bt-pagination .page-item.active .page-link {
+  background: var(--bt-accent-soft);
+  color: var(--bt-accent);
+  font-weight: 600;
+}
+.bt-modern .bt-pagination .page-item.disabled .page-link {
+  background: transparent;
+  color: var(--bt-muted);
+  opacity: 0.5;
+}
+.bt-modern .bt-pagination .fa-solid {
+  font-size: 0.75rem;
+}
+/* The count of a chip: a circle in the colour of the chip, the number in a contrasting colour */
+.bt-modern .bt-chip-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.3rem;
+  border-radius: 999px;
+  background: var(--bt-chip-color);
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* Filter modal of the tables (cp-modal), in Inter like the tables */
+.modal.bt-filter-modal .modal-content {
+  font-family: 'Inter', -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+.bt-filter-modal .bt-filter-modal-text {
+  color: var(--cp-text-subtle);
+  font-size: 0.9rem;
+}
+.bt-filter-modal .input-group {
+  flex-wrap: nowrap;
+}
+.bt-filter-modal .input-group .btn,
+.bt-filter-modal .form-control,
+.bt-filter-modal .custom-select {
+  height: 40px;
+  border: 1px solid var(--cp-border);
+  border-radius: 0;
+  background-color: var(--cp-surface);
+  color: var(--cp-text);
+  font-size: 0.88rem;
+  box-shadow: none;
+}
+.bt-filter-modal .input-group .dropdown-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.bt-filter-modal .input-group-prepend .b-dropdown:first-child .btn {
+  border-top-left-radius: 10px;
+  border-bottom-left-radius: 10px;
+}
+.bt-filter-modal .input-group-append .btn {
+  border-top-right-radius: 10px;
+  border-bottom-right-radius: 10px;
+}
+.bt-filter-modal .input-group .btn:hover:not(:disabled),
+.bt-filter-modal .input-group .show > .btn {
+  border-color: var(--cp-muted);
+  background-color: var(--cp-surface-hover);
+  color: var(--cp-text);
+}
+.bt-filter-modal .form-control:focus,
+.bt-filter-modal .custom-select:focus {
+  position: relative;
+  z-index: 3;
+  border-color: var(--cp-green);
+  box-shadow: 0 0 0 3px var(--cp-green-soft);
+}
+/* Delete a row: the trash in red */
+.bt-filter-modal .input-group-append .btn-danger {
+  color: #c8323f;
+}
+.bt-filter-modal .input-group-append .btn-danger svg {
+  fill: currentColor;
+}
+.bt-filter-modal .input-group-append .btn-danger:disabled {
+  color: var(--cp-muted);
+  opacity: 0.5;
+}
+body.dark-mode .bt-filter-modal .input-group-append .btn-danger:not(:disabled) {
+  color: #f07b86;
+}
+.bt-filter-modal .dropdown-menu {
+  border: 1px solid var(--cp-border);
+  border-radius: 10px;
+  background: var(--cp-surface);
+  box-shadow: 0 10px 24px -12px var(--cp-shadow);
+  font-size: 0.88rem;
+}
+.bt-filter-modal .dropdown-item {
+  color: var(--cp-text);
+}
+.bt-filter-modal .dropdown-item:hover,
+.bt-filter-modal .dropdown-item:focus {
+  background: var(--cp-surface-hover);
+}
+/* AND / OR between two rows */
+.bt-filter-modal .btn-group-toggle {
+  margin-bottom: 0.25rem;
+}
+.bt-filter-modal .btn-group-toggle .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 64px;
+  height: 32px;
+  margin: 0;
+  padding: 0 0.9rem;
+  line-height: 1;
+  border: 1px solid var(--cp-border);
+  background: var(--cp-surface);
+  color: var(--cp-text-subtle);
+  font-size: 0.8rem;
+  font-weight: 600;
+  box-shadow: none;
+}
+.bt-filter-modal .btn-group-toggle .btn + .btn {
+  margin-left: -1px;
+}
+.bt-filter-modal .btn-group-toggle .btn.active {
+  position: relative;
+  z-index: 1;
+}
+.bt-filter-modal .btn-group-toggle .btn span {
+  display: block;
+  line-height: 1;
+}
+.bt-filter-modal .btn-group-toggle .btn:first-child {
+  border-radius: 999px 0 0 999px;
+}
+.bt-filter-modal .btn-group-toggle .btn:last-child {
+  border-radius: 0 999px 999px 0;
+}
+.bt-filter-modal .btn-group-toggle .btn.active {
+  border-color: var(--cp-green);
+  background: var(--cp-green-soft);
+  color: var(--cp-green);
+}
+.bt-filter-modal .cp-modal-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Tour of the tables (the question mark): a rounded card in Inter */
+.bt-tour {
+  --bt-tour-surface: #ffffff;
+  --bt-tour-border: #e2e3df;
+  --bt-tour-text: #1f2120;
+  --bt-tour-subtle: #4a4d4b;
+  --bt-tour-muted: #6b6f6c;
+  --bt-tour-accent: #3b6b35;
+  --bt-tour-accent-hover: #2f5a2a;
+  --bt-tour-hover: #f3f4f1;
+
+  max-width: 340px;
+  border: 1px solid var(--bt-tour-border);
+  border-radius: 12px;
+  background: var(--bt-tour-surface);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.18);
+  color: var(--bt-tour-text);
+  font-family: 'Inter', -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+body.dark-mode .bt-tour {
+  --bt-tour-surface: rgb(31, 34, 35);
+  --bt-tour-border: rgb(62, 67, 70);
+  --bt-tour-text: #e8e6e3;
+  --bt-tour-subtle: #c4beb5;
+  --bt-tour-muted: #a39d93;
+  --bt-tour-accent: #4a7f42;
+  --bt-tour-accent-hover: #578f4e;
+  --bt-tour-hover: rgba(255, 255, 255, 0.06);
+}
+.bt-tour .popover-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.9rem 1rem 0.25rem;
+  border: 0;
+  background: transparent;
+  color: var(--bt-tour-text);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+.bt-tour .popover-header::before {
+  display: none;
+}
+.bt-tour .bt-tour-close {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  margin: -0.2rem -0.35rem 0 0;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--bt-tour-muted);
+  cursor: pointer;
+}
+.bt-tour .bt-tour-close:hover {
+  background: var(--bt-tour-hover);
+  color: var(--bt-tour-text);
+}
+.bt-tour .popover-body {
+  padding: 0.25rem 1rem 0.9rem;
+  color: var(--bt-tour-subtle);
+  font-size: 0.85rem;
+  line-height: 1.55;
+}
+.bt-tour .bt-tour-text {
+  margin: 0 0 0.9rem;
+}
+.bt-tour .bt-tour-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.bt-tour .bt-tour-step {
+  color: var(--bt-tour-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.bt-tour .bt-tour-buttons {
+  display: flex;
+  gap: 0.4rem;
+  margin-left: auto;
+}
+.bt-tour .bt-tour-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  height: 32px;
+  padding: 0 0.8rem;
+  border: 1px solid var(--bt-tour-border);
+  border-radius: 8px;
+  background: var(--bt-tour-surface);
+  color: var(--bt-tour-text);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+.bt-tour .bt-tour-button .fa-solid {
+  font-size: 0.7rem;
+}
+.bt-tour .bt-tour-button:hover:not(:disabled) {
+  background: var(--bt-tour-hover);
+}
+.bt-tour .bt-tour-button.is-primary {
+  border-color: var(--bt-tour-accent);
+  background: var(--bt-tour-accent);
+  color: #ffffff;
+}
+.bt-tour .bt-tour-button.is-primary:hover:not(:disabled) {
+  border-color: var(--bt-tour-accent-hover);
+  background: var(--bt-tour-accent-hover);
+}
+.bt-tour .bt-tour-button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+/* The arrow in the colours of the card */
+.bt-tour.bs-popover-top > .arrow::before { border-top-color: var(--bt-tour-border); }
+.bt-tour.bs-popover-top > .arrow::after { border-top-color: var(--bt-tour-surface); }
+.bt-tour.bs-popover-bottom > .arrow::before { border-bottom-color: var(--bt-tour-border); }
+.bt-tour.bs-popover-bottom > .arrow::after { border-bottom-color: var(--bt-tour-surface); }
+.bt-tour.bs-popover-left > .arrow::before { border-left-color: var(--bt-tour-border); }
+.bt-tour.bs-popover-left > .arrow::after { border-left-color: var(--bt-tour-surface); }
+.bt-tour.bs-popover-right > .arrow::before { border-right-color: var(--bt-tour-border); }
+.bt-tour.bs-popover-right > .arrow::after { border-right-color: var(--bt-tour-surface); }
+
+/* A cell with a single link: clickable as a whole (BaseTable onCellClick) */
+.bt-modern .table tbody td.bt-cell-link {
+  cursor: pointer;
+}
+
+/* Marking checkboxes, in the first column */
+.bt-modern {
+  position: relative;
+}
+.bt-modern .table th.bt-col-marked,
+.bt-modern .table td.bt-col-marked {
+  width: 1%;
+  padding-right: 0.6rem !important;
+  padding-left: 1rem;
+  text-align: left !important;
+  white-space: nowrap;
+}
+.bt-modern .table thead th.bt-col-marked::after {
+  display: none;
+}
+.bt-modern .bt-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+}
+.bt-modern .bt-mark-input {
+  appearance: none;
+  -webkit-appearance: none;
+  display: inline-grid;
+  place-content: center;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  border: 1.5px solid #c3c6c1;
+  border-radius: 4px;
+  background: var(--bt-surface);
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+body.dark-mode .bt-modern .bt-mark-input {
+  border-color: rgb(95, 101, 104);
+}
+.bt-modern .bt-mark-input:hover:not(:disabled) {
+  border-color: var(--bt-accent);
+}
+.bt-modern .bt-mark-input:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--bt-accent-soft);
+}
+.bt-modern .bt-mark-input:checked,
+.bt-modern .bt-mark-input:indeterminate {
+  border-color: var(--bt-accent);
+  background: var(--bt-accent);
+}
+/* The tick and the dash, drawn with borders */
+.bt-modern .bt-mark-input:checked::before {
+  content: '';
+  width: 4px;
+  height: 8px;
+  margin-top: -2px;
+  border: solid #ffffff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+.bt-modern .bt-mark-input:indeterminate::before {
+  content: '';
+  width: 8px;
+  height: 2px;
+  border-radius: 1px;
+  background: #ffffff;
+}
+.bt-modern .bt-mark-input:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+/* The chevron of the other marking options: always in the head, on hover in a row */
+.bt-modern .bt-mark-more {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--bt-muted);
+  font-size: 0.6rem;
+  cursor: pointer;
+}
+.bt-modern .bt-mark-more:hover,
+.bt-modern .bt-mark-more:focus-visible {
+  background: var(--bt-icon-hover-bg);
+  color: var(--bt-icon-hover);
+  outline: none;
+}
+.bt-modern .bt-mark-more.is-row {
+  opacity: 0;
+}
+.bt-modern .table tbody tr:hover .bt-mark-more.is-row,
+.bt-modern .bt-mark-more.is-row:focus-visible {
+  opacity: 1;
+}
+@media (hover: none) {
+  .bt-modern .bt-mark-more.is-row {
+    opacity: 1;
+  }
+}
+/* A marked row: a light tint */
+.bt-modern .table tbody tr:has(.bt-mark-input:checked) > td {
+  background: color-mix(in srgb, var(--bt-accent) 5%, transparent);
+}
+/* The menu of the marking (one for the table) */
+.bt-modern .bt-mark-menu {
+  position: absolute;
+  z-index: 1050;
+  display: block;
+  margin: 0;
+  padding: 0.35rem 0;
+}
+.bt-modern .bt-mark-menu .dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.4rem 1rem;
+  font-size: 0.85rem;
+}
+.bt-modern .bt-mark-menu .dropdown-item .fa-fw {
+  color: var(--bt-icon);
+}
+.bt-modern .bt-mark-menu .dropdown-item svg {
+  width: 1rem;
+  height: 1rem;
+  fill: var(--bt-icon);
+}
+.bt-modern .bt-mark-menu .dropdown-item.is-danger:hover:not(:disabled),
+.bt-modern .bt-mark-menu .dropdown-item.is-danger:hover:not(:disabled) .fa-fw {
+  color: var(--bt-danger);
+}
+.bt-modern .bt-mark-menu .dropdown-item:disabled {
+  opacity: 0.45;
+}
+.bt-modern .bt-mark-count {
+  margin-left: auto;
+  padding: 0.05rem 0.5rem;
+  border-radius: 999px;
+  background: var(--bt-accent-soft);
+  color: var(--bt-accent);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+/* Footer: the hint about selecting several items */
+.bt-modern .bt-footer-info {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-right: 0.5rem;
+  color: var(--bt-muted);
+  font-size: 0.8rem;
+}
+
+/* Selection checkboxes (Bootstrap custom checkboxes in the tables): as the marking ones */
+.bt-modern .table .custom-checkbox {
+  min-height: 16px;
+  padding-left: 16px;
+}
+.bt-modern .table .custom-checkbox .custom-control-label::before,
+.bt-modern .table .custom-checkbox .custom-control-label::after {
+  top: 0.15rem;
+  left: -16px;
+  width: 16px;
+  height: 16px;
+}
+.bt-modern .table .custom-checkbox .custom-control-label::before {
+  border: 1.5px solid #c3c6c1;
+  border-radius: 4px;
+  background: var(--bt-surface);
+  box-shadow: none;
+}
+body.dark-mode .bt-modern .table .custom-checkbox .custom-control-label::before {
+  border-color: rgb(95, 101, 104);
+}
+.bt-modern .table .custom-checkbox .custom-control-input:checked ~ .custom-control-label::before,
+.bt-modern .table .custom-checkbox .custom-control-input:indeterminate ~ .custom-control-label::before {
+  border-color: var(--bt-accent);
+  background: var(--bt-accent);
+}
+.bt-modern .table .custom-checkbox .custom-control-input:focus ~ .custom-control-label::before {
+  box-shadow: 0 0 0 3px var(--bt-accent-soft);
+}
+.bt-modern .table .custom-checkbox .custom-control-label::after {
+  background-size: 10px 10px;
+}
+/* A selected row (row variant "primary"): a light tint instead of the blue */
+.bt-modern .table tbody tr.table-primary > td {
+  background: color-mix(in srgb, var(--bt-accent) 8%, transparent);
+}
+
+/* Chips made of Bootstrap badges (b-badge, also as links): the look of the chips, not of the badge */
+.bt-modern .badge.bt-chip {
+  line-height: 1.3;
+  vertical-align: middle;
+}
+.bt-modern .badge.bt-chip + .badge.bt-chip {
+  margin-left: 0.15rem;
+}
+.bt-modern a.badge.bt-chip:hover,
+.bt-modern a.badge.bt-chip:focus {
+  border-color: var(--bt-chip-color);
+  background: color-mix(in srgb, var(--bt-chip-color) 22%, transparent);
+  color: color-mix(in srgb, var(--bt-chip-color) 55%, var(--bt-text));
+  text-decoration: none;
+  box-shadow: none;
+}
+/* An icon with its own colour class (e.g. the severity of a feedback) keeps it */
+.bt-modern .bt-chip svg[class*="text-"] {
+  fill: currentColor;
+}
+
+/* Cut cells (dataset name and description): one line, "..." where cut, a chevron at the right; expanded: all of it */
+.bt-modern .bt-clamp {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.35rem;
+  width: 100%;
+  max-width: 22rem;
+}
+.bt-modern .bt-clamp-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bt-modern .bt-clamp.expanded .bt-clamp-text {
+  white-space: normal;
+}
+.bt-modern .bt-clamp-toggle {
+  flex-shrink: 0;
+  margin-left: auto;
+  padding: 0 0.15rem;
+  border: 0;
+  background: transparent;
+  color: var(--bt-muted);
+  font-size: 0.65rem;
+  line-height: 1.5rem;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+.bt-modern .bt-clamp.expanded .bt-clamp-toggle {
+  transform: rotate(180deg);
+}

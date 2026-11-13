@@ -1,0 +1,10 @@
+<template>
+  <!-- The Dublin Core logo (a disc and twelve rays of two dots), in the colour of the text around it -->
+  <svg class="dublin-core-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><circle cx="19.1" cy="12" r="1.15"/><circle cx="22.4" cy="12" r="0.95"/><circle cx="18.15" cy="15.55" r="1.15"/><circle cx="21.01" cy="17.2" r="0.95"/><circle cx="15.55" cy="18.15" r="1.15"/><circle cx="17.2" cy="21.01" r="0.95"/><circle cx="12" cy="19.1" r="1.15"/><circle cx="12" cy="22.4" r="0.95"/><circle cx="8.45" cy="18.15" r="1.15"/><circle cx="6.8" cy="21.01" r="0.95"/><circle cx="5.85" cy="15.55" r="1.15"/><circle cx="2.99" cy="17.2" r="0.95"/><circle cx="4.9" cy="12" r="1.15"/><circle cx="1.6" cy="12" r="0.95"/><circle cx="5.85" cy="8.45" r="1.15"/><circle cx="2.99" cy="6.8" r="0.95"/><circle cx="8.45" cy="5.85" r="1.15"/><circle cx="6.8" cy="2.99" r="0.95"/><circle cx="12" cy="4.9" r="1.15"/><circle cx="12" cy="1.6" r="0.95"/><circle cx="15.55" cy="5.85" r="1.15"/><circle cx="17.2" cy="2.99" r="0.95"/><circle cx="18.15" cy="8.45" r="1.15"/><circle cx="21.01" cy="6.8" r="0.95"/></svg>
+</template>
+
+<script>
+export default {
+  name: 'DublinCoreIcon'
+}
+</script>

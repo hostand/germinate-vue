@@ -5,11 +5,14 @@
                primary-key="institutionId"
                v-bind="$props"
                ref="institutionTable"
-               v-on="$listeners">
+               v-on="$listeners"
+               @data-changed="lookUpWiewsNames">
+      <!-- The name of the database; without one but with a code, the name from FAO WIEWS (a spinner while looking it up) -->
       <template v-slot:cell(institutionName)="data">
-        <div v-if="data.item.institutionName">
-          <a v-if="showLinks" href="#" @click.prevent="redirectToGermplasmPage(data.item)">{{ data.item.institutionName }}</a>
-          <span v-else>{{ data.item.institutionName }}</span>
+        <b-spinner small class="text-muted" v-if="isLookingUpWiewsName(data.item)" />
+        <div v-else-if="getInstitutionName(data.item)">
+          <a v-if="showLinks" href="#" @click.prevent="redirectToGermplasmPage(data.item)">{{ getInstitutionName(data.item) }}</a>
+          <span v-else>{{ getInstitutionName(data.item) }}</span>
         </div>
       </template>
       <template v-slot:cell(institutionCode)="data">
@@ -23,7 +26,7 @@
         </div>
       </template>
       <template v-slot:cell(institutionType)="data">
-        <b-badge v-if="data.item.institutionType" class="w-100" :style="`color: ${getHighContrastTextColor(germplasmInstitutionTypes[data.item.institutionType].color())}; background-color: ${germplasmInstitutionTypes[data.item.institutionType].color()};`"><MdiIcon :path="germplasmInstitutionTypes[data.item.institutionType].path" /> {{ germplasmInstitutionTypes[data.item.institutionType].text() }}</b-badge>
+        <b-badge v-if="data.item.institutionType" class="bt-chip" :style="{ '--bt-chip-color': germplasmInstitutionTypes[data.item.institutionType].color() }"><MdiIcon :path="germplasmInstitutionTypes[data.item.institutionType].path" /> {{ germplasmInstitutionTypes[data.item.institutionType].text() }}</b-badge>
       </template>
       <!-- Country flag -->
       <template v-slot:cell(countryCode)="data">
@@ -44,8 +47,10 @@ import BaseTable from '@/components/tables/BaseTable'
 import defaultProps from '@/const/table-props.js'
 import { germplasmInstitutionTypes } from '@/mixins/types'
 import { getHighContrastTextColor } from '@/mixins/colors'
+import wiewsNames from '@/mixins/wiews-names'
 
 export default {
+  mixins: [wiewsNames],
   name: 'InstitutionTable',
   props: {
     ...defaultProps.BASE,
@@ -73,6 +78,8 @@ export default {
         label: this.$t('tableColumnInstitutionId')
       }, {
         key: 'institutionName',
+        // Names of the database may be missing: those from WIEWS fill them (never hidden for being mostly empty)
+        autoHide: false,
         type: String,
         sortable: true,
         label: this.$t('tableColumnInstitutionName'),
@@ -169,6 +176,3 @@ export default {
   }
 }
 </script>
-
-<style>
-</style>

@@ -1,25 +1,25 @@
 <template>
   <div class="base-table">
-    <b-table :items="users"
-            :fields="columns"
-            striped
-            responsive
-            hover
-            outlined
-            show-empty
-            head-variant="dark"
-            :empty-text="$t('paginationNoResult')"
-            ref="table">
-      <!-- HEAD: Selected checkbox -->
-      <template v-slot:head(selected)>
-        <b-form-checkbox :checked="allSelected" @change="onSelectionHeaderClicked"/>
-      </template>
+    <!-- In the card of the new look of the tables (table-modern.css) -->
+    <div class="bt-modern bt-plain">
+      <b-table :items="users"
+              :fields="columns"
+              responsive
+              hover
+              show-empty
+              :empty-text="$t('paginationNoResult')"
+              ref="table">
+        <!-- HEAD: Selected checkbox -->
+        <template v-slot:head(selected)>
+          <b-form-checkbox :checked="allSelected" @change="onSelectionHeaderClicked"/>
+        </template>
 
-      <!-- Selected checkbox -->
-      <template v-slot:cell(selected)="data">
-        <b-form-checkbox :value="data.item.id" v-model="selectedItems" />
-      </template>
-    </b-table>
+        <!-- Selected checkbox -->
+        <template v-slot:cell(selected)="data">
+          <b-form-checkbox :value="data.item.id" v-model="selectedItems" />
+        </template>
+      </b-table>
+    </div>
     <!-- Action buttons -->
     <b-button-group>
       <b-button v-b-tooltip.hover.bottom
@@ -114,6 +114,7 @@ export default {
 }
 </script>
 
+<style src="@/assets/table-modern.css"></style>
 <style>
 .base-table table th[aria-sort="none"] {
   padding-right: 0.75em !important;

@@ -4,6 +4,8 @@ import Vue from 'vue'
 import App from '@/App.vue'
 // Font Awesome (free): icons as <i class="fa-brands fa-github"></i>
 import '@fortawesome/fontawesome-free/css/all.min.css'
+// The look of the custom pages for every modal
+import '@/assets/modal-global.css'
 import router from '@/router'
 import store from '@/store'
 import { i18n } from '@/plugins/i18n.js'

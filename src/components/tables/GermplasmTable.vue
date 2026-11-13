@@ -35,22 +35,23 @@
       </template>
       <!-- HEAD: Allelefreq data -->
       <template v-slot:head(hasPedigreeData)>
-        <span v-b-tooltip.bottom.hover :title="$t('tableColumnHasPedigreeData')"><MdiIcon :path="datasetTypes.pedigree.path" /></span>
+        <span v-b-tooltip.bottom.hover :title="$t('tableColumnHasPedigreeData')"><i class="fa-solid fa-sitemap gt-data-icon" aria-hidden="true" /></span>
       </template>
       <!-- /HEADS -->
 
-      <template v-slot:cell(preview)="data">
-        <router-link :to="{ name: Pages.passport, params: { germplasmId: data.item.germplasmId } }" event="" @click.native.prevent="selectGermplasm(data.item.germplasmId)" class="table-link" v-b-tooltip:hover="$t('tableTooltipGermplasmPreviewPassport')">
-          <MdiIcon :path="mdiOpenInApp" />
-        </router-link>
-      </template>
       <!-- Germplasm id link -->
       <template v-slot:cell(germplasmId)="data">
         <router-link :to="{ name: Pages.passport, params: { germplasmId: data.item.germplasmId } }">{{ data.item.germplasmId }}</router-link>
       </template>
       <!-- Germplasm name link -->
+      <!-- Before it the passport icon: the preview of the passport (modal), as the former preview column -->
       <template v-slot:cell(germplasmName)="data">
-        <router-link :to="{ name: Pages.passport, params: { germplasmId: data.item.germplasmId } }">{{ data.item.germplasmName }}</router-link>
+        <span class="gt-name">
+          <router-link :to="{ name: Pages.passport, params: { germplasmId: data.item.germplasmId } }" event="" @click.native.prevent="selectGermplasm(data.item.germplasmId)" class="gt-passport-preview" v-b-tooltip.hover="$t('tableTooltipGermplasmPreviewPassport')" :aria-label="$t('tableTooltipGermplasmPreviewPassport')">
+            <i class="fa-solid fa-passport" aria-hidden="true" />
+          </router-link>
+          <router-link :to="{ name: Pages.passport, params: { germplasmId: data.item.germplasmId } }">{{ data.item.germplasmName }}</router-link>
+        </span>
       </template>
       <!-- Germplasm display name link -->
       <template v-slot:cell(germplasmDisplayName)="data">
@@ -66,7 +67,9 @@
       </template>
       <!-- Entity type -->
       <template v-slot:cell(entityTypeName)="data">
-        <span class="text-nowrap"><span :style="`color: ${entityTypes[data.item.entityTypeName].color()};`"><MdiIcon :path="entityTypes[data.item.entityTypeName].path" /></span> {{ entityTypes[data.item.entityTypeName].text() }}</span>
+        <!-- New look: a rounded badge in the colour of the type -->
+        <span class="bt-chip" :style="{ '--bt-chip-color': entityTypes[data.item.entityTypeName].color() }" v-if="modernLook"><MdiIcon :path="entityTypes[data.item.entityTypeName].path" /> {{ entityTypes[data.item.entityTypeName].text() }}</span>
+        <span class="bt-chip" v-else :style="{ '--bt-chip-color': entityTypes[data.item.entityTypeName].color() }"><MdiIcon :path="entityTypes[data.item.entityTypeName].path" /> {{ entityTypes[data.item.entityTypeName].text() }}</span>
       </template>
       <!-- Synonyms -->
       <template v-slot:cell(synonyms)="data">
@@ -84,15 +87,15 @@
       </template>
       <!-- Location elevation -->
       <template v-slot:cell(elevation)="data">
-        <span v-if="data.item.elevation !== undefined">{{ data.item.elevation.toFixed(2) }}</span>
+        <span v-if="data.item.elevation !== undefined">{{ formatNumber(data.item.elevation, 2) }}</span>
       </template>
       <!-- Location latitude -->
       <template v-slot:cell(latitude)="data">
-        <span v-if="data.item.latitude !== undefined">{{ data.item.latitude.toFixed(2) }}</span>
+        <span v-if="data.item.latitude !== undefined">{{ formatNumber(data.item.latitude, 2) }}</span>
       </template>
       <!-- Location longitude -->
       <template v-slot:cell(longitude)="data">
-        <span v-if="data.item.longitude !== undefined">{{ data.item.longitude.toFixed(2) }}</span>
+        <span v-if="data.item.longitude !== undefined">{{ formatNumber(data.item.longitude, 2) }}</span>
       </template>
       <!-- Country flag -->
       <!-- Conservation (virtual column, see conservation.js): in-situ when the germplasm has the IN-SITU attribute 1 -->
@@ -101,7 +104,7 @@
       </template>
       <template v-slot:cell(countryName)="data">
           <span class="table-country text-nowrap" v-b-tooltip.hover :title="data.item.countryName" v-if="data.item.countryCode">
-            <i :class="'fi fi-' + data.item.countryCode.toLowerCase()"/> <span> {{ data.item.countryCode }}</span>
+            <i :class="'fi fi-' + data.item.countryCode.toLowerCase()"/> <span> {{ getCountryIso3(data.item.countryCode) }}</span>
           </span>
           <span v-else>
             {{ data.item.countryName }}
@@ -109,16 +112,13 @@
       </template>
       <!-- Formatted colldate -->
       <template v-slot:cell(collDate)="data">
-        <span v-if="data.item.collDate">{{ mcpdDateToJsDate(data.item.collDate).toLocaleDateString() }}</span>
+        <span v-if="data.item.collDate">{{ formatDate(mcpdDateToJsDate(data.item.collDate)) }}</span>
       </template>
       <!-- Institutions -->
+      <!-- One institution code: the maintenance institution (INSTCODE), else the first one. The whole text (all the
+           institutions) on hover, their details on click. -->
       <template v-slot:cell(institutions)="data">
-        <template v-if="data.item.institutions && data.item.institutions.length > 0">
-          <span :title="data.value" v-if="data.value">{{ truncateAfterWords(data.value, 6) }}</span>
-          <a href="#" class="table-icon-link" @click.prevent="showInstitutionModal(data.item)" v-b-tooltip="$t('buttonReadMore')" v-if="isTruncatedAfterWords(data.value, 6)" >&nbsp;
-            <MdiIcon :path="mdiPageNext" />
-          </a>
-        </template>
+        <a href="#" class="gt-institution-codes" :title="data.value" @click.prevent="showInstitutionModal(data.item)" v-if="data.item.institutions && data.item.institutions.length > 0">{{ getInstitutionCodes(data.item) }}</a>
       </template>
       <!-- Image preview -->
       <template v-slot:cell(imageCount)="data">
@@ -158,7 +158,7 @@
               <circle id="circle" class="pdci-circle-inner" :style="'stroke-dasharray: 44; stroke-dashoffset: ' + (44 - (data.item.pdci / 10 * 44)) + ';'" r="7" cy="9" cx="9" stroke-width="4" fill="none"/>
             </g>
           </svg>
-          <span> {{ data.item.pdci.toFixed(2) }}</span>
+          <span> {{ formatNumber(data.item.pdci, 2) }}</span>
         </div>
       </template>
       <!-- Dataset types -->
@@ -172,7 +172,7 @@
         <span v-if="data.item.hasAllelefreqData" :style="{ color: datasetTypes.allelefreq.color() }" v-b-tooltip.hover :title="datasetTypes.allelefreq.text()"><MdiIcon :path="datasetTypes.allelefreq.path" /></span>
       </template>
       <template v-slot:cell(hasPedigreeData)="data">
-        <span v-if="data.item.hasPedigreeData" :style="{ color: datasetTypes.pedigree.color() }" v-b-tooltip.hover :title="datasetTypes.pedigree.text()"><MdiIcon :path="datasetTypes.pedigree.path" /></span>
+        <span v-if="data.item.hasPedigreeData" :style="{ color: datasetTypes.pedigree.color() }" v-b-tooltip.hover :title="datasetTypes.pedigree.text()"><i class="fa-solid fa-sitemap gt-data-icon" aria-hidden="true" /></span>
       </template>
 
       <!-- Row details is where the dataset locations are shown on a map -->
@@ -182,9 +182,17 @@
     </BaseTable>
 
     <!-- Modal to show the passport page on data point click -->
-    <!-- Passport preview: the passport page, in a modal wider than "xl" -->
-    <b-modal size="xl" dialog-class="passport-preview-modal" ref="passportModal" v-if="germplasmId" @hidden="germplasmId = null" scrollable ok-only hide-header :ok-title="$t('buttonClose')">
+    <!-- Passport preview: the passport page, in a modal wider than "xl", in the look of the custom pages (cp-modal). No
+         padding around the page: its reference images go to the edges and the top; the page keeps its own (below) -->
+    <b-modal size="xl" dialog-class="passport-preview-modal" modal-class="cp-modal" content-class="custom-page" ref="passportModal" v-if="germplasmId" @hidden="germplasmId = null" scrollable>
+      <!-- Only the X, at the top right over the page (it stays there while the page scrolls) -->
+      <template #modal-header="{ close }">
+        <button type="button" class="passport-preview-close" @click="close()" :title="$t('buttonClose')" :aria-label="$t('buttonClose')"><i class="fa-solid fa-xmark" aria-hidden="true" /></button>
+      </template>
       <PassportView :germplasmId="germplasmId" :isPopup="true" />
+      <template #modal-footer="{ close }">
+        <button type="button" class="cp-modal-button" @click="close()">{{ $t('buttonClose') }}</button>
+      </template>
     </b-modal>
 
     <InstitutionModal @hidden="germplasmId = null" :germplasmId="germplasmId" ref="institutionModal" v-if="germplasmId" />
@@ -200,7 +208,7 @@ import InstitutionModal from '@/components/modals/InstitutionModal'
 import defaultProps from '@/const/table-props'
 import { CONSERVATION_COLUMN, getConservationIds } from '@/mixins/conservation'
 import { apiPostEntityIds } from '@/mixins/api/germplasm'
-import { isTruncatedAfterWords, truncateAfterWords } from '@/mixins/formatting'
+import { isTruncatedAfterWords, truncateAfterWords, formatDate, formatNumber } from '@/mixins/formatting'
 import { getImageUrl } from '@/mixins/image'
 import { entityTypes, datasetTypes } from '@/mixins/types'
 import { Pages } from '@/mixins/pages'
@@ -208,15 +216,36 @@ import { mcpdDateToJsDate } from '@/mixins/util'
 
 import MdiIcon from '@/components/icons/MdiIcon'
 
-import { mdiHelpCircle, mdiOpenInApp, mdiMapMarker, mdiCamera, mdiChevronUpBox, mdiPageNext, mdiChevronUpBoxOutline, mdiChevronDownBox, mdiChevronDownBoxOutline } from '@mdi/js'
+import { mdiHelpCircle, mdiMapMarker, mdiCamera, mdiChevronUpBox, mdiPageNext, mdiChevronUpBoxOutline, mdiChevronDownBox, mdiChevronDownBoxOutline } from '@mdi/js'
+
+const countries = require('i18n-iso-countries')
 
 const emitter = require('tiny-emitter/instance')
 
-// Columns hidden until the user shows them in the column selector (GID, Number, and Conservation where it is offered)
-const DEFAULT_HIDDEN_COLUMNS = ['germplasmGid', 'germplasmNumber', CONSERVATION_COLUMN]
-// Browser storage keys set once a column was hidden by default (conservation keeps the key it had)
-const DEFAULT_HIDDEN_SEEN_KEY_PREFIX = 'germinate-germplasm-default-hidden-'
-const DEFAULT_HIDDEN_SEEN_KEYS = { [CONSERVATION_COLUMN]: 'germinate-germplasm-conservation-column-default-hidden' }
+// Display rule of the germplasm tables (wherever they are): these columns start hidden, the column selector shows them
+// again. Each one is hidden once, so a column added to the list is hidden for everyone once too.
+const DEFAULT_HIDDEN_COLUMNS = [
+  'germplasmId',
+  'germplasmGid',
+  'germplasmNumber',
+  'germplasmPuid',
+  'entityTypeName',
+  'synonyms',
+  'collectorNumber',
+  'elevation',
+  'location',
+  'hasTrialsData',
+  'hasGenotypicData',
+  'hasPedigreeData',
+  'hasAllelefreqData',
+  'imageCount',
+  'pdci'
+]
+// Columns hidden by default before and shown by default now: shown again once (then it is the user's choice)
+const DEFAULT_SHOWN_COLUMNS = [CONSERVATION_COLUMN]
+// The columns already hidden by default: kept with the hidden columns of the user (store), so both are remembered or
+// forgotten together (without accepted cookies nothing is kept: the columns are hidden again at the next visit)
+const DEFAULT_HIDDEN_APPLIED = 'germplasmDefaultHidden'
 
 export default {
   name: 'GermplasmTable',
@@ -252,7 +281,6 @@ export default {
       datasetTypes,
       mdiHelpCircle,
       mdiPageNext,
-      mdiOpenInApp,
       mdiMapMarker,
       mdiCamera,
       mdiChevronUpBox,
@@ -293,16 +321,11 @@ export default {
   },
   computed: {
     ...mapGetters([
+      'storeHiddenColumns',
       'storeToken'
     ]),
     columns: function () {
       const result = [
-        {
-          key: 'preview',
-          type: undefined,
-          sortable: false,
-          label: ''
-        },
         {
           key: 'germplasmId',
           type: Number,
@@ -481,6 +504,8 @@ export default {
           key: CONSERVATION_COLUMN,
           type: CONSERVATION_COLUMN,
           sortable: false,
+          // Computed in the page (not a value of the rows): never hidden for being empty
+          autoHide: false,
           label: 'Conservation'
         })
       }
@@ -510,6 +535,22 @@ export default {
     PassportView: () => import(/* webpackChunkName: "passport" */ '@/views/data/germplasm/PassportView.vue')
   },
   methods: {
+    // The ISO 3166 code of three letters of a country (from its code of two letters; that one if unknown)
+    getCountryIso3: function (code2) {
+      return (code2 && countries.alpha2ToAlpha3(code2.toUpperCase())) || code2
+    },
+    // The code of the maintenance institution of a germplasm (INSTCODE), else of its first institution (its name if it
+    // has no code)
+    getInstitutionCodes: function (item) {
+      const institutions = (item.institutions || []).filter(i => i.code || i.name)
+      if (institutions.length < 1) {
+        return null
+      }
+      const shown = institutions.find(i => i.type === 'maintenance') || institutions[0]
+      return shown.code || shown.name
+    },
+    formatNumber,
+    formatDate,
     isTruncatedAfterWords,
     truncateAfterWords,
     mcpdDateToJsDate,
@@ -621,21 +662,22 @@ export default {
     }
   },
   created: function () {
-    // Columns that start hidden: hidden once, then it is the user's choice (kept with the other columns)
-    const columns = DEFAULT_HIDDEN_COLUMNS.filter(column => column !== CONSERVATION_COLUMN || this.conservationColumn)
-    const toHide = columns.filter(column => {
-      const key = DEFAULT_HIDDEN_SEEN_KEYS[column] || `${DEFAULT_HIDDEN_SEEN_KEY_PREFIX}${column}`
-      let hiddenBefore = false
-      try {
-        hiddenBefore = localStorage.getItem(key) === 'true'
-        localStorage.setItem(key, 'true')
-      } catch (error) {
-        // Not kept: hidden again next time
+    // Columns that start hidden: hidden once, then it is the user's choice (kept with the other columns). Those shown
+    // by default again: shown once (marked "show:<column>" among the applied ones).
+    const applied = this.storeHiddenColumns[DEFAULT_HIDDEN_APPLIED] || []
+    const toHide = DEFAULT_HIDDEN_COLUMNS.filter(column => !applied.includes(column))
+    const toShow = DEFAULT_SHOWN_COLUMNS.filter(column => !applied.includes(`show:${column}`))
+    if (toHide.length > 0 || toShow.length > 0) {
+      if (toHide.length > 0) {
+        this.$store.dispatch('addHiddenColumns', { type: this.options.tableName, columns: toHide })
       }
-      return !hiddenBefore
-    })
-    if (toHide.length > 0) {
-      this.$store.dispatch('addHiddenColumns', { type: this.options.tableName, columns: toHide })
+      if (toShow.length > 0) {
+        this.$store.dispatch('removeHiddenColumns', { type: this.options.tableName, columns: toShow })
+      }
+      if (!this.storeHiddenColumns[DEFAULT_HIDDEN_APPLIED]) {
+        this.$store.dispatch('setHiddenColumns', { type: DEFAULT_HIDDEN_APPLIED, columns: [] })
+      }
+      this.$store.dispatch('addHiddenColumns', { type: DEFAULT_HIDDEN_APPLIED, columns: toHide.concat(toShow.map(column => `show:${column}`)) })
     }
 
     if (this.conservationColumn) {
@@ -645,7 +687,44 @@ export default {
 }
 </script>
 
+<style src="@/assets/custom-page.css"></style>
+<style src="@/assets/cp-modal.css"></style>
 <style>
+/* Icons of the has data of type columns (cells and heads) and of the images: the size of the passport icon (1.3 times
+   the text), no taller than the line (the rows keep their height) */
+.germplasm-table :is(th, td):is(.bt-col-hasTrialsData, .bt-col-hasGenotypicData, .bt-col-hasPedigreeData, .bt-col-hasAllelefreqData, .bt-col-imageCount) .mdi-icon {
+  width: 1.3em;
+  height: 1.3em;
+  vertical-align: middle;
+}
+.germplasm-table :is(th, td):is(.bt-col-hasTrialsData, .bt-col-hasGenotypicData, .bt-col-hasPedigreeData, .bt-col-hasAllelefreqData, .bt-col-imageCount) .mdi-icon-wrapper {
+  line-height: 1;
+}
+/* Pedigree: the icon of the Pedigree tab of the passport page (Font Awesome), as large */
+.germplasm-table .gt-data-icon {
+  font-size: 1.3em;
+  line-height: 1;
+  vertical-align: middle;
+}
+/* The passport icon (preview of the passport), then the name */
+.germplasm-table .gt-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+.germplasm-table .gt-passport-preview {
+  flex-shrink: 0;
+  color: var(--bt-icon, #6c757d) !important;
+  /* Larger than the text, but no taller than its line: the row keeps its height */
+  font-size: 1.3em;
+  line-height: 1;
+  opacity: 0.8;
+}
+.germplasm-table .gt-passport-preview:hover,
+.germplasm-table .gt-passport-preview:focus {
+  color: var(--bt-accent, #3b6b35) !important;
+  opacity: 1;
+}
 .table-image {
   white-space: nowrap;
 }
@@ -681,6 +760,51 @@ export default {
 /* Passport preview: wider than the "xl" modal, within the window */
 .passport-preview-modal {
   max-width: min(1320px, 96vw);
+}
+/* The rounded corners cut the images too */
+.passport-preview-modal .modal-content {
+  overflow: hidden;
+}
+.passport-preview-modal .modal-header {
+  position: absolute;
+  top: 0.75rem;
+  right: 1.25rem;
+  z-index: 5;
+  padding: 0;
+  border: 0;
+}
+.passport-preview-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid var(--cp-border);
+  border-radius: 10px;
+  background: var(--cp-surface);
+  color: var(--cp-muted);
+  font-size: 1rem;
+  box-shadow: 0 2px 6px var(--cp-shadow);
+  cursor: pointer;
+}
+.passport-preview-close:hover,
+.passport-preview-close:focus {
+  border-color: var(--cp-muted);
+  color: var(--cp-text);
+  outline: none;
+}
+.passport-preview-modal .modal-body {
+  padding: 0;
+  /* A thin scroll bar: the images reach (almost) the right edge too */
+  scrollbar-width: thin;
+}
+.passport-preview-modal .passport-page.is-popup {
+  padding: 1.5rem 1.5rem 0.5rem;
+}
+.passport-preview-modal .modal-footer {
+  border-top: 1px solid var(--cp-border);
+  padding-top: 0.9rem;
 }
 .pdci-circle-background {
   stroke: #ccc;

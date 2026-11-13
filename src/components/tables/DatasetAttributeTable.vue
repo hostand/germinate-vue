@@ -13,10 +13,7 @@
       </template>
       <!-- Attribute type -->
       <template v-slot:cell(attributeType)="data">
-        <span v-if="data.item.attributeType">
-          <span :style="`color: ${dataTypes[data.item.attributeType].color()};`"><MdiIcon :path="dataTypes[data.item.attributeType].path" /></span>
-          <span> {{ dataTypes[data.item.attributeType].text() }}</span>
-        </span>
+        <span class="bt-chip" v-if="data.item.attributeType" :style="{ '--bt-chip-color': dataTypes[data.item.attributeType].color() }"><MdiIcon :path="dataTypes[data.item.attributeType].path" /> {{ dataTypes[data.item.attributeType].text() }}</span>
       </template>
     </BaseTable>
   </div>

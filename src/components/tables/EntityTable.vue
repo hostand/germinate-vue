@@ -37,11 +37,11 @@
       </template>
       <!-- Entity parent type -->
       <template v-slot:cell(entityParentType)="data">
-        <span class="text-nowrap" v-if="data.item.entityParentType"><span :style="`color: ${entityTypes[data.item.entityParentType].color()};`"><MdiIcon :path="entityTypes[data.item.entityParentType].path" /></span> {{ entityTypes[data.item.entityParentType].text() }}</span>
+        <span class="bt-chip" v-if="data.item.entityParentType" :style="{ '--bt-chip-color': entityTypes[data.item.entityParentType].color() }"><MdiIcon :path="entityTypes[data.item.entityParentType].path" /> {{ entityTypes[data.item.entityParentType].text() }}</span>
       </template>
       <!-- Entity child type -->
       <template v-slot:cell(entityChildType)="data">
-        <span class="text-nowrap" v-if="data.item.entityChildType"><span :style="`color: ${entityTypes[data.item.entityChildType].color()};`"><MdiIcon :path="entityTypes[data.item.entityChildType].path" /></span> {{ entityTypes[data.item.entityChildType].text() }}</span>
+        <span class="bt-chip" v-if="data.item.entityChildType" :style="{ '--bt-chip-color': entityTypes[data.item.entityChildType].color() }"><MdiIcon :path="entityTypes[data.item.entityChildType].path" /> {{ entityTypes[data.item.entityChildType].text() }}</span>
       </template>
     </BaseTable>
   </div>

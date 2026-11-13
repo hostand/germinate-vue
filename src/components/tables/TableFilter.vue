@@ -1,7 +1,55 @@
 <template>
   <div :class="divClass">
     <div>
-      <b-button-group class="table-filter">
+      <!-- New look of the tables: help | columns, filter and clear filter as icons -->
+      <div class="bt-tools" v-if="modernLook">
+        <button type="button" class="bt-tool" @click="$emit('help-clicked')" v-b-tooltip.hover :title="$t('tooltipTableHelp')" :aria-label="$t('tooltipTableHelp')">
+          <i class="fa-solid fa-circle-question" aria-hidden="true" />
+        </button>
+        <span class="bt-tools-separator" aria-hidden="true" />
+        <b-dropdown left
+                    no-caret
+                    variant="link"
+                    toggle-class="bt-select"
+                    v-if="columns && columns.length > 0"
+                    class="overflow-dropdown"
+                    id="column-selector"
+                    v-b-tooltip.hover
+                    :title="$t('tooltipTableColumnSelector')">
+          <template #button-content><i class="fa-solid fa-table-columns" aria-hidden="true" /> <i class="fa-solid fa-chevron-down" aria-hidden="true" /></template>
+          <b-dropdown-form>
+            <b-form-checkbox v-for="column in getColumnsToToggle"
+                             :key="'table-filter-' + column.key"
+                             @change="toggleColumn($event, column)"
+                             class="my-2"
+                             :checked="getValue(column)">
+              {{ getText(column) }}
+            </b-form-checkbox>
+          </b-dropdown-form>
+        </b-dropdown>
+        <button type="button"
+                :class="['bt-tool', { 'is-active': userFilterCount > 0 }]"
+                :disabled="filterLocked"
+                v-b-modal="'table-filter-modal-' + id"
+                @click="$emit('filter-opened')"
+                id="filter-toggle"
+                v-b-tooltip.hover
+                :title="$t('tooltipTableFilter')"
+                :aria-label="$t('tooltipTableFilter')">
+          <i class="fa-solid fa-filter" aria-hidden="true" />
+        </button>
+        <button type="button"
+                class="bt-tool is-danger"
+                v-if="userFilterCount > 0"
+                @click="clearFilter"
+                v-b-tooltip.hover
+                :title="$t('tooltipTableClearFilter')"
+                :aria-label="$t('tooltipTableClearFilter')">
+          <i class="fa-solid fa-trash-can" aria-hidden="true" />
+        </button>
+      </div>
+
+      <b-button-group class="table-filter" v-else>
         <!-- Help information -->
         <b-button @click="$emit('help-clicked')"
                   v-b-tooltip.hover
@@ -51,25 +99,35 @@
                ref="tableFilterModal"
                :title="$t('modalTitleTableFilter')"
                size="lg"
-               @ok="setFilter(false, true)"
+               :modal-class="modernLook ? 'cp-modal bt-filter-modal' : null"
+               :content-class="modernLook ? 'custom-page' : null"
+               :ok-disabled="!canApplyFilter"
+               @ok="applyUserFilter(false)"
                @show="init">
-        <p>{{ $t('modalTextTableFilter') }}</p>
-        <b-form v-on:submit.prevent="setFilter(true, true)">
+        <!-- New look: Cancel and OK (only once every field of the filter is filled in) -->
+        <template #modal-footer="{ ok, cancel }" v-if="modernLook">
+          <button type="button" class="cp-modal-button" @click="cancel()">{{ $t('buttonCancel') }}</button>
+          <button type="button" class="cp-modal-button is-primary" :disabled="!canApplyFilter" @click="ok()">
+            <i class="fa-solid fa-filter" aria-hidden="true" /> {{ $t('buttonOk') }}
+          </button>
+        </template>
+        <p class="bt-filter-modal-text">{{ $t('modalTextTableFilter') }}</p>
+        <b-form v-on:submit.prevent="canApplyFilter && applyUserFilter(true)">
           <!-- Each row -->
           <div v-for="(f, index) in tempFilter" :key="'filter-' + f.column.name + '-' + index">
             <b-form-group :disabled="f.canBeChanged === false">
               <b-input-group class="mb-3">
                 <b-input-group-prepend>
                   <!-- Column selector -->
-                  <b-dropdown :text="getText(f.column)" class="overflow-dropdown">
+                  <b-dropdown :text="getFilterColumnText(f.column)" class="overflow-dropdown">
                     <b-dropdown-item v-for="column in getColumns"
                                     :key="'filter-column-' + column.key"
                                     @click="switchColumn(f, column)">
-                      {{ getText(column) }}
+                      {{ getFilterColumnText(column) }}
                     </b-dropdown-item>
                   </b-dropdown>
-                  <!-- Comparator selector -->
-                  <b-dropdown :text="comparators[f.comparator].text()" class="overflow-dropdown">
+                  <!-- Comparator selector (none for datasets: the trait in any of those ticked) -->
+                  <b-dropdown :text="comparators[f.comparator].text()" class="overflow-dropdown" v-if="!isType(f, 'datasets')">
                     <b-dropdown-item v-for="(value, name) in comparators"
                                     :disabled="isDisabled(f.column.type, name)"
                                     :key="'filter-comparator-' + name"
@@ -79,7 +137,9 @@
                   </b-dropdown>
                 </b-input-group-prepend>
 
-                <template v-if="f.comparator === 'inSet'">
+                <!-- Datasets: a dropdown with their list, several of them ticked (any of them) -->
+                <DatasetFilterInput v-model="f.values" :datasetType="getColumnDefinition(f.column).filterDatasetType || null" v-if="isType(f, 'datasets')" />
+                <template v-else-if="f.comparator === 'inSet'">
                   <b-form-input v-model="f.values[0]" @focus.native="$event.target.select()"/>
                 </template>
                 <template v-else>
@@ -148,7 +208,8 @@
               ></b-form-radio-group>
             </b-form-group>
           </div>
-          <b-button @click="addFilter"><MdiIcon :path="mdiPlus" /> <span> {{ $t('genericAdd') }}</span></b-button>
+          <button type="button" class="cp-modal-button" @click="addFilter" v-if="modernLook"><i class="fa-solid fa-plus" aria-hidden="true" /> {{ $t('genericAdd') }}</button>
+          <b-button @click="addFilter" v-else><MdiIcon :path="mdiPlus" /> <span> {{ $t('genericAdd') }}</span></b-button>
         </b-form>
       </b-modal>
     </div>
@@ -164,14 +225,31 @@ import { dataTypes, entityTypes, groupTypes, locationTypes } from '@/mixins/type
 import { uuidv4, objectArraysAreSame } from '@/mixins/util'
 
 import MdiIcon from '@/components/icons/MdiIcon'
+import DatasetFilterInput from '@/components/tables/DatasetFilterInput'
 
 import { mdiHelpCircleOutline, mdiViewColumn, mdiDelete, mdiFilter, mdiPlus } from '@mdi/js'
 
 export default {
   components: {
-    MdiIcon
+    MdiIcon,
+    DatasetFilterInput
   },
   props: {
+    // The new look of the tables (see BaseTable)
+    modernLook: {
+      type: Boolean,
+      default: false
+    },
+    // The filter button shown but disabled
+    filterLocked: {
+      type: Boolean,
+      default: false
+    },
+    // Columns hidden by the table because they were mostly empty when it loaded (shown as hidden in the column selector)
+    autoHiddenColumns: {
+      type: Array,
+      default: () => []
+    },
     columns: {
       type: Array,
       default: function () {
@@ -211,6 +289,7 @@ export default {
         locationType: ['equals', 'isNull', 'isNotNull'],
         entityType: ['equals', 'isNull', 'isNotNull'],
         json: ['jsonSearch', 'isNull', 'isNotNull'],
+        datasets: ['arrayContains'],
         jsonObject: ['jsonSearch'],
         Number: ['equals', 'between', 'lessThan', 'greaterThan', 'lessOrEquals', 'greaterOrEquals', 'inSet', 'isNull', 'isNotNull'],
         Date: ['equals', 'between', 'lessThan', 'greaterThan', 'lessOrEquals', 'greaterOrEquals', 'isNull', 'isNotNull']
@@ -218,7 +297,10 @@ export default {
       filter: null,
       tempFilter: [],
       targetFilter: [],
-      hasBeenCleared: false
+      hasBeenCleared: false,
+      // The filter set by the user (filter modal, clearing it): until then the line of the active filters of the table is
+      // not shown for the filters it loads with (of the page, of the address)
+      userFiltered: false
     }
   },
   watch: {
@@ -235,11 +317,33 @@ export default {
     }
   },
   computed: {
+    // The filters the user can change (not the fixed ones of the page, the context of the table): only they make the
+    // filter button active and can be cleared
+    userFilterCount: function () {
+      return (this.filter || []).filter(f => f.canBeChanged !== false).length
+    },
     ...mapGetters([
       'storeHiddenColumns',
       'storeEntityTypeStats',
       'storeLocale'
     ]),
+    // The filter can be applied once every value its comparators need is filled in
+    canApplyFilter: function () {
+      return this.tempFilter.length > 0 && this.tempFilter.every(f => {
+        if (f.canBeChanged === false) {
+          return true
+        }
+        const comparator = comparators[f.comparator]
+        const needed = Math.min((comparator && comparator.values) || 0, 2)
+        for (let i = 0; i < needed; i++) {
+          const value = f.values ? f.values[i] : null
+          if (value === null || value === undefined || `${value}`.trim() === '') {
+            return false
+          }
+        }
+        return true
+      })
+    },
     // Only get the columns that have a text that isn't empty and that have a valid type
     getColumns: function () {
       return this.columns.filter(c => {
@@ -353,6 +457,8 @@ export default {
       f.column = column
       if (this.isType(f, Boolean)) {
         f.values = [0, 0]
+      } else if (this.isType(f, 'datasets')) {
+        f.values = []
       } else {
         f.values = [null, null]
       }
@@ -396,7 +502,8 @@ export default {
 
       this.$emit('filter-changed', {
         filter: this.targetFilter,
-        triggerUpdate: trigger
+        triggerUpdate: trigger,
+        byUser: this.userFiltered
       })
 
       if (hideModal) {
@@ -426,8 +533,22 @@ export default {
         return column.key
       }
     },
+    // The definition of the column of a filter (the filter has its key or its name)
+    getColumnDefinition: function (column) {
+      const key = column ? (column.key || column.name) : null
+      return this.columns.find(c => c.key === key) || column || {}
+    },
+    // The name of a column in the filter: its own name for the filter when it has one (e.g. "Datasets" for "# Datasets")
+    getFilterColumnText: function (column) {
+      const definition = this.getColumnDefinition(column)
+      return definition.filterLabel || this.getText(column)
+    },
     getValue: function (column) {
-      return this.storeHiddenColumns[this.tableName] ? this.storeHiddenColumns[this.tableName].indexOf(column.key) === -1 : false
+      if (this.autoHiddenColumns.includes(column.key)) {
+        return false
+      }
+      // A table without a list of hidden columns yet: none hidden
+      return this.storeHiddenColumns[this.tableName] ? this.storeHiddenColumns[this.tableName].indexOf(column.key) === -1 : true
     },
     toggleColumn: function (value, column) {
       if (value) {
@@ -437,8 +558,14 @@ export default {
       }
       this.$emit('on-column-toggle', column.key)
     },
+    // The filter of the modal, set by the user: from now on shown as active
+    applyUserFilter: function (hideModal) {
+      this.userFiltered = true
+      this.setFilter(hideModal, true)
+    },
     clearFilter: function () {
       this.hasBeenCleared = true
+      this.userFiltered = true
       this.filter = this.filter.filter(f => {
         if (f.canBeChanged !== undefined) {
           return !f.canBeChanged
@@ -466,7 +593,8 @@ export default {
       })
       this.$emit('filter-changed', {
         filter: this.targetFilter,
-        triggerUpdate: true
+        triggerUpdate: true,
+        byUser: true
       })
     },
     init: function () {
@@ -543,6 +671,8 @@ export default {
 }
 </script>
 
+<style src="@/assets/custom-page.css"></style>
+<style src="@/assets/cp-modal.css"></style>
 <style>
 .table-filter .btn {
   border-bottom-right-radius: 0;

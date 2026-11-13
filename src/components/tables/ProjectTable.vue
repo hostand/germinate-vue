@@ -27,7 +27,7 @@
       </template>
       <!-- Project datasets -->
       <template v-slot:cell(datasets)="data">
-        <span v-if="data.item.datasets">{{ data.item.datasets.length.toLocaleString() }}</span>
+        <span v-if="data.item.datasets">{{ formatNumber(data.item.datasets.length) }}</span>
       </template>
       <!-- Project image/logo -->
       <template v-slot:cell(projectImageId)="data">
@@ -69,6 +69,7 @@ import { userIsAtLeast, USER_TYPE_DATA_CURATOR } from '@/mixins/api/auth'
 import { mdiDelete, mdiPlusBox, mdiSquareEditOutline } from '@mdi/js'
 import { apiDeleteProject } from '@/mixins/api/project'
 import { getImageUrlById } from '@/mixins/image'
+import { formatDate, formatNumber } from '@/mixins/formatting'
 
 const emitter = require('tiny-emitter/instance')
 
@@ -157,13 +158,13 @@ export default {
           type: Date,
           sortable: true,
           label: this.$t('tableColumnProjectStartDate'),
-          formatter: value => value ? new Date(value).toLocaleDateString() : null
+          formatter: value => formatDate(value)
         }, {
           key: 'projectEndDate',
           type: Date,
           sortable: true,
           label: this.$t('tableColumnProjectEndDate'),
-          formatter: value => value ? new Date(value).toLocaleDateString() : null
+          formatter: value => formatDate(value)
         }
       ]
 
@@ -205,6 +206,7 @@ export default {
     MdiIcon
   },
   methods: {
+    formatNumber,
     getSrc: function (project, size) {
       return getImageUrlById(project.projectImageId, {
         type: 'projects',

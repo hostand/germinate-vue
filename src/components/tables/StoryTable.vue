@@ -57,7 +57,7 @@ import defaultProps from '@/const/table-props'
 import { getImageUrl } from '@/mixins/image'
 
 import { mdiTextBoxCheckOutline, mdiPlay, mdiPageNext } from '@mdi/js'
-import { getNumberWithSuffix, isTruncatedAfterWords, truncateAfterWords } from '@/mixins/formatting'
+import { getNumberWithSuffix, isTruncatedAfterWords, truncateAfterWords, formatDateTime } from '@/mixins/formatting'
 import { Pages } from '@/mixins/pages'
 
 export default {
@@ -130,7 +130,7 @@ export default {
           type: Date,
           sortable: true,
           label: this.$t('tableColumnStoryCreatedOn'),
-          formatter: value => value ? new Date(value).toLocaleString() : null,
+          formatter: value => formatDateTime(value),
           preferredSortingColumn: true
         }, {
           key: 'storyImageId',

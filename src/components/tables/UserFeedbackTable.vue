@@ -12,11 +12,11 @@
                ref="userFeedbackTable"
                v-on="$listeners">
       <template v-slot:cell(severity)="data">
-        <b-badge class="w-100" ><MdiIcon :path="userFeedbackSeverityTypes[data.item.severity].path" :className="userFeedbackSeverityTypes[data.item.severity].color"/> {{ userFeedbackSeverityTypes[data.item.severity].text() }}</b-badge>
+        <b-badge :style="{ '--bt-chip-color': 'var(--bt-muted)' }" class="bt-chip" ><MdiIcon :path="userFeedbackSeverityTypes[data.item.severity].path" :className="userFeedbackSeverityTypes[data.item.severity].color"/> {{ userFeedbackSeverityTypes[data.item.severity].text() }}</b-badge>
       </template>
 
       <template v-slot:cell(feedbackType)="data">
-        <b-badge class="w-100"><MdiIcon :path="userFeedbackTypeMap[data.item.feedbackType].path" :color="userFeedbackTypeMap[data.item.feedbackType].color()"/> {{ userFeedbackTypeMap[data.item.feedbackType].text() }}</b-badge>
+        <b-badge :style="{ '--bt-chip-color': 'var(--bt-muted)' }" class="bt-chip"><MdiIcon :path="userFeedbackTypeMap[data.item.feedbackType].path" :color="userFeedbackTypeMap[data.item.feedbackType].color()"/> {{ userFeedbackTypeMap[data.item.feedbackType].text() }}</b-badge>
       </template>
 
       <template v-slot:cell(pageUrl)="data">
@@ -62,7 +62,7 @@ import defaultProps from '@/const/table-props'
 import MdiIcon from '@/components/icons/MdiIcon'
 import { getHighContrastTextColor } from '@/mixins/colors'
 import { getFeedbackImageUrl } from '@/mixins/image'
-import { isTruncatedAfterWords, truncateAfterWords, truncateAfterChars } from '@/mixins/formatting'
+import { isTruncatedAfterWords, truncateAfterWords, truncateAfterChars, formatDateTime } from '@/mixins/formatting'
 import { mdiPageNext, mdiNewBox, mdiEyeCheckOutline, mdiOpenInNew, mdiDelete } from '@mdi/js'
 import { apiDeleteUserFeedback, apiGetUserFeedbackMarkAsRead } from '@/mixins/api/misc'
 
@@ -141,7 +141,7 @@ export default {
         type: Date,
         sortable: true,
         label: this.$t('tableColumnUserFeedbackUpdatedOn'),
-        formatter: value => value ? new Date(value).toLocaleString() : null,
+        formatter: value => formatDateTime(value),
         preferredSortingColumn: true
       }, {
         key: 'image',

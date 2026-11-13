@@ -24,7 +24,7 @@
       </template>
       <!-- Group type icon -->
       <template v-slot:cell(groupType)="data">
-        <b-badge class="w-100" :style="`color: ${getHighContrastTextColor(groupTypes[data.item.groupType].color())}; background-color: ${groupTypes[data.item.groupType].color()};`"><MdiIcon :path="groupTypes[data.item.groupType].path" /> {{ groupTypes[data.item.groupType].text() }}</b-badge>
+        <b-badge class="bt-chip" :style="{ '--bt-chip-color': groupTypes[data.item.groupType].color() }"><MdiIcon :path="groupTypes[data.item.groupType].path" /> {{ groupTypes[data.item.groupType].text() }}</b-badge>
       </template>
 
       <!-- Only show if authentication enabled -->
@@ -46,7 +46,7 @@ import BaseTable from '@/components/tables/BaseTable'
 import defaultProps from '@/const/table-props.js'
 import { groupTypes } from '@/mixins/types.js'
 import { getHighContrastTextColor } from '@/mixins/colors'
-import { getNumberWithSuffix } from '@/mixins/formatting'
+import { getNumberWithSuffix, formatDateTime } from '@/mixins/formatting'
 import { Pages } from '@/mixins/pages'
 
 import { mdiRenameBox, mdiDelete } from '@mdi/js'
@@ -123,13 +123,13 @@ export default {
           type: Date,
           sortable: true,
           label: this.$t('tableColumnGroupCreatedOn'),
-          formatter: value => value ? new Date(value).toLocaleString() : null
+          formatter: value => formatDateTime(value)
         }, {
           key: 'updatedOn',
           type: Date,
           sortable: true,
           label: this.$t('tableColumnGroupUpdatedOn'),
-          formatter: value => value ? new Date(value).toLocaleString() : null
+          formatter: value => formatDateTime(value)
         }, {
           key: 'count',
           type: Number,

@@ -374,13 +374,13 @@ export default {
           paper_bgcolor: 'transparent',
           plot_bgcolor: 'transparent',
           xaxis: {
-            gridcolor: this.storeDarkMode ? 'rgba(1.0, 1.0, 1.0, 0.1)' : 'rgba(0.0, 0.0, 0.0, 0.1)',
+            gridcolor: this.storeDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
             title: { text: this.$t('chartAxisTitleTime'), font: { color: this.storeDarkMode ? 'white' : 'black' } },
             tickfont: { color: this.storeDarkMode ? 'white' : 'black' }
           },
           height: 400,
           yaxis: {
-            gridcolor: this.storeDarkMode ? 'rgba(1.0, 1.0, 1.0, 0.1)' : 'rgba(0.0, 0.0, 0.0, 0.1)',
+            gridcolor: this.storeDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
             title: { text: this.$t('chartAxisTitleValue'), font: { color: this.storeDarkMode ? 'white' : 'black' } },
             tickfont: { color: this.storeDarkMode ? 'white' : 'black' }
             // range: this.traitStats ? [this.traitStats.min - (this.traitStats.max - this.traitStats.min) * 0.05, this.traitStats.max + (this.traitStats.max - this.traitStats.min) * 0.05] : null

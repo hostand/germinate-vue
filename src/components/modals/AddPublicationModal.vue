@@ -13,27 +13,23 @@
         {{ newPublication.errorMessage }}
       </b-form-invalid-feedback>
     </b-form-group>
-    <b-button variant="primary" @click="getPublication" :disabled="!newPublication.doi || newPublication.loading"><MdiIcon :path="mdiChevronDoubleDown" /> {{ $t('buttonUpdate') }} <b-spinner small v-if="newPublication.loading" /></b-button>
+    <!-- New look: the rounded, outlined button of the modals -->
+    <button type="button" class="cp-modal-button is-primary" @click="getPublication" :disabled="!newPublication.doi || newPublication.loading">
+      <i class="fa-solid fa-angles-down" aria-hidden="true" /> {{ $t('buttonUpdate') }} <b-spinner small v-if="newPublication.loading" />
+    </button>
 
     <p v-html="newPublication.html" v-if="newPublication.html" />
   </b-modal>
 </template>
 
 <script>
-import MdiIcon from '@/components/icons/MdiIcon'
-
 import { apiPutPublication, apiPutPublicationReference } from '@/mixins/api/misc'
-
-import { mdiChevronDoubleDown } from '@mdi/js'
 
 const { Cite } = require('@citation-js/core')
 require('@citation-js/plugin-doi')
 require('@citation-js/plugin-csl')
 
 export default {
-  components: {
-    MdiIcon
-  },
   props: {
     referenceType: {
       type: String,
@@ -46,7 +42,6 @@ export default {
   },
   data: function () {
     return {
-      mdiChevronDoubleDown,
       newPublication: {
         doi: null,
         html: null,
@@ -116,3 +111,5 @@ export default {
   }
 }
 </script>
+
+<style src="@/assets/cp-modal.css"></style>

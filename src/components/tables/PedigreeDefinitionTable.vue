@@ -19,6 +19,7 @@
 <script>
 import BaseTable from '@/components/tables/BaseTable'
 import defaultProps from '@/const/table-props.js'
+import { formatDateTime } from '@/mixins/formatting'
 const emitter = require('tiny-emitter/instance')
 
 export default {
@@ -103,7 +104,7 @@ export default {
           type: Date,
           sortable: true,
           label: this.$t('tableColumnPedigreeDefinitionCreatedOn'),
-          formatter: value => value ? new Date(value).toLocaleString() : null
+          formatter: value => formatDateTime(value)
         }
       ]
     }

@@ -225,6 +225,10 @@ const storeState = {
       }
     },
     ON_HIDDEN_COLUMNS_ADD_MUTATION: function (state, { type, columns }) {
+      // A table without a list of its own yet
+      if (!state.userStates[state.token ? state.token.id : null].hiddenColumns[type]) {
+        Vue.set(state.userStates[state.token ? state.token.id : null].hiddenColumns, type, [])
+      }
       columns.forEach(id => {
         if (state.userStates[state.token ? state.token.id : null].hiddenColumns[type].indexOf(id) === -1) {
           state.userStates[state.token ? state.token.id : null].hiddenColumns[type].push(id)
@@ -232,6 +236,10 @@ const storeState = {
       })
     },
     ON_HIDDEN_COLUMNS_REMOVE_MUTATION: function (state, { type, columns }) {
+      // A table without a list of its own yet: nothing hidden
+      if (!state.userStates[state.token ? state.token.id : null].hiddenColumns[type]) {
+        return
+      }
       columns.forEach(id => {
         const index = state.userStates[state.token ? state.token.id : null].hiddenColumns[type].indexOf(id)
         if (index !== -1) {
