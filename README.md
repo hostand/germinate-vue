@@ -1,153 +1,102 @@
-# Germinate - The generic plant genetic resources database
+<h1 align="center">
+  <img src="docs/readme/cousin-logo.svg" width="420" alt="COUSIN">
+  <br>
+  COUSIN Germinate
+</h1>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/germinateplatform/germinate-vue/master/public/img/germinate-square.svg?sanitize=true" width="200" alt="Logo">
+  <b>The data platform of the COUSIN project: Crop Wild Relatives for a sustainable agriculture.</b>
+  <br>
+  A fork of <a href="https://github.com/germinateplatform/germinate-vue">Germinate</a>, the open source plant genetic resources database of The James Hutton Institute.
 </p>
 
-![GitHub](https://img.shields.io/github/license/germinateplatform/germinate-vue?style=for-the-badge&logo=apache)
-![GitHub release (latest by date)](https://img.shields.io/github/v/release/germinateplatform/germinate-vue?style=for-the-badge)
-![GitHub last commit](https://img.shields.io/github/last-commit/germinateplatform/germinate-vue?style=for-the-badge&logo=git)
-[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg?style=for-the-badge)](CODE_OF_CONDUCT.md)
+<p align="center">
+  <a href="https://github.com/germinateplatform/germinate-vue"><img src="https://img.shields.io/badge/fork%20of-germinateplatform%2Fgerminate--vue-138d6b?style=for-the-badge&logo=github" alt="Fork of germinateplatform/germinate-vue"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache%202.0-blue?style=for-the-badge&logo=apache" alt="Apache 2.0"></a>
+  <a href="https://www.cousinproject.eu/"><img src="https://img.shields.io/badge/project-cousinproject.eu-6b8f3a?style=for-the-badge" alt="cousinproject.eu"></a>
+</p>
 
-![Docker Pulls](https://img.shields.io/docker/pulls/cropgeeks/germinate?style=for-the-badge&logo=docker)
-[![Docker CI Push](https://img.shields.io/github/actions/workflow/status/germinateplatform/germinate-vue/docker-ci-push.yml?label=GitHub%20Push%20Action&logo=github&style=for-the-badge)](https://github.com/germinateplatform/germinate-vue/actions/workflows/docker-ci-push.yml)
-[![Docker CI Tag](https://img.shields.io/github/actions/workflow/status/germinateplatform/germinate-vue/docker-ci-push.yml?label=GitHub%20Tag%20Action&logo=github&style=for-the-badge)](https://github.com/germinateplatform/germinate-vue/actions/workflows/docker-ci-tag.yml)
+> [!NOTE]
+> **This repository is a fork of [germinateplatform/germinate-vue](https://github.com/germinateplatform/germinate-vue).**
+> Germinate is developed by the Information and Computational Sciences group of [The James Hutton Institute](https://www.hutton.ac.uk/).
+> For Germinate itself (documentation, downloads, demo, support) see the
+> [Germinate website](https://ics.hutton.ac.uk/get-germinate).
 
-[![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.14858537-007ec6?style=for-the-badge)](https://doi.org/10.5281/zenodo.14858537)
+![The home page of COUSIN Germinate](docs/readme/home.png "The home page of COUSIN Germinate")
 
-![](https://germinateplatform.github.io/get-germinate/images/screenshot-1.png "Home page")
+## About COUSIN
 
-Germinate is an open source plant database infrastructure and application programming platform
-on which complex data from genetic resource collections can be stored, queried and visualized
-using common, reusable, programming components. Germinate utilises modern web and database
-standards to provide a common architecture and high performance web-based user interface and
-analytics functionality across a wide variety of data types including: passport, phenotypic,
-field trial, pedigree, genetic, climatic, geographic location data as well as user-submitted
-annotations. In addition, it provides links to an expanding variety of external visualization
-and analysis tools such as [Helium](https://ics.hutton.ac.uk/helium) for pedigree visualization,
-[Flapjack](https://ics.hutton.ac.uk/flapjack) for graphical genotyping and
-[CurlyWhirly](https://ics.hutton.ac.uk/curlywhirly) for 3D coordinate data.
+Crop Wild Relatives (CWRs) are often seen as the *cousins* of domesticated crops: they are their close kin and an
+important source of natural genetic variation. Crop diversification and breeding are key tools for the agroecological
+transition of European food systems, and CWRs can play a central role as custodians of diversity.
 
-The single point of access for all background data on genetic resources collections that
-Germinate implements, provides a valuable digital curation resource as well as offering
-essential continuity on how new data is recorded and presented to researchers and breeders
-which brings focus and facilitates community building into research communities.
+COUSIN develops and implements a roadmap for the use of CWRs to breed new cultivars supporting the agroecological
+transition. For five flagship crops (**wheat, barley, pea, lettuce and brassica**), representing cereals, legumes, leafy
+greens, vegetables and oilseed crops, it shows how the challenges of stakeholders from farm to fork can be overcome by
+using CWRs in formal and participatory breeding.
 
-## Website
-Want to know more? Browse our homepage ([https://ics.hutton.ac.uk/get-germinate](https://ics.hutton.ac.uk/get-germinate))
+### Objectives
 
-## Interactive Demo Instance
-If you want to explore Germinate and try out all the features, have a play about with our [demo database](https://ics.hutton.ac.uk/germinate-demo).
+| | |
+|---|---|
+| **Identify** | Pathways to use Crop Wild Relatives to strengthen sustainable agriculture. |
+| **Recognize** | Preferred areas for the conservation and monitoring of priority CWR species in Europe, and implement their *trans situ* conservation. |
+| **Determine** | The characteristics of CWRs demanded by stakeholders. |
+| **Implement** | These stakeholder-demanded characteristics in breeding activities. |
+| **Provide** | Information about CWRs in an accessible format to stakeholders and potential users. |
+| **Train and raise awareness** | About the value of Crop Wild Relatives in society. |
 
-## Download
-Please consult the [online documentation](https://germinateplatform.github.io/germinate-server) for a variety of options to download and run Germinate yourself.
+### COUSIN Readiness Levels
 
-## Contact
-If you have any questions or suggestions, please send us an email on [germinate@hutton.ac.uk](mailto:germinate@hutton.ac.uk) or post an issue.
+The project developed the COUSIN Readiness Levels (CRL): nine steps from a wild relative recorded in a database to a
+variety grown in farmers' fields.
 
-## Acknowledgements
+1. **Identified in databases**: the CWR is identified in species distribution databases.
+2. **Identified in situ**: the CWR is found in its natural habitat.
+3. **Characterised in situ**: the CWR is characterised where it grows.
+4. **Available ex situ**: the CWR is conserved in gene banks with its passport data. ← *this platform*
+5. **Characterised ex situ**: stress tolerance, nutritional properties and other agronomic traits are assessed.
+6. **Early crosses**: early interspecific crosses with the CWR and early selection.
+7. **Advanced populations**: crosses and backcrosses with selection create advanced populations.
+8. **Novel cultivar or OHM**: a novel cultivar (DUS) or an organic heterogeneous material (OHM) is defined.
+9. **In farmers' fields**: registered varieties and OHM are grown to produce food and feed.
 
-The Germinate Team gratefully acknowledges support by the following organizations who have generously provided us with open source licenses for their software products:
+### Work packages
 
-### Lokalise
-<img src="https://raw.githubusercontent.com/germinateplatform/germinate-vue/master/public/img/other/lokalise.svg?sanitize=true" height="75" alt="Lokalise">
+The project is organised into seven work packages. This platform is part of **WP5, Data provisioning**:
 
-We use [Lokalise](https://lokalise.co/) to manage Germinate's translations.
+| WP | Title | |
+|---|---|---|
+| 1 | Participation and co-design | Co-creating the contexts for Crop Wild Relatives |
+| 2 | Conservation | Monitoring and conservation of Crop Wild Relatives |
+| 3 | Characterisation | Trait characterisation of CWRs and pre-breeding germplasm |
+| 4 | Breeding and farming | Implementing CWRs in breeding and farming |
+| **5** | **Data provisioning** | **High-quality data resources: the data management plan, the project data platform, consolidation of diversity, climate, land use, conservation and characterisation data, and a catalogue of CWR genetic resources** |
+| 6 | Communication and training | Communication, dissemination, exploitation and training |
+| 7 | Project management | Coordination of the project |
 
-### Funders
+## Partners
 
-We are very grateful for the funding Germinate has received over the years. Below is a list of our main funders who we have worked with closely during the development of Germinate.
+![The 25 partners of the COUSIN consortium](docs/readme/partners.png "COUSIN partners")
 
-<table bgcolor="white">
-  <tbody>
-    <tr>
-      <td align="center" valign="middle">
-        <img src="https://raw.githubusercontent.com/germinateplatform/germinate-vue/master/public/img/hutton-black.svg?sanitize=true" width="222px" alt="The James Hutton Institute logo">
-      </td>
-      <td align="center" valign="middle">
-        <img src="https://raw.githubusercontent.com/germinateplatform/germinate-vue/master/public/img/funders/crop-trust.svg?sanitize=true" width="222px" alt="Crop Trust">
-      </td>
-      <td align="center" valign="middle">
-        <img src="https://raw.githubusercontent.com/germinateplatform/germinate-vue/master/public/img/funders/bold.svg?sanitize=true" width="222px" alt="Biodiversity for Opportunities, Livelihoods and Development">
-      </td>
-      <td align="center" valign="middle">
-        <img src="https://raw.githubusercontent.com/germinateplatform/germinate-vue/master/public/img/funders/cwr.svg?sanitize=true" width="222px" alt="Crop Wild Relatives">
-      </td>
-    </tr>
-    <tr>
-      <td align="center" valign="middle">
-        <img src="https://raw.githubusercontent.com/germinateplatform/germinate-vue/master/public/img/funders/norway.svg?sanitize=true" width="222px" alt="Norway">
-      </td>
-      <td align="center" valign="middle">
-        <img src="https://raw.githubusercontent.com/germinateplatform/germinate-vue/master/public/img/funders/norwegian-ministry-of-foreign-affairs.svg?sanitize=true" width="222px" alt="Norwegian Ministry of Foreign Affairs">
-      </td>
-      <td align="center" valign="middle">
-        <img src="https://raw.githubusercontent.com/germinateplatform/germinate-vue/master/public/img/funders/templeton.svg?sanitize=true" width="222px" alt="Templeton World Charity Foundation">
-      </td>
-      <td align="center" valign="middle">
-        <img src="https://raw.githubusercontent.com/germinateplatform/germinate-vue/master/public/img/funders/cimmyt.svg?sanitize=true" width="222px" alt="CIMMYT">
-      </td>
-    </tr>
-    <tr>
-      <td align="center" valign="middle">
-        <img src="https://raw.githubusercontent.com/germinateplatform/germinate-vue/master/public/img/funders/uod.svg?sanitize=true" width="222px" alt="University of Dundee">
-      </td>
-      <td align="center" valign="middle">
-        <img src="https://raw.githubusercontent.com/germinateplatform/germinate-vue/master/public/img/funders/ukri.svg?sanitize=true" width="222px" alt="UK Research and Innovation">
-      </td>
-      <td align="center" valign="middle">
-        <img src="https://raw.githubusercontent.com/germinateplatform/germinate-vue/master/public/img/funders/innovate-uk.svg?sanitize=true" width="222px" alt="Innovate UK">
-      </td>
-      <td align="center" valign="middle">
-        <img src="https://raw.githubusercontent.com/germinateplatform/germinate-vue/master/public/img/funders/bbsrc.svg?sanitize=true" width="222px" alt="BBSRC">
-      </td>
-    </tr>
-    <tr>
-      <td align="center" valign="middle">
-        <img src="https://raw.githubusercontent.com/germinateplatform/germinate-vue/master/public/img/funders/scottish-government.svg?sanitize=true" width="222px" alt="Scottish Government">
-      </td>
-      <td align="center" valign="middle">
-        <img src="https://raw.githubusercontent.com/germinateplatform/germinate-vue/master/public/img/funders/sefari.svg?sanitize=true" width="222px" alt="SEFARI">
-      </td>
-      <td align="center" valign="middle">
-        <img src="https://raw.githubusercontent.com/germinateplatform/germinate-vue/master/public/img/funders/jhiss.svg?sanitize=true" width="222px" alt="James Hutton Limited">
-      </td>
-      <td align="center" valign="middle">
-        <img src="https://raw.githubusercontent.com/germinateplatform/germinate-vue/master/public/img/funders/ibh.svg?sanitize=true" width="222px" alt="International Barley Hub">
-      </td>    
-    </tr>
-    <tr>
-      <td align="center" valign="middle">
-        <img src="https://raw.githubusercontent.com/germinateplatform/germinate-vue/master/public/img/funders/resas.svg?sanitize=true" width="222px" alt="RESAS">
-      </td>
-      <td align="center" valign="middle">
-        <img src="https://raw.githubusercontent.com/germinateplatform/germinate-vue/master/public/img/funders/crp-maize.svg?sanitize=true" width="222px" alt="CRP Maize">
-      </td>
-      <td align="center" valign="middle">
-        <img src="https://raw.githubusercontent.com/germinateplatform/germinate-vue/master/public/img/funders/crp-wheat.svg?sanitize=true" width="222px" alt="CRP Wheat">
-      </td>
-      <td align="center" valign="middle">
-        <img src="https://raw.githubusercontent.com/germinateplatform/germinate-vue/master/public/img/funders/iwyp.svg?sanitize=true" width="222px" alt="IWYP">
-      </td>
-    </tr>
-    <tr>
-      <td align="center" valign="middle">
-        <img src="https://raw.githubusercontent.com/germinateplatform/germinate-vue/master/public/img/funders/sader.svg?sanitize=true" width="222px" alt="SADER">
-      </td>
-      <td align="center" valign="middle">
-        <img src="https://raw.githubusercontent.com/germinateplatform/germinate-vue/master/public/img/funders/divseek.png" width="222px" alt="DivSeek">
-      </td>
-      <td align="center" valign="middle">
-        <img src="https://raw.githubusercontent.com/germinateplatform/germinate-vue/master/public/img/funders/eu.svg?sanitize=true" width="222px" alt="EU">
-      </td>
-      <td align="center" valign="middle">
-        <img src="https://raw.githubusercontent.com/germinateplatform/germinate-vue/master/public/img/funders/defra.svg?sanitize=true" width="222px" alt="Department for Environment, Food and Rural Affairs">
-      </td>
-    </tr>
-  </tbody>
-</table>
+## Funding
 
-<br />
-<img src="https://raw.githubusercontent.com/germinateplatform/germinate-vue/master/public/img/hutton-black.svg?sanitize=true" height="150" alt="The James Hutton Institute logo">
-<br />
-<img src="https://raw.githubusercontent.com/germinateplatform/germinate-vue/master/public/img/ics-sdg-black.svg?sanitize=true" height="150" alt="Software Development Group logo">
+<p>
+  <img src="public/img/cousin-funding/eu-flag-color.svg" height="60" alt="Co-funded by the European Union">
+  &nbsp;&nbsp;
+  <img src="public/img/cousin-funding/swiss-confederation-color.svg" height="60" alt="Swiss Confederation">
+  &nbsp;&nbsp;
+  <img src="public/img/cousin-funding/ukri-color.svg" height="60" alt="UK Research and Innovation">
+</p>
+
+COUSIN is funded by the European Union (Horizon Europe, grant agreement 101135314), the Swiss State Secretariat for
+Education, Research and Innovation (SERI contract number 22.0412) and UK Research and Innovation (UKRI). Views and
+opinions expressed are however those of the author(s) only and do not necessarily reflect those of the European Union
+or REA, nor SERI or UKRI.
+
+## Credits and license
+
+Germinate is developed by [The James Hutton Institute](https://www.hutton.ac.uk/) and released under the
+[Apache License 2.0](LICENSE), which also applies to this fork. If you use Germinate, please cite it:
+[10.5281/zenodo.14858537](https://doi.org/10.5281/zenodo.14858537). The original README, funders and acknowledgements
+of Germinate are in the [upstream repository](https://github.com/germinateplatform/germinate-vue#readme).

@@ -46,12 +46,7 @@
       <!-- Germplasm name link -->
       <!-- Before it the passport icon: the preview of the passport (modal), as the former preview column -->
       <template v-slot:cell(germplasmName)="data">
-        <span class="gt-name">
-          <router-link :to="{ name: Pages.passport, params: { germplasmId: data.item.germplasmId } }" event="" @click.native.prevent="selectGermplasm(data.item.germplasmId)" class="gt-passport-preview" v-b-tooltip.hover="$t('tableTooltipGermplasmPreviewPassport')" :aria-label="$t('tableTooltipGermplasmPreviewPassport')">
-            <i class="fa-solid fa-passport" aria-hidden="true" />
-          </router-link>
-          <router-link :to="{ name: Pages.passport, params: { germplasmId: data.item.germplasmId } }">{{ data.item.germplasmName }}</router-link>
-        </span>
+        <GermplasmNameCell :germplasmId="data.item.germplasmId" :name="data.item.germplasmName" />
       </template>
       <!-- Germplasm display name link -->
       <template v-slot:cell(germplasmDisplayName)="data">
@@ -181,20 +176,6 @@
       </template>
     </BaseTable>
 
-    <!-- Modal to show the passport page on data point click -->
-    <!-- Passport preview: the passport page, in a modal wider than "xl", in the look of the custom pages (cp-modal). No
-         padding around the page: its reference images go to the edges and the top; the page keeps its own (below) -->
-    <b-modal size="xl" dialog-class="passport-preview-modal" modal-class="cp-modal" content-class="custom-page" ref="passportModal" v-if="germplasmId" @hidden="germplasmId = null" scrollable>
-      <!-- Only the X, at the top right over the page (it stays there while the page scrolls) -->
-      <template #modal-header="{ close }">
-        <button type="button" class="passport-preview-close" @click="close()" :title="$t('buttonClose')" :aria-label="$t('buttonClose')"><i class="fa-solid fa-xmark" aria-hidden="true" /></button>
-      </template>
-      <PassportView :germplasmId="germplasmId" :isPopup="true" />
-      <template #modal-footer="{ close }">
-        <button type="button" class="cp-modal-button" @click="close()">{{ $t('buttonClose') }}</button>
-      </template>
-    </b-modal>
-
     <InstitutionModal @hidden="germplasmId = null" :germplasmId="germplasmId" ref="institutionModal" v-if="germplasmId" />
 
   </div>
@@ -203,6 +184,7 @@
 <script>
 import { mapGetters } from 'vuex'
 import BaseTable from '@/components/tables/BaseTable'
+import GermplasmNameCell from '@/components/germplasm/GermplasmNameCell'
 import LocationMap from '@/components/map/LocationMap'
 import InstitutionModal from '@/components/modals/InstitutionModal'
 import defaultProps from '@/const/table-props'
@@ -531,8 +513,7 @@ export default {
     LocationMap,
     InstitutionModal,
     MdiIcon,
-    // Loaded when a preview is opened (the passport page is large, and uses tables itself)
-    PassportView: () => import(/* webpackChunkName: "passport" */ '@/views/data/germplasm/PassportView.vue')
+    GermplasmNameCell
   },
   methods: {
     // The ISO 3166 code of three letters of a country (from its code of two letters; that one if unknown)
@@ -560,10 +541,6 @@ export default {
 
         this.$nextTick(() => this.$refs.institutionModal.show())
       }
-    },
-    selectGermplasm: function (id) {
-      this.germplasmId = id
-      this.$nextTick(() => this.$refs.passportModal.show())
     },
     refresh: function () {
       this.$refs.germplasmTable.refresh()
@@ -706,25 +683,6 @@ export default {
   line-height: 1;
   vertical-align: middle;
 }
-/* The passport icon (preview of the passport), then the name */
-.germplasm-table .gt-name {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-}
-.germplasm-table .gt-passport-preview {
-  flex-shrink: 0;
-  color: var(--bt-icon, #6c757d) !important;
-  /* Larger than the text, but no taller than its line: the row keeps its height */
-  font-size: 1.3em;
-  line-height: 1;
-  opacity: 0.8;
-}
-.germplasm-table .gt-passport-preview:hover,
-.germplasm-table .gt-passport-preview:focus {
-  color: var(--bt-accent, #3b6b35) !important;
-  opacity: 1;
-}
 .table-image {
   white-space: nowrap;
 }
@@ -756,55 +714,6 @@ export default {
 }
 .germplasm-table .b-table-details td {
   padding: 0;
-}
-/* Passport preview: wider than the "xl" modal, within the window */
-.passport-preview-modal {
-  max-width: min(1320px, 96vw);
-}
-/* The rounded corners cut the images too */
-.passport-preview-modal .modal-content {
-  overflow: hidden;
-}
-.passport-preview-modal .modal-header {
-  position: absolute;
-  top: 0.75rem;
-  right: 1.25rem;
-  z-index: 5;
-  padding: 0;
-  border: 0;
-}
-.passport-preview-close {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  padding: 0;
-  border: 1px solid var(--cp-border);
-  border-radius: 10px;
-  background: var(--cp-surface);
-  color: var(--cp-muted);
-  font-size: 1rem;
-  box-shadow: 0 2px 6px var(--cp-shadow);
-  cursor: pointer;
-}
-.passport-preview-close:hover,
-.passport-preview-close:focus {
-  border-color: var(--cp-muted);
-  color: var(--cp-text);
-  outline: none;
-}
-.passport-preview-modal .modal-body {
-  padding: 0;
-  /* A thin scroll bar: the images reach (almost) the right edge too */
-  scrollbar-width: thin;
-}
-.passport-preview-modal .passport-page.is-popup {
-  padding: 1.5rem 1.5rem 0.5rem;
-}
-.passport-preview-modal .modal-footer {
-  border-top: 1px solid var(--cp-border);
-  padding-top: 0.9rem;
 }
 .pdci-circle-background {
   stroke: #ccc;

@@ -7,7 +7,7 @@
        the options of the chart and its help at the right end of the strip, then the chart under its title -->
   <div class="tvs" :id="id">
     <div class="tvs-numbers">
-      <div :class="['tvs-number', { 'is-text': number.text }]" v-for="number in numbers" :key="`tvs-number-${number.key}`">
+      <div :class="['tvs-number', { 'is-text': number.text }]" v-for="number in numbers" :key="`tvs-number-${number.key}`" :data-tour-number="number.key">
         <span class="tvs-number-value" :title="number.text ? number.value : null">{{ number.value === null ? '–' : (number.text ? number.value : formatNumber(number.value)) }}</span>
         <span class="tvs-number-label">{{ number.label }}</span>
       </div>
@@ -176,12 +176,6 @@ export default {
       id,
       // The statistics file of the values (download of the data, in the options of the chart)
       sourceFile: null,
-      tourSteps: [{
-        title: () => this.$t('popoverChartTourGenericOptionsTitle'),
-        text: () => this.$t('popoverChartTourGenericOptionsText'),
-        target: () => `#${id} #additional-options`,
-        position: 'bottom'
-      }],
       loading: false,
       // { value, count }, the most frequent first
       values: [],
@@ -251,6 +245,76 @@ export default {
     },
     typeColor: function () {
       return this.dataType ? this.dataType.color() : null
+    },
+    // The help (the tour): the numbers (each one shown), the views (each one), what the chart shows, the options of the
+    // chart last. Each mode its own texts (tourNumberTexts, tourViews, tourExtraSteps); steps of elements not on the page
+    // are left out by the tour
+    tourSteps: function () {
+      const target = selector => () => `#${this.id} ${selector}`
+      const steps = [{
+        title: () => this.$t('pageTraitDetailsTourNumbersTitle'),
+        text: () => this.$t('pageTraitDetailsTourNumbersText'),
+        target: target('.tvs-numbers'),
+        position: 'bottom'
+      }]
+      const numberTexts = this.tourNumberTexts
+      this.numbers.forEach(number => {
+        if (numberTexts[number.key]) {
+          steps.push({
+            title: () => number.label,
+            text: () => numberTexts[number.key],
+            target: target(`[data-tour-number="${number.key}"]`),
+            position: 'bottom'
+          })
+        }
+      })
+      const views = this.tourViews
+      if (views.length > 0) {
+        steps.push({
+          title: () => this.$t('pageTraitDetailsTourViewsTitle'),
+          text: () => this.$t('pageTraitDetailsTourViewsText'),
+          target: target('.tds-views:not(.tcs-groups)'),
+          position: 'bottom'
+        })
+      }
+      views.concat(this.tourExtraSteps).forEach(view => {
+        steps.push({
+          title: () => view.title,
+          text: () => view.text,
+          target: target(view.selector || `[data-tour-view="${view.key}"]`),
+          position: view.position || 'bottom'
+        })
+      })
+      steps.push({
+        title: () => this.$t('popoverChartTourGenericOptionsTitle'),
+        text: () => this.$t('pageTraitDetailsTourOptionsText'),
+        target: target('#additional-options'),
+        position: 'bottom'
+      })
+      return steps
+    },
+    // The help: what each number tells (by its key)
+    tourNumberTexts: function () {
+      return {
+        unique: this.$t('pageTraitDetailsTourNumberUnique'),
+        observations: this.$t('pageTraitDetailsTourNumberObservations'),
+        missing: this.$t('pageTraitDetailsTourNumberMissing'),
+        top: this.$t('pageTraitDetailsTourNumberTop'),
+        singletons: this.$t('pageTraitDetailsTourNumberSingletons')
+      }
+    },
+    // The help: each view ({ key, title, text }, its button: data-tour-view = key); text: no views, the chart
+    tourViews: function () {
+      return []
+    },
+    // The help: other steps after the views ({ title, text, selector })
+    tourExtraSteps: function () {
+      return [{
+        title: this.$t('pageTraitDetailsTourChartTitle'),
+        text: this.$t('pageTraitDetailsTourTextChart'),
+        selector: '.tvs-chart',
+        position: 'top'
+      }]
     },
     numbers: function () {
       const loaded = !this.loading

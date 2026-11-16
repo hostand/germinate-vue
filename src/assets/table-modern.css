@@ -306,7 +306,8 @@ body.dark-mode .bt-tokens {
 .bt-modern .table td:first-child {
   border-left: 0;
 }
-.bt-modern .table tbody tr:last-child td {
+/* Child combinators: a table inside an expanded row (details) keeps its own lines and states */
+.bt-modern .table > tbody > tr:last-child > td {
   border-bottom: 0;
 }
 .bt-modern.base-table table thead tr,
@@ -327,6 +328,10 @@ body.dark-mode .bt-tokens {
 .bt-modern .table.table-hover tbody tr:hover {
   background: var(--bt-row-hover);
   color: var(--bt-text);
+}
+/* The row whose details are shown below it (e.g. another table): in the colour of the hover while it is expanded */
+.bt-modern .table > tbody > tr.b-table-has-details {
+  background: var(--bt-row-hover);
 }
 .bt-modern .table a,
 .bt-modern .table a:hover,
@@ -812,7 +817,7 @@ body.dark-mode .bt-modern .bt-mark-input {
 .bt-modern .bt-mark-more.is-row {
   opacity: 0;
 }
-.bt-modern .table tbody tr:hover .bt-mark-more.is-row,
+.bt-modern .table > tbody > tr:hover > td > .bt-mark > .bt-mark-more.is-row,
 .bt-modern .bt-mark-more.is-row:focus-visible {
   opacity: 1;
 }
@@ -822,12 +827,13 @@ body.dark-mode .bt-modern .bt-mark-input {
   }
 }
 /* A marked row: a light tint */
-.bt-modern .table tbody tr:has(.bt-mark-input:checked) > td {
+.bt-modern .table > tbody > tr:has(> td > .bt-mark > .bt-mark-input:checked) > td {
   background: color-mix(in srgb, var(--bt-accent) 5%, transparent);
 }
 /* The menu of the marking (one for the table) */
 .bt-modern .bt-mark-menu {
-  position: absolute;
+  /* Fixed (placed in the coordinates of the window): no container with overflow hidden cuts it */
+  position: fixed;
   z-index: 1050;
   display: block;
   margin: 0;
@@ -950,6 +956,14 @@ body.dark-mode .bt-modern .table .custom-checkbox .custom-control-label::before 
 }
 .bt-modern .bt-clamp.expanded .bt-clamp-text {
   white-space: normal;
+}
+/* Chips in a cut cell (e.g. the roles of a collaborator): on one line, all of them when expanded */
+.bt-modern .bt-clamp-text .bt-chips {
+  flex-wrap: nowrap;
+  vertical-align: middle;
+}
+.bt-modern .bt-clamp.expanded .bt-clamp-text .bt-chips {
+  flex-wrap: wrap;
 }
 .bt-modern .bt-clamp-toggle {
   flex-shrink: 0;

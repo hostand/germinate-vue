@@ -21,7 +21,7 @@
       </template>
       <!-- Entity parent name link -->
       <template v-slot:cell(entityParentName)="data">
-        <router-link :to="{ name: Pages.passport, params: { germplasmId: data.item.entityParentId } }">{{ data.item.entityParentName }}</router-link>
+        <GermplasmNameCell :germplasmId="data.item.entityParentId" :name="data.item.entityParentName" />
       </template>
       <!-- Entity child id link -->
       <template v-slot:cell(entityChildId)="data">
@@ -33,7 +33,7 @@
       </template>
       <!-- Entity child name link -->
       <template v-slot:cell(entityChildName)="data">
-        <router-link :to="{ name: Pages.passport, params: { germplasmId: data.item.entityChildId } }">{{ data.item.entityChildName }}</router-link>
+        <GermplasmNameCell :germplasmId="data.item.entityChildId" :name="data.item.entityChildName" />
       </template>
       <!-- Entity parent type -->
       <template v-slot:cell(entityParentType)="data">
@@ -50,6 +50,7 @@
 <script>
 import MdiIcon from '@/components/icons/MdiIcon'
 import BaseTable from '@/components/tables/BaseTable'
+import GermplasmNameCell from '@/components/germplasm/GermplasmNameCell'
 import defaultProps from '@/const/table-props.js'
 import { entityTypes } from '@/mixins/types.js'
 import { getTableColumnStyle } from '@/mixins/util'
@@ -134,6 +135,7 @@ export default {
     }
   },
   components: {
+    GermplasmNameCell,
     BaseTable,
     MdiIcon
   },

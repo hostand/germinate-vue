@@ -1,0 +1,169 @@
+/* Shared by the statistics of the traits per data type (TraitDateStats, TraitCategoricalStats, under the class tds):
+   the views (a segmented control), the sentences instead of a chart, the notes, the pages of germplasm, the names of
+   the germplasm on the axes (the preview of their passport) */
+/* The views of the dates: a segmented control under the name of the trait */
+.tds .tds-views {
+  display: flex;
+  justify-content: center;
+  gap: 0.25rem;
+  width: max-content;
+  margin: 0 auto 1rem;
+  padding: 0.25rem;
+  border: 1px solid var(--cp-border);
+  border-radius: 10px;
+  background: var(--cp-neutral-bg);
+}
+.tds .tds-view {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.35rem 0.85rem;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--cp-text-subtle);
+  font-family: 'DM Sans', -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 0.88rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+.tds .tds-view:hover,
+.tds .tds-view:focus-visible {
+  color: var(--cp-text);
+  outline: none;
+}
+.tds .tds-view.active {
+  background: var(--cp-surface);
+  color: var(--cp-text);
+  box-shadow: 0 1px 3px var(--cp-shadow);
+}
+.tds .tds-view.active .fa-solid {
+  color: var(--cp-green);
+}
+/* All the dates the same: the sentence instead of the chart */
+.tds .tds-single {
+  margin: 0;
+  padding: 2rem 0;
+  color: var(--cp-text-subtle);
+  text-align: center;
+}
+.tds .tds-single .fa-solid {
+  margin-right: 0.4rem;
+  color: var(--cp-green);
+}
+/* The timeline: a note (the medians of the reps), the pages of germplasm */
+.tds .tds-note {
+  margin: 0.25rem 0 0;
+  color: var(--cp-muted);
+  font-size: 0.85rem;
+  text-align: center;
+}
+.tds .tds-note .fa-solid {
+  margin-right: 0.35rem;
+  color: var(--cp-green);
+}
+.tds .tds-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+  color: var(--cp-text-subtle);
+  font-size: 0.88rem;
+}
+.tds .tds-pager-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--cp-border);
+  border-radius: 8px;
+  background: var(--cp-surface);
+  color: var(--cp-text-subtle);
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+.tds .tds-pager-button:hover:not(:disabled),
+.tds .tds-pager-button:focus-visible {
+  border-color: var(--cp-muted);
+  color: var(--cp-text);
+  outline: none;
+}
+.tds .tds-pager-button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+/* Very many observations: the sentence and the button loading the timeline */
+.tds div.tds-single p {
+  margin: 0 0 1rem;
+}
+/* The names of the germplasm of the timeline: the preview of their passport */
+.tds .tvs-chart .tds-germplasm-name {
+  cursor: pointer;
+}
+.tds .tvs-chart .tds-germplasm-name:hover {
+  fill: var(--cp-green) !important;
+  text-decoration: underline;
+}
+/* The days and the observations can be clicked */
+.tds .tvs-chart .plotly .heatmaplayer,
+.tds .tvs-chart .plotly .scatterlayer .point {
+  cursor: pointer;
+}
+
+/* Numbers in red (values outside the categories / limits, not numbers) */
+.tds .tvs-number.is-danger .tvs-number-value {
+  color: var(--bt-danger, #c0392b);
+}
+/* Loading every observation: how many of how many */
+.tds .tds-progress {
+  margin-left: 0.5rem;
+  font-size: 0.85rem;
+}
+/* Above a chart: a summary (an icon and a sentence) and a button (only the mixed germplasm, the order of the ranking) */
+.tds .tcs-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem 1rem;
+  margin-bottom: 0.25rem;
+  color: var(--cp-text-subtle);
+  font-size: 0.88rem;
+}
+.tds .tcs-summary .fa-solid {
+  margin-right: 0.35rem;
+  color: var(--cp-green);
+}
+.tds .tds-pager-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.75rem;
+  border: 1px solid var(--cp-border);
+  border-radius: 8px;
+  background: var(--cp-surface);
+  color: var(--cp-text-subtle);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.tds .tds-pager-toggle:hover,
+.tds .tds-pager-toggle:focus-visible,
+.tds .tds-pager-toggle.active {
+  border-color: var(--cp-muted);
+  color: var(--cp-text);
+  outline: none;
+}
+.tds .tds-pager-toggle .fa-solid {
+  color: var(--cp-green);
+}
+/* By rep / block: rep or block, smaller than the views */
+.tds .tcs-groups {
+  margin-top: -0.25rem;
+}
+.tds .tcs-groups .tds-view {
+  padding: 0.25rem 0.75rem;
+  font-size: 0.82rem;
+}

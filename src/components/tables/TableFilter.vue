@@ -14,6 +14,8 @@
                     v-if="columns && columns.length > 0"
                     class="overflow-dropdown"
                     id="column-selector"
+                    boundary="window"
+                    :popper-opts="{ positionFixed: true }"
                     v-b-tooltip.hover
                     :title="$t('tooltipTableColumnSelector')">
           <template #button-content><i class="fa-solid fa-table-columns" aria-hidden="true" /> <i class="fa-solid fa-chevron-down" aria-hidden="true" /></template>
@@ -61,6 +63,8 @@
                     v-if="columns && columns.length > 0"
                     class="overflow-dropdown"
                     id="column-selector"
+                    boundary="window"
+                    :popper-opts="{ positionFixed: true }"
                     v-b-tooltip.hover
                     :title="$t('tooltipTableColumnSelector')">
           <template slot="button-content">

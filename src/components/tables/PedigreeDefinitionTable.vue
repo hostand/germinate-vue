@@ -5,6 +5,10 @@
                v-bind="$props"
                ref="pedigreeDefinitionTable"
                v-on="$listeners">
+      <!-- Germplasm name: the passport icon (preview), then the name -->
+      <template v-slot:cell(germplasmName)="data">
+        <GermplasmNameCell :germplasmId="data.item.germplasmId" :name="data.item.germplasmName" />
+      </template>
       <!-- Pedigree notation URL -->
       <template v-slot:cell(pedigreeNotationUrl)="data">
         <span v-if="data.item.pedigreeNotationUrl">
@@ -18,6 +22,7 @@
 
 <script>
 import BaseTable from '@/components/tables/BaseTable'
+import GermplasmNameCell from '@/components/germplasm/GermplasmNameCell'
 import defaultProps from '@/const/table-props.js'
 import { formatDateTime } from '@/mixins/formatting'
 const emitter = require('tiny-emitter/instance')
@@ -110,6 +115,7 @@ export default {
     }
   },
   components: {
+    GermplasmNameCell,
     BaseTable
   },
   methods: {

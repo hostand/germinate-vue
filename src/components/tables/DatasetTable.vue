@@ -171,7 +171,7 @@
 
     <!-- The options of a dataset: internal / external and its state, then what can be seen of it (the menu stays open)
          and the download (the menu closes) -->
-    <div class="bt-tokens dt-more-menu" v-if="moreMenu" :style="moreMenu.style" ref="moreMenu" role="menu" @click.stop>
+    <div class="bt-tokens dt-more-menu" v-if="moreMenu" :style="moreMenu.style" ref="moreMenu" role="menu" data-bt-keep-details @click.stop>
       <div class="dt-more-head">
         <span class="dt-more-kind">{{ moreMenu.item.isExternal ? $t('datasetMenuExternal') : $t('datasetMenuInternal') }}</span>
         <span class="dt-more-state" v-if="datasetStates[moreMenu.item.datasetState]">
@@ -332,6 +332,8 @@ export default {
       cutCells: {},
       // The options menu: its dataset (item), the row (for its details) and where it is
       moreMenu: null,
+      // The dataset whose full download was the last option chosen: marked in its menu and on its button
+      downloadMarkedId: null,
       // The Font Awesome icons of the dataset states
       stateIcons: {
         public: 'fa-lock-open',
@@ -406,13 +408,11 @@ export default {
         text: this.$t('tableTooltipDatasetDownload'),
         count: null,
         disabled: item.isExternal || !allowed,
-        action: () => {
-          this.closeMoreMenu()
-          this.downloadDataset(item)
-        }
+        action: () => this.startFullDownload(item)
       }].filter(option => option.count === null || option.count > 0 || this.userIsDataCurator)
         .map(option => Object.assign(option, {
-          active: ['fileresources', 'institutions', 'collaborators', 'attributes'].includes(option.key) && item._showDetails === true && this.detailType === option.key
+          active: (['fileresources', 'institutions', 'collaborators', 'attributes'].includes(option.key) && item._showDetails === true && this.detailType === option.key) ||
+            (option.key === 'download' && this.downloadMarkedId === item.datasetId)
         }))
     },
     dataResourcesVisible: function () {
@@ -660,8 +660,10 @@ export default {
       if (this.moreMenu.above === null) {
         this.moreMenu.above = b.top >= height + 8
       }
-      const left = Math.max(0, Math.min(b.left - r.left, r.width - width))
-      const top = this.moreMenu.above ? b.top - r.top - height - 3 : b.bottom - r.top + 3
+      // In the coordinates of the window (the menu is fixed: no container with overflow hidden cuts it), within the
+      // width of the table
+      const left = Math.max(r.left, Math.min(b.left, r.right - width))
+      const top = this.moreMenu.above ? b.top - height - 3 : b.bottom + 3
       this.moreMenu.style = { left: `${left}px`, width: `${width}px`, top: `${top}px` }
     },
     // The table brought into view, its column of checkboxes highlighted for a moment (e.g. when a dataset has to be
@@ -691,6 +693,9 @@ export default {
           return texts[this.detailType]()
         }
       }
+      if (this.downloadMarkedId === item.datasetId) {
+        return this.$t('tableTooltipDatasetDownload')
+      }
       return this.$t('datasetMenuMoreOptions')
     },
     closeMoreMenu: function () {
@@ -711,6 +716,7 @@ export default {
     // One row expanded at a time (the type of details is the same for all rows): the same option again closes it,
     // another one replaces its content, and the details of another row close
     showRowDetails: function (type, data) {
+      this.downloadMarkedId = null
       const shown = data.item._showDetails === true
       if (!shown || type === this.detailType) {
         this.$set(data.item, '_showDetails', !shown)
@@ -719,6 +725,19 @@ export default {
         this.closeOtherDetails(data.item)
       }
       this.detailType = type
+    },
+    // Full download from the menu: first the option marked (in the menu and on the button), then every row of the
+    // table folded, then the download; right after it, "More options" again
+    startFullDownload: function (item) {
+      this.downloadMarkedId = item.datasetId
+      this.$nextTick(() => {
+        this.closeOtherDetails(null)
+        this.$nextTick(() => {
+          this.closeMoreMenu()
+          this.downloadDataset(item)
+          this.downloadMarkedId = null
+        })
+      })
     },
     closeOtherDetails: function (item) {
       const table = this.$refs.datasetTable
@@ -880,6 +899,7 @@ export default {
         emitter.emit('show-loading', false)
       })
     },
+
     showPublications: function (dataset) {
       this.dataset = dataset
       this.$nextTick(() => this.$refs.publicationsModal.show())
@@ -1144,7 +1164,7 @@ export default {
 
 /* The options menu: a card above the button, in the font of the tables */
 .dt-more-menu {
-  position: absolute;
+  position: fixed;
   z-index: 1050;
   overflow: hidden;
   border: 1px solid var(--bt-border);

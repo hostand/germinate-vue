@@ -12,7 +12,7 @@
     </template>
     <!-- Germplasm name link -->
     <template v-slot:cell(germplasmName)="data">
-      <router-link :to="{ name: Pages.passport, params: { germplasmId: data.item.germplasmId } }">{{ data.item.germplasmName }}</router-link>
+      <GermplasmNameCell :germplasmId="data.item.germplasmId" :name="data.item.germplasmName" />
     </template>
     <!-- Germplasm name link -->
     <template v-slot:cell(germplasmDisplayName)="data">
@@ -69,6 +69,7 @@
 <script>
 import MdiIcon from '@/components/icons/MdiIcon'
 import BaseTable from '@/components/tables/BaseTable'
+import GermplasmNameCell from '@/components/germplasm/GermplasmNameCell'
 import defaultProps from '@/const/table-props.js'
 import { entityTypes, dataTypes } from '@/mixins/types.js'
 import { truncateAfterWords, formatDate, formatNumber } from '@/mixins/formatting'
@@ -263,6 +264,7 @@ export default {
     }
   },
   components: {
+    GermplasmNameCell,
     BaseTable,
     MdiIcon
   },

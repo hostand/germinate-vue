@@ -11,7 +11,7 @@
       </template>
       <!-- Germplasm name link -->
       <template v-slot:cell(germplasmName)="data">
-        <router-link :to="{ name: Pages.passport, params: { germplasmId: data.item.germplasmId } }">{{ data.item.germplasmName }}</router-link>
+        <GermplasmNameCell :germplasmId="data.item.germplasmId" :name="data.item.germplasmName" />
       </template>
       <!-- Germplasm GID link -->
       <template v-slot:cell(germplasmGid)="data">
@@ -34,6 +34,7 @@
 <script>
 import MdiIcon from '@/components/icons/MdiIcon'
 import BaseTable from '@/components/tables/BaseTable'
+import GermplasmNameCell from '@/components/germplasm/GermplasmNameCell'
 import defaultProps from '@/const/table-props.js'
 import { dataTypes } from '@/mixins/types'
 import { Pages } from '@/mixins/pages'
@@ -102,6 +103,7 @@ export default {
     }
   },
   components: {
+    GermplasmNameCell,
     BaseTable,
     MdiIcon
   },

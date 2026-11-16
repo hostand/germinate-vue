@@ -19,7 +19,7 @@
       </template>
       <!-- Parent name link -->
       <template v-slot:cell(parentName)="data">
-        <router-link :to="{ name: Pages.passport, params: { germplasmId: data.item.parentId } }">{{ data.item.parentName }}</router-link>
+        <GermplasmNameCell :germplasmId="data.item.parentId" :name="data.item.parentName" />
       </template>
       <!-- Child id link -->
       <template v-slot:cell(childId)="data">
@@ -31,7 +31,7 @@
       </template>
       <!-- Child name link -->
       <template v-slot:cell(childName)="data">
-        <router-link :to="{ name: Pages.passport, params: { germplasmId: data.item.childId } }">{{ data.item.childName }}</router-link>
+        <GermplasmNameCell :germplasmId="data.item.childId" :name="data.item.childName" />
       </template>
     </BaseTable>
   </div>
@@ -40,6 +40,7 @@
 <script>
 import MdiIcon from '@/components/icons/MdiIcon'
 import BaseTable from '@/components/tables/BaseTable'
+import GermplasmNameCell from '@/components/germplasm/GermplasmNameCell'
 import defaultProps from '@/const/table-props.js'
 import { mdiHelpCircle } from '@mdi/js'
 import { Pages } from '@/mixins/pages'
@@ -137,6 +138,7 @@ export default {
     }
   },
   components: {
+    GermplasmNameCell,
     BaseTable,
     MdiIcon
   },

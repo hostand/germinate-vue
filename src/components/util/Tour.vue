@@ -4,19 +4,19 @@
     <div class="backdrop" />
     <!-- The popover appears next to the element -->
     <!-- New look (tables): a rounded card in Inter, the step count, the buttons below (table-modern.css) -->
-    <b-popover :target="popoverTarget" :placement="steps[currentIndex].position" ref="popover" :show="popoverShow" custom-class="bt-tour" v-if="modernLook">
+    <b-popover :target="popoverTarget" :placement="shownSteps[currentIndex].position" ref="popover" :show="popoverShow" custom-class="bt-tour" v-if="modernLook">
       <template v-slot:title>
-        <span class="bt-tour-title">{{ steps[currentIndex].title() }}</span>
+        <span class="bt-tour-title">{{ shownSteps[currentIndex].title() }}</span>
         <button type="button" class="bt-tour-close" @click="resetPopover" :aria-label="$t('buttonClose')"><i class="fa-solid fa-xmark" aria-hidden="true" /></button>
       </template>
-      <p class="bt-tour-text" v-html="steps[currentIndex].text()" />
+      <p class="bt-tour-text" v-html="shownSteps[currentIndex].text()" />
       <div class="bt-tour-footer">
-        <span class="bt-tour-step" v-if="steps.length > 1">{{ currentIndex + 1 }} / {{ steps.length }}</span>
+        <span class="bt-tour-step" v-if="shownSteps.length > 1">{{ currentIndex + 1 }} / {{ shownSteps.length }}</span>
         <div class="bt-tour-buttons">
-          <button type="button" class="bt-tour-button" @click="currentIndex = currentIndex - 1" :disabled="currentIndex < 1" v-if="steps.length > 1">
+          <button type="button" class="bt-tour-button" @click="currentIndex = currentIndex - 1" :disabled="currentIndex < 1" v-if="shownSteps.length > 1">
             <i class="fa-solid fa-chevron-left" aria-hidden="true" /> {{ $t('buttonBack') }}
           </button>
-          <button type="button" class="bt-tour-button is-primary" @click="currentIndex = currentIndex + 1" v-if="currentIndex < steps.length - 1">
+          <button type="button" class="bt-tour-button is-primary" @click="currentIndex = currentIndex + 1" v-if="currentIndex < shownSteps.length - 1">
             {{ $t('buttonNext') }} <i class="fa-solid fa-chevron-right" aria-hidden="true" />
           </button>
           <button type="button" class="bt-tour-button is-primary" @click="resetPopover" v-else>
@@ -25,24 +25,24 @@
         </div>
       </div>
     </b-popover>
-    <b-popover :target="popoverTarget" :placement="steps[currentIndex].position" ref="popover" :show="popoverShow" variant="secondary" v-else>
+    <b-popover :target="popoverTarget" :placement="shownSteps[currentIndex].position" ref="popover" :show="popoverShow" variant="secondary" v-else>
       <template v-slot:title>
         <b-button @click="popoverShow = false" size="sm" class="ml-1 close" aria-label="Close">
           ×
         </b-button>
-        <span>{{ steps[currentIndex].title() }}</span>
+        <span>{{ shownSteps[currentIndex].title() }}</span>
       </template>
       <div>
         <!-- Step content text -->
-        <p v-html="steps[currentIndex].text()" />
+        <p v-html="shownSteps[currentIndex].text()" />
 
         <!-- Buttons -->
         <b-button-group class="d-flex">
           <!-- Back button -->
-          <b-button variant="secondary" @click="currentIndex = currentIndex - 1" :disabled="currentIndex < 1" v-if="steps.length > 1">
+          <b-button variant="secondary" @click="currentIndex = currentIndex - 1" :disabled="currentIndex < 1" v-if="shownSteps.length > 1">
             <MdiIcon :path="mdiChevronLeft" /> {{ $t('buttonBack') }}</b-button>
           <!-- Next button -->
-          <b-button variant="success" @click="currentIndex = currentIndex + 1" v-if="currentIndex < steps.length - 1">{{ $t('buttonNext') }} <MdiIcon :path="mdiChevronRight" /></b-button>
+          <b-button variant="success" @click="currentIndex = currentIndex + 1" v-if="currentIndex < shownSteps.length - 1">{{ $t('buttonNext') }} <MdiIcon :path="mdiChevronRight" /></b-button>
           <!-- Finish button -->
           <b-button variant="success" @click="resetPopover" v-else>{{ $t('buttonClose') }} <MdiIcon :path="mdiCheck" /></b-button>
         </b-button-group>
@@ -78,7 +78,10 @@ export default {
       mdiCheck,
       currentIndex: 0,
       popoverShow: false,
-      popoverTarget: null
+      popoverTarget: null,
+      // The steps of the tour being shown: those whose element is on the page when it starts (a view or a number not
+      // shown: its step left out, so that going back does not stop on it)
+      shownSteps: []
     }
   },
   watch: {
@@ -108,8 +111,8 @@ export default {
     updatePopover: function () {
       this.popoverShow = false
       this.$nextTick(() => {
-        if (this.currentIndex < this.steps.length) {
-          this.popoverTarget = document.querySelector(this.steps[this.currentIndex].target())
+        if (this.currentIndex < this.shownSteps.length) {
+          this.popoverTarget = document.querySelector(this.shownSteps[this.currentIndex].target())
 
           if (this.popoverTarget) {
             this.popoverShow = true
@@ -138,13 +141,21 @@ export default {
     },
     start: function () {
       this.resetPopover()
+      const shown = this.steps.filter(step => {
+        try {
+          return document.querySelector(step.target()) !== null
+        } catch (e) {
+          return false
+        }
+      })
+      this.shownSteps = shown.length > 0 ? shown : this.steps
       this.updatePopover()
     },
     handleKeys: function (e) {
       if (this.popoverShow) {
         if (e.keyCode === 39) {
           // Right
-          if (this.currentIndex < this.steps.length - 1) {
+          if (this.currentIndex < this.shownSteps.length - 1) {
             this.currentIndex++
           }
         } else if (e.keyCode === 37) {

@@ -70,7 +70,7 @@
                   </button>
                 </div>
                 <!-- The chart of the selected dataset (built again for another one) -->
-                <div :class="['td-card-body', { 'td-card-body-flush': trait.dataType === 'text' }]" :key="`stats-${selectedDatasetId}`" v-else>
+                <div :class="['td-card-body', { 'td-card-body-flush': ['text', 'date', 'categorical', 'numeric'].includes(trait.dataType) }]" :key="`stats-${selectedDatasetId}`" v-else>
                   <!-- Text traits: the values (numbers and a bar each, the most frequent on top); a bar clicked shows its
                        observations below -->
                   <TraitValueStats :traitId="traitId"
@@ -79,6 +79,24 @@
                                    :datasetId="selectedDatasetId"
                                    @value-clicked="statsValueClicked"
                                    v-if="trait.dataType === 'text'" />
+                  <!-- Date traits: earliest / latest / median date, and the dates as a histogram, a timeline per germplasm
+                       (by rep) or a calendar; a date clicked shows its observations below -->
+                  <TraitDateStats :traitId="traitId"
+                                  :traitName="trait.traitName"
+                                  :traitDataType="trait.dataType"
+                                  :datasetId="selectedDatasetId"
+                                  @value-clicked="statsValueClicked"
+                                  v-else-if="trait.dataType === 'date'" />
+                  <!-- Categorical traits: the categories (distribution, by germplasm, by rep / block); ordinal when the
+                       trait has the attribute "scale" = "ordinal"; a category clicked shows its observations below -->
+                  <TraitCategoricalStats :traitId="traitId"
+                                         :traitName="trait.traitName"
+                                         :traitDataType="trait.dataType"
+                                         :traitRestrictions="trait.traitRestrictions"
+                                         :ordinal="traitOrdinal"
+                                         :datasetId="selectedDatasetId"
+                                         @value-clicked="statsValueClicked"
+                                         v-else-if="trait.dataType === 'categorical'" />
                   <BarChart xColumn="phenotype_value"
                             :xTitle="trait.traitName"
                             :yTitle="$t('genericCount')"
@@ -89,8 +107,15 @@
                             ref="traitCategoryChart"
                             v-else-if="trait.dataType !== 'numeric'"/>
 
-                  <!-- Boxplot for this trait -->
-                  <TraitBoxplotChart :traitIds="[traitId]" :datasetIds="[selectedDatasetId]" ref="traitDetailsChart" v-else />
+                  <!-- Numeric traits: mean, median, SD, CV..., the distribution (histogram and box plot), the outliers,
+                       the ranking of the germplasm, by rep / block; a bar clicked shows its observations below -->
+                  <TraitNumericStats :traitId="traitId"
+                                     :traitName="trait.traitName"
+                                     :traitDataType="trait.dataType"
+                                     :traitRestrictions="trait.traitRestrictions"
+                                     :datasetId="selectedDatasetId"
+                                     @value-clicked="statsValueClicked"
+                                     v-else />
                 </div>
               </section>
 
@@ -99,7 +124,7 @@
                 <header class="td-card-head">
                   <span class="td-card-icon" aria-hidden="true"><i class="fa-solid fa-table-list" /></span>
                   <div class="td-card-head-main">
-                    <h3 class="td-card-title">{{ $t('pageTraitDetailsStatsValueTitle', { value: statsValue }) }}</h3>
+                    <h3 class="td-card-title">{{ $t('pageTraitDetailsStatsValueTitle', { value: statsValueLabel }) }}</h3>
                     <p class="td-card-text">{{ selectedDataset ? selectedDataset.datasetName : '' }}</p>
                   </div>
                   <button type="button" class="td-card-close" @click="statsValue = null" :title="$t('buttonClose')" :aria-label="$t('buttonClose')">
@@ -107,7 +132,7 @@
                   </button>
                 </header>
                 <div class="td-card-body">
-                  <TrialsDataTable :getData="getData" :getIds="getIds" :filterOn="statsValueFilter" :storeUrlParameters="false" :key="`stats-value-${selectedDatasetId}-${statsValue}`" />
+                  <TrialsDataTable :getData="getData" :getIds="getIds" :filterOn="statsValueFilter" :storeUrlParameters="false" :key="`stats-value-${selectedDatasetId}-${statsValueLabel}`" />
                 </div>
               </section>
             </div>
@@ -149,8 +174,10 @@
 import BarChart from '@/components/charts/BarChart'
 import DatasetsWithUnacceptedLicense from '@/components/util/DatasetsWithUnacceptedLicense'
 import DatasetTable from '@/components/tables/DatasetTable'
-import TraitBoxplotChart from '@/components/charts/TraitBoxplotChart'
+import TraitNumericStats from '@/components/charts/TraitNumericStats'
 import TraitValueStats from '@/components/charts/TraitValueStats'
+import TraitDateStats from '@/components/charts/TraitDateStats'
+import TraitCategoricalStats from '@/components/charts/TraitCategoricalStats'
 import ImageUploadModal from '@/components/modals/ImageUploadModal'
 import PassportImageGallery from '@/components/images/PassportImageGallery'
 import TrialsDataTable from '@/components/tables/TrialsDataTable'
@@ -191,8 +218,11 @@ export default {
       selectedDataset: null,
       // The dataset selected before for the trait (in the traits table or here), selected once the datasets arrived
       pendingDatasetId: null,
-      // The value clicked in the chart of the statistics: its observations below the chart
-      statsValue: null
+      // The value clicked in the chart of the statistics: its observations below the chart. A value, or a category
+      // written in several ways ({ label, values }: the codes of its scales)
+      statsValue: null,
+      // The trait attribute "scale" = "ordinal": its categories are ordered (statistics of categorical traits)
+      traitOrdinal: false
     }
   },
   watch: {
@@ -212,8 +242,10 @@ export default {
     DatasetsWithUnacceptedLicense,
     DatasetTable,
     MdiIcon,
-    TraitBoxplotChart,
+    TraitNumericStats,
     TraitValueStats,
+    TraitDateStats,
+    TraitCategoricalStats,
     ImageUploadModal,
     PassportImageGallery,
     TrialsDataTable,
@@ -256,6 +288,10 @@ export default {
     },
     // The observations of the trait in the selected dataset with the value clicked in the chart
     statsValueFilter: function () {
+      // A bin of a histogram: the values in its range; a category written in several ways: any of them
+      const value = this.statsValueRange
+        ? { column: { name: 'traitValue', type: Number }, comparator: 'between', operator: 'and', values: this.statsValueRange, canBeChanged: false }
+        : { column: { name: 'traitValue', type: String }, comparator: this.statsValues.length > 1 ? 'inSet' : 'equals', operator: 'and', values: this.statsValues, canBeChanged: false }
       return [{
         column: { name: 'traitId', type: Number },
         comparator: 'equals',
@@ -268,13 +304,18 @@ export default {
         operator: 'and',
         values: [this.selectedDatasetId],
         canBeChanged: false
-      }, {
-        column: { name: 'traitValue', type: String },
-        comparator: 'equals',
-        operator: 'and',
-        values: [this.statsValue],
-        canBeChanged: false
-      }]
+      }, value]
+    },
+    // The value clicked: a range ({ label, range: [from, to] }: a bin of a histogram), several values ({ label, values })
+    // or a value
+    statsValueRange: function () {
+      return this.statsValue !== null && typeof this.statsValue === 'object' && this.statsValue.range ? this.statsValue.range : null
+    },
+    statsValues: function () {
+      return this.statsValue !== null && typeof this.statsValue === 'object' ? this.statsValue.values : [this.statsValue]
+    },
+    statsValueLabel: function () {
+      return this.statsValue !== null && typeof this.statsValue === 'object' ? this.statsValue.label : this.statsValue
     },
     attributeFilter: function () {
       return [{
@@ -307,6 +348,29 @@ export default {
     },
     getTraitAttributeData: function (data, callback) {
       return apiPostTraitAttributeTable(data, callback)
+    },
+    // The trait attribute "scale" = "ordinal" (any case): the categories of the trait are ordered
+    loadTraitOrdinal: function () {
+      const traitId = this.traitId
+      apiPostTraitAttributeTable({
+        page: 1,
+        limit: 100,
+        filter: [{
+          column: 'traitId',
+          comparator: 'equals',
+          operator: 'and',
+          values: [traitId]
+        }]
+      }, result => {
+        if (traitId !== this.traitId) {
+          return
+        }
+        const attributes = (result && result.data) || []
+        this.traitOrdinal = attributes.some(a => `${a.attributeName || ''}`.trim().toLowerCase() === 'scale' && `${a.attributeValue || ''}`.trim().toLowerCase() === 'ordinal')
+      }, {
+        codes: [],
+        callback: () => { this.traitOrdinal = false }
+      })
     },
     generateBarcodes: function (includeValues) {
       if (includeValues) {
@@ -367,8 +431,9 @@ export default {
       const rows = (baseTable && baseTable.pageItems) || []
       this.selectedDataset = datasetId === null ? null : (rows.find(row => row.datasetId === datasetId) || null)
       this.categoricalTraitFile = null
-      // Text traits load their own statistics (TraitValueStats)
-      if (datasetId !== null && this.trait && this.trait.dataType !== 'numeric' && this.trait.dataType !== 'text') {
+      // Text, date and categorical traits load their own statistics (TraitValueStats, TraitDateStats,
+      // TraitCategoricalStats)
+      if (datasetId !== null && this.trait && !['numeric', 'text', 'date', 'categorical'].includes(this.trait.dataType)) {
         this.updateCategoryChart()
       }
     },
@@ -430,16 +495,15 @@ export default {
         this.$refs.datasetTable.refresh()
       }
 
-      if (this.$refs.traitDetailsChart) {
-        this.$refs.traitDetailsChart.redraw()
-      } else if (this.$refs.traitCategoryChart) {
+      if (this.$refs.traitCategoryChart) {
         this.updateCategoryChart()
       }
 
       this.checkNumbers()
     },
+    // The bar chart of the other traits (text, date and categorical traits load their own statistics)
     updateCategoryChart: function () {
-      if (this.selectedDatasetId === null) {
+      if (this.selectedDatasetId === null || (this.trait && ['text', 'date', 'categorical'].includes(this.trait.dataType))) {
         return
       }
       const query = {
@@ -489,6 +553,10 @@ export default {
           this.trait = result.data[0]
           // The traits page shows it in the title of its tab (name, data type)
           this.$emit('trait-loaded', this.trait)
+
+          if (this.trait.dataType === 'categorical') {
+            this.loadTraitOrdinal()
+          }
 
           if (this.trait.dataType !== 'numeric') {
             this.updateCategoryChart()

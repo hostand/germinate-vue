@@ -29,7 +29,7 @@
             <button type="button" class="bt-tool" id="table-jump-to-page" :disabled="maxPage < 2" @click="showJumpToPage" v-b-tooltip.hover :title="$t('modalTitleJumpToPage')" :aria-label="$t('modalTitleJumpToPage')">
               <i class="fa-solid fa-book-open" aria-hidden="true" />
             </button>
-            <b-dropdown id="table-page-size-dropdown" right no-caret variant="link" toggle-class="bt-select" v-b-tooltip.hover :title="$t('tooltipTableItemsPerPage')">
+            <b-dropdown id="table-page-size-dropdown" right no-caret boundary="window" :popper-opts="{ positionFixed: true }" variant="link" toggle-class="bt-select" v-b-tooltip.hover :title="$t('tooltipTableItemsPerPage')">
               <template #button-content>{{ storeTablePerPage }} <i class="fa-solid fa-chevron-down" aria-hidden="true" /></template>
               <b-dropdown-item v-for="value in perPageValues" @click="onPerPageChanged(value)" :key="'table-per-page-' + value" :active="value === storeTablePerPage">{{ value }}</b-dropdown-item>
             </b-dropdown>
@@ -108,7 +108,7 @@
 
       <!-- Item per page dropdown -->
       <b-button-group class="per-page-dropdown order-2 order-sm-2" v-if="!showAllItems">
-        <b-dropdown v-b-tooltip.hover :title="$t('tooltipTableItemsPerPage')" id="table-page-size-dropdown" right>
+        <b-dropdown v-b-tooltip.hover :title="$t('tooltipTableItemsPerPage')" id="table-page-size-dropdown" right boundary="window" :popper-opts="{ positionFixed: true }">
           <template slot="button-content">
             <MdiIcon :path="mdiBookOpenPageVariant" /><span> {{ storeTablePerPage }}</span>
           </template>
@@ -396,7 +396,7 @@ const GERMPLASM_DEFAULT_HIDDEN_COLUMNS = [
 const GERMPLASM_DEFAULT_HIDDEN_APPLIED = 'germplasmColumnsDefaultHidden'
 
 // Columns cut on one line in every table (new look), a chevron showing all of the text
-const CLAMP_COLUMNS = ['datasetName', 'datasetDescription']
+const CLAMP_COLUMNS = ['datasetName', 'datasetDescription', 'collaboratorRoles']
 // Columns whose web addresses (http:// or https://) are links, in every table
 const URL_COLUMNS = ['attributeValue']
 const URL_PATTERN = /^https?:\/\/\S+$/i
@@ -880,10 +880,10 @@ export default {
         this.closeMarkMenu()
         return
       }
+      // In the coordinates of the window (the menu is fixed: no container with overflow hidden cuts it)
       const button = this.markMenu.button.getBoundingClientRect()
-      const root = this.$el.getBoundingClientRect()
-      this.markMenu.top = button.bottom - root.top + 4
-      this.markMenu.left = button.left - root.left
+      this.markMenu.top = button.bottom + 4
+      this.markMenu.left = button.left
     },
     closeMarkMenu: function () {
       if (this.stopFollowingMark) {
@@ -1105,6 +1105,33 @@ export default {
         })
       })
     },
+    // A row expanded (its details, e.g. another table, below it): any interaction that is neither with that row nor
+    // with its details folds it. Kept open: modals, menus, tooltips (shown outside the table, e.g. opened from the
+    // details) and elements marked data-bt-keep-details (e.g. the options menu of the datasets). Tables showing the
+    // details on every row of the page (e.g. the datasets of an address) keep them.
+    onOutsideDetails: function (event) {
+      const expanded = (this.pageItems || []).filter(item => item._showDetails)
+      if (expanded.length === 0 || (this.pageItems.length > 1 && expanded.length === this.pageItems.length)) {
+        return
+      }
+      const target = event.target
+      if (!target || !target.closest || target.closest('.modal, .dropdown-menu, .popover, .tooltip, .b-sidebar, [data-bt-keep-details]')) {
+        return
+      }
+      // The row of this table around the target (not that of a table inside its details)
+      const table = this.$refs.table ? this.$refs.table.$el.querySelector('table') || this.$refs.table.$el : null
+      if (!table) {
+        return
+      }
+      let row = target.closest('tr')
+      while (row && row.closest('table') !== table) {
+        row = row.parentElement ? row.parentElement.closest('tr') : null
+      }
+      if (row && (row.classList.contains('b-table-has-details') || row.classList.contains('b-table-details'))) {
+        return
+      }
+      expanded.forEach(item => this.$set(item, '_showDetails', false))
+    },
     onFilterChanged: function (filter) {
       // A filter taken away by the user (cleared, or removed in the filter modal): the rows expanded below them are
       // folded, the table showing other rows now (the tables showing details on every row stop doing so)
@@ -1298,6 +1325,9 @@ export default {
       this.hoveredCell = null
       this.$el.addEventListener('click', this.onCellClick)
       this.$el.addEventListener('mouseover', this.onCellHover)
+      // Any interaction elsewhere folds the expanded row (see onOutsideDetails)
+      document.addEventListener('pointerdown', this.onOutsideDetails, true)
+      document.addEventListener('focusin', this.onOutsideDetails, true)
     }
   },
   beforeDestroy: function () {
@@ -1305,6 +1335,8 @@ export default {
     if (this.modernLook) {
       this.$el.removeEventListener('click', this.onCellClick)
       this.$el.removeEventListener('mouseover', this.onCellHover)
+      document.removeEventListener('pointerdown', this.onOutsideDetails, true)
+      document.removeEventListener('focusin', this.onOutsideDetails, true)
     }
     if (this.resizeObserver) {
       this.resizeObserver.disconnect()
