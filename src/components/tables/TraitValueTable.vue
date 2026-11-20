@@ -26,7 +26,7 @@
 
 <script>
 import BaseTable from '@/components/tables/BaseTable'
-import { formatNumber } from '@/mixins/formatting'
+import { formatNumber, formatDecimals } from '@/mixins/formatting'
 
 // The comparators of the table filter, on the values in memory
 const matches = (row, filter) => {
@@ -131,7 +131,7 @@ export default {
   methods: {
     formatNumber,
     formatShare: function (share) {
-      return `${share < 0.1 && share > 0 ? '<0.1' : (Math.round(share * 10) / 10).toLocaleString()} %`
+      return `${share < 0.1 && share > 0 ? '< 0.1' : formatDecimals(Math.round(share * 10) / 10, 0, 1)} %`
     },
     // The page of the request (filter, sort, page) from the rows in memory, as the server would answer it
     getData: function (request) {

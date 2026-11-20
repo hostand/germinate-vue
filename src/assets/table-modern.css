@@ -132,6 +132,49 @@ body.dark-mode .bt-tokens {
   opacity: 0.4;
   cursor: default;
 }
+/* A choice of the footer (e.g. the dataset of the pivot table): its option cut when long */
+.bt-modern .bt-action-select.btn {
+  max-width: 20rem;
+}
+.bt-modern .bt-action-select-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bt-action-select-menu {
+  max-width: 28rem;
+}
+.bt-action-select-menu .dropdown-item {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* The right end of the footer: the pagination, then the primary actions */
+.bt-modern .bt-footer-end {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-left: auto;
+}
+/* A primary action (e.g. Next): a filled button, its text and its icon */
+.bt-modern .bt-tool.is-primary {
+  gap: 0.5rem;
+  padding: 0 0.95rem;
+  background: var(--bt-accent);
+  color: #ffffff;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.bt-modern .bt-tool.is-primary:hover:not(:disabled),
+.bt-modern .bt-tool.is-primary:focus-visible {
+  background: var(--bt-accent-hover);
+  color: #ffffff;
+}
+body.dark-mode .bt-modern .bt-tool.is-primary,
+body.dark-mode .bt-modern .bt-tool.is-primary:hover:not(:disabled) {
+  color: #1f2120;
+}
 .bt-modern .bt-tool svg {
   width: 1.2rem;
   height: 1.2rem;
@@ -325,6 +368,11 @@ body.dark-mode .bt-tokens {
 .bt-modern .table tbody tr {
   background: var(--bt-surface);
 }
+/* A table that scrolls sideways (BaseTable, checkSideways): its cells on one line (wrapping them would not make it fit).
+   Not the rows of details nor the loading row; the text of a cut cell expanded by its chevron still wraps */
+.bt-modern.is-wide .table tbody > tr:not(.b-table-details):not(.b-table-busy-slot) > td {
+  white-space: nowrap;
+}
 .bt-modern .table.table-hover tbody tr:hover {
   background: var(--bt-row-hover);
   color: var(--bt-text);
@@ -368,6 +416,34 @@ body.dark-mode .bt-tokens {
   width: 0.95rem;
   height: 0.95rem;
   fill: var(--bt-chip-color);
+}
+/* Loading: the table not faded out (the default of the busy tables), a row of its own with the spinner and the message */
+.bt-modern .table.b-table[aria-busy='true'] {
+  opacity: 1;
+}
+/* Loading: the toolbar, the active filters, the head and the footer faded out and not usable (also inert) */
+.bt-modern.is-busy .bt-toolbar,
+.bt-modern.is-busy .bt-filter-line,
+.bt-modern.is-busy .bt-footer,
+.bt-modern.is-busy .table thead {
+  opacity: 0.5;
+  pointer-events: none;
+  user-select: none;
+  transition: opacity 0.15s ease;
+}
+.bt-modern .table .b-table-busy-slot td {
+  padding: 2rem 1rem;
+  color: var(--bt-muted);
+  text-align: center;
+}
+.bt-modern .bt-busy {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.9rem;
+}
+.bt-modern .bt-busy-spinner {
+  color: var(--bt-accent);
 }
 .bt-modern .table .b-table-empty-row td {
   padding: 2rem 1rem;
@@ -939,7 +1015,7 @@ body.dark-mode .bt-modern .table .custom-checkbox .custom-control-label::before 
   fill: currentColor;
 }
 
-/* Cut cells (dataset name and description): one line, "..." where cut, a chevron at the right; expanded: all of it */
+/* Cut cells (names and descriptions, see CLAMP_COLUMNS in BaseTable): one line, "..." where cut, a chevron at the right; expanded: all of it */
 .bt-modern .bt-clamp {
   display: flex;
   align-items: flex-start;
@@ -979,4 +1055,26 @@ body.dark-mode .bt-modern .table .custom-checkbox .custom-control-label::before 
 }
 .bt-modern .bt-clamp.expanded .bt-clamp-toggle {
   transform: rotate(180deg);
+}
+
+/* A trait name (or a value of its column, pivoted) that opens its details (the trials export): the look of the text of
+   the table, no colour nor underline */
+.tdt-trait-link {
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* The note on how to select several rows, when shown only for a moment: fading in and out */
+.bt-fade-enter-active,
+.bt-fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+.bt-fade-enter,
+.bt-fade-leave-to {
+  opacity: 0;
 }

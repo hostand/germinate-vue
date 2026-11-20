@@ -1,0 +1,123 @@
+/* The block: as those of the other custom pages */
+.stc {
+  overflow: visible;
+  border: 1px solid var(--cp-border);
+  border-radius: 16px;
+  background: var(--cp-surface);
+  box-shadow: 0 1px 2px var(--cp-shadow);
+}
+/* Its head: the icon, the title and the text, the trait to compare on the right */
+.stc-head {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 1.25rem;
+}
+.stc-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--stc-type-color) 14%, transparent);
+}
+.stc-icon >>> svg {
+  width: 1.5rem;
+  height: 1.5rem;
+  fill: var(--stc-type-color);
+}
+.stc-heading {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.stc-title {
+  margin: 0.1rem 0 0.3rem;
+  color: var(--cp-text);
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+.stc-text {
+  margin: 0;
+  color: var(--cp-muted);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+.stc-select {
+  flex: 0 1 30rem;
+  min-width: 16rem;
+}
+/* The trait to compare: as the common filters of the germplasm page (rounded field, Inter, the green focus) */
+.stc-select >>> .form-control {
+  height: 40px;
+  border: 1px solid var(--cp-border);
+  border-radius: 10px !important;
+  background: var(--cp-surface);
+  color: var(--cp-text);
+  font-family: 'Inter', -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 0.9rem;
+}
+/* The suffix over the field (e.g. the country code of a location): in the font of the field, so it follows the name */
+.stc-select >>> .germplasm-filter-suffix-overlay {
+  font-family: 'Inter', -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 0.9rem;
+}
+.stc-select >>> .form-control:focus {
+  border-color: var(--cp-green);
+  box-shadow: 0 0 0 3px var(--cp-green-soft);
+}
+.stc-select >>> .germplasm-filter-select,
+.stc-select >>> .germplasm-filter-name,
+.stc-select >>> .vbt-autcomplete-list {
+  font-family: 'Inter', -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 0.9rem;
+}
+.stc-select >>> .germplasm-filter-count {
+  font-size: 0.75rem;
+}
+/* The comparison: below the head, from edge to edge (the strip of the numbers) */
+.stc-body {
+  border-top: 1px solid var(--cp-border);
+}
+.stc-body .tvs-number.is-danger .tvs-number-value {
+  color: #c8323f;
+}
+.stc-confirm p {
+  margin: 0 0 0.75rem;
+}
+.stc-chart-title {
+  margin: 0.5rem 0 0.75rem;
+  color: var(--cp-text);
+  font-family: 'DM Sans', -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+}
+.stc-chart + .stc-chart-title,
+.tvs-empty + .stc-chart-title {
+  margin-top: 1rem;
+}
+/* The summary below the charts, as they are (the same side margins) */
+.stc-summary-wrap {
+  padding: 0 1.25rem 1.25rem;
+}
+/* Its values on one line (a value and its unit together) */
+.stc-summary >>> .table td,
+.stc-summary >>> .table th {
+  white-space: nowrap;
+}
+.stc-swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 0.5rem;
+  border-radius: 3px;
+}
+@media (max-width: 767px) {
+  .stc-head {
+    flex-wrap: wrap;
+  }
+  .stc-select {
+    flex-basis: 100%;
+  }
+}

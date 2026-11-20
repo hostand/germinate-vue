@@ -14,26 +14,32 @@
                            :maxMatches="options.length"
                            :showAllResults="isOption(search)"
                            :disableSort="true"
+                           :autoClose="!multiple"
                            inputClass="germplasm-filter-input"
                            @hit="onSelected">
       <template #suggestion="{ data }">
         <span class="germplasm-filter-option">
           <span :class="`fi fi-${data.flag}`" v-if="data.flag" />
           <span class="germplasm-filter-code" v-if="data.code !== undefined && data.code !== null">{{ data.code }}</span>
-          <span class="germplasm-filter-name" :title="data.name">{{ data.name }}</span>
-          <span class="germplasm-filter-count">{{ getNumberWithSuffix(data.count, 2) }}</span>
+          <span class="germplasm-filter-name" :title="data.name">{{ data.name }}<span class="germplasm-filter-suffix" v-if="data.suffix"> ({{ data.suffix }})</span></span>
+          <span class="germplasm-filter-count" v-if="showCount"><i :class="countIcon" aria-hidden="true" v-if="countIcon" /> {{ getNumberWithSuffix(data.count, 2) }}</span>
+          <i class="fa-solid fa-check germplasm-filter-check" aria-hidden="true" v-if="multiple && data.checked" />
         </span>
       </template>
     </VueTypeaheadBootstrap>
     <!-- The flag of the chosen country, before its name -->
     <span class="germplasm-filter-flag" v-if="selectedFlag" aria-hidden="true"><span :class="`fi fi-${selectedFlag}`" /></span>
+    <!-- The suffix of the chosen value (e.g. the country code of a location), smaller, after its name: the name copied
+         unseen in the font of the field, then the suffix (hidden while typing) -->
+    <span class="germplasm-filter-suffix-overlay" v-if="selectedSuffix && !focused" aria-hidden="true"><span class="germplasm-filter-mirror">{{ search }}</span><span class="germplasm-filter-suffix"> ({{ selectedSuffix }})</span></span>
     <!-- While the values are counted (when it takes a while): disabled, with this message -->
     <span class="germplasm-filter-placeholder" v-if="showLoading" role="status">
       <b-spinner small /> Loading ...
     </span>
-    <!-- A placeholder can't hold a badge: shown over the empty field, hidden while typing -->
-    <span class="germplasm-filter-placeholder" v-else-if="!search && !focused" aria-hidden="true">
-      {{ placeholder }} <span class="germplasm-filter-count">{{ options.length }}</span>
+    <!-- A placeholder can't hold a badge: shown over the empty field, hidden while typing (clearOnClick: never while a
+         value is chosen, the field only emptied to choose another one) -->
+    <span class="germplasm-filter-placeholder" v-else-if="!search && !focused && !(clearOnClick && hasValue)" aria-hidden="true">
+      {{ placeholder }} <span class="germplasm-filter-count" v-if="showCount">{{ options.length }}</span>
     </span>
     <!-- Only with a value: removes the filter, back to the placeholder. The chevron is always there. -->
     <button type="button" class="germplasm-filter-clear" v-if="hasValue && !showLoading" title="Clear" :aria-label="`Clear ${placeholder || 'filter'}`"
@@ -69,7 +75,8 @@ export default {
       type: String,
       required: true
     },
-    // [{ value, name, count, flag?, code? }]
+    // [{ value, name, count, flag?, code?, suffix? (after the name, smaller: e.g. the country code of a location),
+    // checked? (multiple: chosen) }]
     options: {
       type: Array,
       default: () => []
@@ -92,9 +99,39 @@ export default {
     loading: {
       type: Boolean,
       default: false
+    },
+    // An icon before the count of each value (e.g. "fa-solid fa-database": the count is of datasets)
+    countIcon: {
+      type: String,
+      default: null
+    },
+    // The counts of the values (and of the list in the placeholder) shown
+    showCount: {
+      type: Boolean,
+      default: true
+    },
+    // A click in the field with a value: its text emptied (the cursor there, the whole list shown); the value kept until
+    // another one is chosen (leaving the field: its name back)
+    clearOnClick: {
+      type: Boolean,
+      default: false
+    },
+    // Several values: each one chosen in the list switches it (its tick: the option "checked"); the field stays empty
+    // and the list open for the next one
+    multiple: {
+      type: Boolean,
+      default: false
     }
   },
   computed: {
+    // The suffix of the chosen value while the field shows it
+    selectedSuffix: function () {
+      if (!this.hasValue || this.showLoading) {
+        return null
+      }
+      const option = this.options.find(o => o.value === this.value)
+      return option && option.suffix && this.search === option.name ? option.suffix : null
+    },
     hasValue: function () {
       return this.value !== null && this.value !== undefined
     },
@@ -167,7 +204,9 @@ export default {
       }
       this.focused = false
       if (`${this.search || ''}`.trim() === '') {
-        if (this.value !== null && this.value !== undefined) {
+        if (this.clearOnClick) {
+          this.showValue()
+        } else if (this.value !== null && this.value !== undefined) {
           this.$emit('clear')
         }
       } else {
@@ -183,6 +222,10 @@ export default {
     onFieldClick: function (event) {
       const typeahead = this.$refs.typeahead
       if (typeahead && event.target === this.getInput()) {
+        // A value shown: its text emptied, the whole list offered
+        if (this.clearOnClick && this.hasValue && !this.showLoading) {
+          this.search = ''
+        }
         typeahead.isFocused = true
       }
     },
@@ -210,9 +253,32 @@ export default {
       }
       this.focused = false
     },
-    // Hands the chosen value over; the field keeps showing it
+    // Opens the list (the field focused), e.g. when the field is shown
+    open: function () {
+      const typeahead = this.$refs.typeahead
+      const input = this.getInput()
+      if (typeahead && input) {
+        input.focus()
+        typeahead.isFocused = true
+      }
+    },
+    // Hands the chosen value over; the field keeps showing it (multiple: empty, the list open for the next one)
     onSelected: function (option) {
       this.$emit('select', option.value)
+      // Several values: the field emptied and the list opened again once the click is over (the list reacts to the focus
+      // leaving its option: done first)
+      if (this.multiple) {
+        this.search = ''
+        setTimeout(() => {
+          this.search = ''
+          // The text of the typeahead itself too (its value went from empty to the name and back in one go: not seen)
+          if (this.$refs.typeahead) {
+            this.$refs.typeahead.inputValue = ''
+          }
+          this.open()
+        }, 50)
+        return
+      }
       this.$nextTick(() => {
         this.search = option.name
         const typeahead = this.$refs.typeahead
@@ -259,6 +325,28 @@ export default {
 .germplasm-filter-select.has-flag >>> .germplasm-filter-input {
   padding-left: 2.25rem;
 }
+/* The suffix of a value: smaller and lighter; in the field, after the name (at the place of the text of the field) */
+.germplasm-filter-select >>> .germplasm-filter-suffix {
+  color: #6c757d;
+  font-size: 0.8em;
+}
+.germplasm-filter-suffix-overlay {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(0.75rem + 1px);
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  white-space: pre;
+  pointer-events: none;
+}
+.germplasm-filter-select.has-flag .germplasm-filter-suffix-overlay {
+  left: calc(2.25rem + 1px);
+}
+.germplasm-filter-mirror {
+  visibility: hidden;
+}
 /* Count and code badges: same shape as the codes of COLLSRC in the passport editing (codes in its green, counts grey) */
 .germplasm-filter-select >>> .germplasm-filter-count,
 .germplasm-filter-select >>> .germplasm-filter-code {
@@ -278,6 +366,11 @@ export default {
 .germplasm-filter-select >>> .germplasm-filter-count {
   background: var(--gfs-count-bg);
   color: var(--gfs-count-text);
+}
+/* Several values: the tick of the chosen ones */
+.germplasm-filter-select >>> .germplasm-filter-check {
+  flex: 0 0 auto;
+  color: var(--cp-green, #3b6b35);
 }
 /* The list scrolls instead of pushing the page down */
 .germplasm-filter-select >>> .vbt-autcomplete-list {

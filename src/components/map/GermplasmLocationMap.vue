@@ -76,6 +76,7 @@ import { MAX_JAVA_INTEGER } from '@/mixins/api/base'
 import { mcpdDateToJsDate } from '@/mixins/util'
 
 import { mdiCircle } from '@mdi/js'
+import { formatDate } from '@/mixins/formatting'
 
 const countries = require('i18n-iso-countries')
 countries.registerLocale(require('i18n-iso-countries/langs/en.json'))
@@ -171,7 +172,7 @@ export default {
               return null
             }
           },
-          format: (value) => (value !== null) ? new Date(value).toLocaleDateString() : ''
+          format: (value) => (value !== null) ? formatDate(value) : ''
         }
       }, {
         text: this.$t('tableColumnElevation'),

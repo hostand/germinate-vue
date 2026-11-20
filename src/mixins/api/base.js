@@ -171,8 +171,8 @@ const authForm = ({ url = null, formData, method = 'post', success = null, error
       // The request was made but no response was received `err.request` is an instance of XMLHttpRequest in the browser
       if (err.request.textStatus === 'timeout') {
         emitter.emit('toast', {
-          message: 'Request to the server timed out.',
-          title: 'Error',
+          message: i18n.t('httpErrorFourOEight'),
+          title: i18n.t('genericError'),
           variant: 'danger',
           autoHideDelay: 5000,
           appendToast: true
@@ -270,8 +270,8 @@ const authAxios = ({ url = null, method = 'GET', data = null, formData = null, d
       } else if (err.request) {
         if (err.request.textStatus === 'timeout') {
           emitter.emit('toast', {
-            message: 'Request to the server timed out.',
-            title: 'Error',
+            message: i18n.t('httpErrorFourOEight'),
+            title: i18n.t('genericError'),
             variant: 'danger',
             autoHideDelay: 5000,
             appendToast: true

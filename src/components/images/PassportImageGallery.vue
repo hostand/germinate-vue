@@ -1,5 +1,6 @@
 <template>
-  <!-- Same features as ImageGallery (original passport page), in the look of the custom pages -->
+  <!-- Same features as ImageGallery (original passport page), in the look of the custom pages. With "allImages": every
+       image of the database (Images page), each card naming what it shows (germplasm, trait...), no upload -->
   <div class="pig">
     <!-- Toolbar: tag filter on the left, download and upload on the right -->
     <div class="pig-toolbar" v-if="tags.length > 0 || imageCount > 0 || canEdit">
@@ -12,7 +13,7 @@
                 :class="['pig-chip', { active: selectedTag !== null && selectedTag.tagId === tag.tagId }]"
                 :aria-pressed="selectedTag !== null && selectedTag.tagId === tag.tagId"
                 @click="selectTag(tag)">
-          <MdiIcon :path="icons.tag" :size="14" /> {{ tag.tagName }}
+          <MdiIcon :path="icons.tag" :size="16" /> {{ tag.tagName }}
         </button>
       </div>
 
@@ -20,7 +21,7 @@
         <button type="button" class="pig-button" @click="download" v-if="imageCount > 0">
           <MdiIcon :path="icons.download" :size="18" /> {{ $t('buttonDownloadImages') }}
         </button>
-        <button type="button" class="pig-button pig-button-primary" @click="$refs.imageUploadModal.show()" v-if="canEdit">
+        <button type="button" class="pig-button pig-button-primary" @click="$refs.imageUploadModal.show()" v-if="canEdit && canUpload">
           <MdiIcon :path="icons.upload" :size="18" /> {{ $t('buttonUpload') }}
         </button>
       </div>
@@ -28,7 +29,7 @@
 
     <!-- Loading placeholders -->
     <div class="pig-grid" v-if="images === null">
-      <div class="pig-card pig-card-placeholder" v-for="i in IMAGES_PER_PAGE" :key="'pig-placeholder-' + i">
+      <div class="pig-card pig-card-placeholder" v-for="i in perPage" :key="'pig-placeholder-' + i">
         <div class="pig-thumb" />
       </div>
     </div>
@@ -36,11 +37,13 @@
     <!-- No images -->
     <div class="pig-empty" v-else-if="images.length === 0">
       <MdiIcon :path="icons.images" :size="40" />
-      <p>{{ selectedTag ? 'There are no images with this tag.' : 'There are no images of this germplasm yet.' }}</p>
+      <p>{{ selectedTag ? 'There are no images with this tag.' : (allImages ? $t('pageImagesNone') : 'There are no images of this germplasm yet.') }}</p>
     </div>
 
     <template v-else>
-      <div class="pig-grid">
+      <!-- Another tag (or page): the cards no longer shown fade out, those still shown slide into the places left empty,
+           the new ones fade in -->
+      <transition-group tag="div" name="pig-card" class="pig-grid pig-grid-animated" @before-leave="holdLeaving">
         <div class="pig-card" v-for="(image, index) in images" :key="'pig-image-' + image.imageId">
           <!-- Thumbnail, opens the lightbox -->
           <button type="button" class="pig-thumb" @click="lightboxIndex = index" :aria-label="image.imageDescription || 'Open image'">
@@ -53,6 +56,12 @@
           </button>
 
           <div class="pig-card-body">
+            <!-- All images: what it shows (type chip, then its name, a link to its page) -->
+            <div class="pig-subject" v-if="allImages && image.referenceName">
+              <span class="pig-subject-icon" :style="{ color: getTypeColor(image) }" :title="getTypeText(image)" v-if="getTypePath(image)"><MdiIcon :path="getTypePath(image)" :size="16" /></span>
+              <router-link :to="getSubjectLink(image)" class="pig-subject-name" :title="image.referenceName" v-if="getSubjectLink(image)">{{ image.referenceName }}</router-link>
+              <span class="pig-subject-name" :title="image.referenceName" v-else>{{ image.referenceName }}</span>
+            </div>
             <!-- Date first, the description below it -->
             <div class="pig-meta" v-if="image.createdOn">
               <MdiIcon :path="icons.calendar" :size="14" /> {{ formatDate(image.createdOn) }}
@@ -84,9 +93,9 @@
             </button>
           </div>
         </div>
-      </div>
+      </transition-group>
 
-      <!-- Pagination, 8 images per page -->
+      <!-- Pagination -->
       <nav class="pig-pager" v-if="pageCount > 1" aria-label="Image pages">
         <button type="button" class="pig-pager-button" :disabled="page <= 1" @click="loadImages(page - 1)" aria-label="Previous page">
           <MdiIcon :path="icons.chevronLeft" :size="20" />
@@ -108,7 +117,7 @@
     <CoolLightBox :items="lightboxItems" :index="lightboxIndex" effect="fade" @close="lightboxIndex = null" />
 
     <!-- The modals of the original gallery -->
-    <ImageUploadModal v-if="canEdit" :foreignId="foreignId" :referenceTable="referenceTable" @images-updated="onImagesUploaded" ref="imageUploadModal" />
+    <ImageUploadModal v-if="canEdit && canUpload" :foreignId="foreignId" :referenceTable="referenceTable" @images-updated="onImagesUploaded" ref="imageUploadModal" />
     <EditTagModal v-if="canEdit && tagImage" :imageId="tagImage.imageId" :allTags="tags" :prefilledTags="tagImage.tags || []" @tags-changed="onTagsChanged" ref="editTagModal" />
     <ImageExifModal v-if="exifImage" :image="exifImage" ref="imageExifModal" />
   </div>
@@ -124,7 +133,9 @@ import ImageUploadModal from '@/components/modals/ImageUploadModal'
 import EditTagModal from '@/components/modals/EditTagModal'
 import ImageExifModal from '@/components/modals/ImageExifModal'
 
-import { apiPostImages, apiPostImagesExport, apiGetImageTagsForId, apiDeleteImage, apiPatchImage } from '@/mixins/api/misc'
+import { apiPostImages, apiPostImagesExport, apiGetImageTags, apiGetImageTagsForId, apiDeleteImage, apiPatchImage } from '@/mixins/api/misc'
+import { imageTypes } from '@/mixins/types'
+import { Pages } from '@/mixins/pages'
 import { getImageUrl } from '@/mixins/image'
 import { userIsAtLeast, USER_TYPE_DATA_CURATOR } from '@/mixins/api/auth'
 
@@ -152,6 +163,21 @@ export default {
     foreignId: {
       type: Number,
       default: null
+    },
+    // Uploading here (data curators); off where the server does not take uploads (the images of a climate)
+    allowUpload: {
+      type: Boolean,
+      default: true
+    },
+    // Every image of the database (the Images page) instead of those of one item
+    allImages: {
+      type: Boolean,
+      default: false
+    },
+    // Images per page
+    perPage: {
+      type: Number,
+      default: IMAGES_PER_PAGE
     }
   },
   data: function () {
@@ -196,7 +222,11 @@ export default {
       return !!this.storeToken && !!this.storeToken.userType && userIsAtLeast(this.storeToken.userType, USER_TYPE_DATA_CURATOR)
     },
     pageCount: function () {
-      return Math.ceil(this.imageCount / IMAGES_PER_PAGE)
+      return Math.ceil(this.imageCount / this.perPage)
+    },
+    // Uploading needs the item the images belong to
+    canUpload: function () {
+      return this.allowUpload && !this.allImages
     },
     lightboxItems: function () {
       return (this.images || []).map(i => ({ src: this.getSrc(i, 'large'), title: i.imageDescription }))
@@ -221,21 +251,50 @@ export default {
       const date = new Date(value)
       return isNaN(date.getTime()) ? '' : `${date.getDate()} ${MONTHS[date.getMonth()]} ${date.getFullYear()}`
     },
+    getTypePath: function (image) {
+      return imageTypes[image.imageRefTable] ? imageTypes[image.imageRefTable].path : null
+    },
+    getTypeColor: function (image) {
+      return imageTypes[image.imageRefTable] ? imageTypes[image.imageRefTable].color() : null
+    },
+    getTypeText: function (image) {
+      return imageTypes[image.imageRefTable] ? imageTypes[image.imageRefTable].text() : null
+    },
+    // The page of what the image shows: a germplasm or a trait
+    getSubjectLink: function (image) {
+      if (image.imageRefTable === 'germinatebase') {
+        return { name: Pages.passport, params: { germplasmId: image.imageForeignId } }
+      } else if (image.imageRefTable === 'phenotypes') {
+        return { name: Pages.traitDetails, params: { traitId: image.imageForeignId } }
+      }
+      return null
+    },
+    // A card leaving keeps its size and place (taken out of the grid), so the others can move into its place meanwhile
+    holdLeaving: function (el) {
+      el.style.left = `${el.offsetLeft}px`
+      el.style.top = `${el.offsetTop}px`
+      el.style.width = `${el.offsetWidth}px`
+      el.style.height = `${el.offsetHeight}px`
+    },
     hasExif: function (image) {
       return !!image.imageExif && Object.keys(image.imageExif).length > 0
     },
     getFilter: function () {
-      const filter = [{
-        column: 'imageForeignId',
-        comparator: 'equals',
-        operator: 'and',
-        values: [this.foreignId]
-      }, {
-        column: 'imageRefTable',
-        comparator: 'equals',
-        operator: 'and',
-        values: [this.referenceTable]
-      }]
+      // One item: its images; all images: no filter but the tag
+      const filter = []
+      if (!this.allImages) {
+        filter.push({
+          column: 'imageForeignId',
+          comparator: 'equals',
+          operator: 'and',
+          values: [this.foreignId]
+        }, {
+          column: 'imageRefTable',
+          comparator: 'equals',
+          operator: 'and',
+          values: [this.referenceTable]
+        })
+      }
 
       if (this.selectedTag) {
         filter.push({
@@ -249,12 +308,12 @@ export default {
       return filter
     },
     loadImages: function (page) {
-      if (!this.foreignId) {
+      if (!this.foreignId && !this.allImages) {
         return
       }
 
       apiPostImages({
-        limit: IMAGES_PER_PAGE,
+        limit: this.perPage,
         page: page,
         orderBy: 'createdOn',
         ascending: 0,
@@ -267,6 +326,12 @@ export default {
       })
     },
     loadTags: function () {
+      if (this.allImages) {
+        apiGetImageTags(result => {
+          this.tags = (result && result.data) ? result.data : []
+        })
+        return
+      }
       if (!this.foreignId) {
         return
       }
@@ -361,21 +426,25 @@ export default {
   gap: 0.5rem;
 }
 .pig-tags-label {
-  font-size: 0.85rem;
+  font-size: 0.95rem;
   color: var(--cp-muted);
 }
 .pig-chip {
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
-  padding: 0.25rem 0.9rem;
+  gap: 0.4rem;
+  padding: 0.4rem 1.1rem;
   border: 1px solid var(--cp-border);
   border-radius: 999px;
   background: var(--cp-surface);
   color: var(--cp-text-subtle);
   font: inherit;
-  font-size: 0.85rem;
+  font-size: 0.95rem;
   cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.pig-chip:hover:not(.active) {
+  border-color: var(--cp-green);
 }
 .pig-chip.active {
   background: var(--cp-green-soft);
@@ -490,6 +559,28 @@ export default {
   background: #dc3545;
 }
 
+/* What the image shows (all images) */
+.pig-subject {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+.pig-subject-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+.pig-subject-name {
+  overflow: hidden;
+  color: var(--cp-text);
+  font-size: 0.92rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+a.pig-subject-name:hover {
+  color: var(--cp-green);
+}
 .pig-card-body {
   display: flex;
   flex-direction: column;
@@ -635,6 +726,35 @@ export default {
 .pig-pager-button:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+/* Changing the tag: cards leaving fade and shrink (out of the grid, in their place), those staying slide to their new
+   place, new ones fade in a little later */
+.pig-grid-animated {
+  position: relative;
+}
+.pig-card-move {
+  transition: transform 0.5s ease;
+}
+.pig-card-leave-active {
+  position: absolute;
+  z-index: 0;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.pig-card-enter-active {
+  transition: opacity 0.35s ease 0.25s, transform 0.35s ease 0.25s;
+}
+.pig-card-enter,
+.pig-card-leave-to {
+  opacity: 0;
+  transform: scale(0.92);
+}
+@media (prefers-reduced-motion: reduce) {
+  .pig-card-move,
+  .pig-card-enter-active,
+  .pig-card-leave-active {
+    transition: none;
+  }
 }
 
 /* Four images per row, only phones get fewer: 2, then 1 */

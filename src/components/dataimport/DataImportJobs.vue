@@ -10,7 +10,7 @@
           <div class="border-left pl-3 flex-column align-items-start flex-grow-1">
             <div class="d-flex w-100 justify-content-between">
               <h5 class="mb-1">{{ formatDataType(job.datatype) }}</h5>
-              <small v-b-tooltip="new Date(job.createdOn).toLocaleDateString()"><MdiIcon :path="mdiCalendarClock" /> {{ formatTimeAgo(job.createdOn) }}</small>
+              <small v-b-tooltip="formatDateTime(job.createdOn)"><MdiIcon :path="mdiCalendarClock" /> {{ formatTimeAgo(job.createdOn) }}</small>
             </div>
             <p class="mb-1">
               <template v-for="cat in jobStatsCategories">
@@ -43,6 +43,7 @@ import { templateImportTypes, statCategories } from '@/mixins/types'
 import { mdiCalendarClock, mdiDatabaseRefreshOutline, mdiDatabaseImportOutline } from '@mdi/js'
 import { Pages } from '@/mixins/pages'
 import { isPageAvailable } from '@/mixins/util'
+import { formatDateTime } from '@/mixins/formatting'
 
 const DIVISIONS = [
   { amount: 60, name: 'seconds' },
@@ -93,6 +94,7 @@ export default {
     }
   },
   methods: {
+    formatDateTime,
     navigateToFileResource: function (job) {
       if (!this.dataResourcesPageAvailable || !job.stats || !job.stats.fileResourceId) {
         return

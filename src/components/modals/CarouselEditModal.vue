@@ -248,7 +248,7 @@ export default {
       const save = index => {
         if (index >= locales.length) {
           if (failed.length > 0) {
-            this.$bvToast.toast(`The images were saved, but not the descriptions in: ${failed.join(', ')}. The server could not update the language file (missing, or not valid JSON for it, e.g. a key defined twice).`, {
+            this.$bvToast.toast(this.$t('toastCarouselDescriptionsNotSaved', { languages: failed.join(', ') }), {
               title: this.$t('modalTitleEditCarousel'),
               variant: 'warning',
               solid: true

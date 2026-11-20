@@ -14,7 +14,7 @@
         <a :href="link" class="stretched-link" target="_blank" rel="noopener noreferrer" />
       </template>
       <template v-else>
-        <router-link class="stretched-link" :disabled="isDisabled" :event="isDisabled ? '' : 'click'" :to="{ name: link, params: linkParams }" :title="`${title ? ($t(title) + ': ') : ''}${numericValue ? numericValue.toLocaleString() : textValue}`" v-if="numericValue || textValue" />
+        <router-link class="stretched-link" :disabled="isDisabled" :event="isDisabled ? '' : 'click'" :to="{ name: link, params: linkParams }" :title="`${title ? ($t(title) + ': ') : ''}${numericValue ? formattedNumericValue : textValue}`" v-if="numericValue || textValue" />
       </template>
     </b-card-body>
   </b-card>
@@ -24,7 +24,7 @@
 import { mapGetters } from 'vuex'
 import MdiIcon from '@/components/icons/MdiIcon'
 import { brighten, getTemplateColor, hexToRgb, rgbColorToHex } from '@/mixins/colors'
-import { getNumberWithSuffix } from '@/mixins/formatting'
+import { getNumberWithSuffix, formatNumber } from '@/mixins/formatting'
 
 export default {
   components: {
@@ -80,6 +80,10 @@ export default {
     },
     isDisabled: function () {
       return this.storeServerSettings && this.storeServerSettings.hiddenPages.indexOf(this.link) !== -1
+    },
+    // The whole number (its tooltip), written as everywhere (see formatting.js)
+    formattedNumericValue: function () {
+      return formatNumber(this.numericValue)
     },
     formattedDisplayInfo: function () {
       return this.textValue || getNumberWithSuffix(this.numericValue, 1)

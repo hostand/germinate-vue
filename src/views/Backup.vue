@@ -22,7 +22,7 @@
             <b-card-sub-title>{{ backupTypes[backup.type].text }}</b-card-sub-title>
             <hr />
             <b-card-text>
-              <div><MdiIcon className="mr-2" :path="mdiCalendarClock" /> <span v-b-tooltip="new Date(backup.timestamp).toLocaleString()">{{ new Date(backup.timestamp).toLocaleDateString() }}</span></div>
+              <div><MdiIcon className="mr-2" :path="mdiCalendarClock" /> <span v-b-tooltip="formatDateTime(backup.timestamp, true)">{{ formatDate(backup.timestamp) }}</span></div>
               <div><MdiIcon className="mr-2" :path="mdiTag" /> v{{ backup.germinateVersion }}</div>
               <div><MdiIcon className="mr-2" :path="mdiFileCabinet" /> {{ backup.formattedSize }}</div>
             </b-card-text>
@@ -47,7 +47,7 @@
 import MdiIcon from '@/components/icons/MdiIcon.vue'
 import { apiDeleteBackup, apiGetAdminSettings, apiGetBackups, apiPutBackup } from '@/mixins/api/misc'
 import { getTemplateColor } from '@/mixins/colors'
-import { getNumberWithSuffix } from '@/mixins/formatting'
+import { getNumberWithSuffix, formatDate, formatDateTime } from '@/mixins/formatting'
 import { mdiCalendarClock, mdiCog, mdiDatabaseArrowRight, mdiDatabaseClock, mdiDatabaseEdit, mdiDatabaseSync, mdiDelete, mdiDownload, mdiFileCabinet, mdiTag } from '@mdi/js'
 import { mapGetters } from 'vuex'
 import { Pages } from '@/mixins/pages'
@@ -102,6 +102,8 @@ export default {
     }
   },
   methods: {
+    formatDate,
+    formatDateTime,
     deleteBackup: function (backup) {
       this.$bvModal.msgBoxConfirm(this.$t('modalTitleSure'), {
         okTitle: this.$t('buttonDelete'),

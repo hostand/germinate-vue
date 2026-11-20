@@ -28,8 +28,10 @@
       </template>
 
       <template v-slot:cell(content)="data">
-        <span :title="data.item.content" v-if="data.item.content">{{ truncateAfterWords(data.item.content, 10) }}</span>
-        <a href="#" class="table-icon-link" @click.prevent="showFullContent(data.item.content)" v-b-tooltip="$t('buttonReadMore')" v-if="isTruncatedAfterWords(data.item.content, 10)" >&nbsp;
+        <!-- New look: all of it (cut by the table, its chevron shows the rest); else cut after 10 words, "read more" -->
+        <span v-if="modernLook && data.item.content">{{ data.item.content }}</span>
+        <span :title="data.item.content" v-else-if="data.item.content">{{ truncateAfterWords(data.item.content, 10) }}</span>
+        <a href="#" class="table-icon-link" @click.prevent="showFullContent(data.item.content)" v-b-tooltip="$t('buttonReadMore')" v-if="!modernLook && isTruncatedAfterWords(data.item.content, 10)" >&nbsp;
           <MdiIcon :path="mdiPageNext" />
         </a>
       </template>

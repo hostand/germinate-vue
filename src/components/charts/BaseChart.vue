@@ -14,13 +14,13 @@
             <b-dropdown-item link-class="top-nav-menu-item" @click="getFilename('png')" v-if="supportsPngDownload"><i class="fa-solid fa-image fa-fw" aria-hidden="true" /> {{ $t('buttonDownloadPng') }}</b-dropdown-item>
             <b-dropdown-item link-class="top-nav-menu-item" @click="getFilename('svg')" v-if="supportsSvgDownload"><i class="fa-solid fa-file-code fa-fw" aria-hidden="true" /> {{ $t('buttonDownloadSvg') }}</b-dropdown-item>
             <b-dropdown-item link-class="top-nav-menu-item" @click="downloadSource()" v-if="sourceFile"><i class="fa-solid fa-file-lines fa-fw" aria-hidden="true" /> {{ $t('buttonDownloadFile') }}</b-dropdown-item>
-            <b-dropdown-item link-class="top-nav-menu-item" @click="$refs.customChartColorModal.show()" v-if="canChangeColors"><i class="fa-solid fa-palette fa-fw" aria-hidden="true" /> {{ $t('buttonChangeChartColors') }}</b-dropdown-item>
+            <b-dropdown-item link-class="top-nav-menu-item" @click="showColors" v-if="canChangeColors"><i class="fa-solid fa-palette fa-fw" aria-hidden="true" /> {{ $t('buttonChangeChartColors') }}</b-dropdown-item>
           </template>
           <template v-else>
             <b-dropdown-item @click="getFilename('png')" v-if="supportsPngDownload"><MdiIcon :path="mdiFileImage" /> {{ $t('buttonDownloadPng') }}</b-dropdown-item>
             <b-dropdown-item @click="getFilename('svg')" v-if="supportsSvgDownload"><MdiIcon :path="mdiFileCode" /> {{ $t('buttonDownloadSvg') }}</b-dropdown-item>
             <b-dropdown-item @click="downloadSource()" v-if="sourceFile"><MdiIcon :path="mdiFileDocument" /> {{ $t('buttonDownloadFile') }}</b-dropdown-item>
-            <b-dropdown-item @click="$refs.customChartColorModal.show()" v-if="canChangeColors"><MdiIcon :path="mdiPalette" /> {{ $t('buttonChangeChartColors') }}</b-dropdown-item>
+            <b-dropdown-item @click="showColors" v-if="canChangeColors"><MdiIcon :path="mdiPalette" /> {{ $t('buttonChangeChartColors') }}</b-dropdown-item>
           </template>
           <!-- Additional options -->
           <slot name="additionalMenuItems" />
@@ -123,6 +123,11 @@ export default {
       type: Boolean,
       default: true
     },
+    // How many colours the chart needs (a number, or a function giving it); null: counted from the Plotly charts inside
+    colorCount: {
+      type: [Number, Function],
+      default: null
+    },
     // The options menu disabled (e.g. no chart drawn)
     optionsDisabled: {
       type: Boolean,
@@ -139,6 +144,45 @@ export default {
     CustomChartColorModal
   },
   methods: {
+    // The colours of the charts: the modal, for the series of this chart
+    showColors: function () {
+      this.$refs.customChartColorModal.show(this.getColorCount())
+    },
+    // How many colours the chart needs: given, else the different colours its Plotly charts use (those of their
+    // traces, of their bars or points, the same colour faded counted once; a trace without a colour of its own counts
+    // as one). Not the traces: many lines can share a colour (e.g. a line per germplasm in the colour of its trial)
+    getColorCount: function () {
+      if (this.colorCount !== null && this.colorCount !== undefined) {
+        return typeof this.colorCount === 'function' ? this.colorCount() : this.colorCount
+      }
+      const keyOf = color => {
+        const text = `${color}`.trim().toLowerCase()
+        const rgb = /^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/.exec(text)
+        if (rgb) {
+          return `${rgb[1]},${rgb[2]},${rgb[3]}`
+        }
+        const hex = /^#([0-9a-f]{6})$/.exec(text)
+        if (hex) {
+          const n = parseInt(hex[1], 16)
+          return `${(n >> 16) & 255},${(n >> 8) & 255},${n & 255}`
+        }
+        return text
+      }
+      let count = 0
+      this.$el.querySelectorAll('.js-plotly-plot').forEach(chart => {
+        const colors = new Set()
+        let uncoloured = 0
+        ;(chart.data || []).filter(t => t.visible !== false).forEach(t => {
+          const own = [t.marker && t.marker.color, t.line && t.line.color].filter(c => c !== undefined && c !== null)
+          if (own.length === 0) {
+            uncoloured++
+          }
+          own.forEach(c => (Array.isArray(c) ? c : [c]).filter(x => typeof x === 'string').forEach(x => colors.add(keyOf(x))))
+        })
+        count = Math.max(count, colors.size + uncoloured)
+      })
+      return count > 0 ? count : null
+    },
     onColorsChanged: function () {
       emitter.emit('chart-colors-changed')
     },

@@ -3,13 +3,12 @@
        them (what the badges at the top of each page used to do) -->
   <b-nav-item-dropdown right class="marked-items-dropdown" menu-class="top-nav-menu marked-items-menu" aria-label="Marked items" v-b-tooltip.hover.bottom="'Marked items'" ref="dropdown" @shown="menuOpen = true" @hidden="menuOpen = false">
     <template #button-content>
-      <!-- Something was just marked: the pin is stuck in (it tilts to the side) in green for a moment. Only the icon moves:
-           its box keeps its size, so the bar doesn't change. -->
+      <!-- Something was just marked: the bookmark turns green for a moment (no movement). -->
       <span :class="['marked-items-pin', { 'marked-items-pinning': alerting }]">
-        <i class="fa-solid fa-thumbtack top-nav-fa-icon" aria-hidden="true" />
-        <!-- All the marked items (any type), at the top left of the pin; not while it moves, nor when nothing is marked,
+        <i class="fa-solid fa-bookmark top-nav-fa-icon" aria-hidden="true" />
+        <!-- All the marked items (any type), at the top left of the bookmark; not while it is green, nor when nothing is marked,
              nor while the menu is open (it shows them) -->
-        <span class="marked-items-total" v-if="totalMarked > 0 && !alerting && !menuOpen" :title="totalMarked.toLocaleString()">{{ getNumberWithSuffix(totalMarked, 1) }}</span>
+        <span class="marked-items-total" v-if="totalMarked > 0 && !alerting && !menuOpen" :title="formatNumber(totalMarked)">{{ getNumberWithSuffix(totalMarked, 1) }}</span>
       </span>
     </template>
 
@@ -22,7 +21,7 @@
            role="link"
            :tabindex="getCount(itemType) === 0 ? -1 : 0"
            :aria-disabled="getCount(itemType) === 0 ? 'true' : null"
-           :title="`${markedItemTypes[itemType].text()}: ${getCount(itemType).toLocaleString()}`"
+           :title="`${markedItemTypes[itemType].text()}: ${formatNumber(getCount(itemType))}`"
            @click="openMarkedItems(itemType)"
            @keydown.enter="openMarkedItems(itemType)">
         <!-- The icon of the type, in a pastel version of its colour -->
@@ -31,7 +30,7 @@
         <button type="button" class="marked-items-clear" v-if="getCount(itemType) > 0" :title="$t('chartTooltipMarkedItemsClear')" :aria-label="$t('chartTooltipMarkedItemsClear')" @click.stop="confirming = itemType" @keydown.enter.stop>
           <MdiIcon :path="mdiBroom" :size="16" />
         </button>
-        <span class="marked-items-count" :title="getCount(itemType).toLocaleString()">{{ getNumberWithSuffix(getCount(itemType), 1) }}</span>
+        <span class="marked-items-count" :title="formatNumber(getCount(itemType))">{{ getNumberWithSuffix(getCount(itemType), 1) }}</span>
       </div>
       <!-- Clearing asked: confirmed or not on a line under the row -->
       <div class="marked-items-confirm" v-if="confirming === itemType" @click.stop>
@@ -48,7 +47,7 @@
 <script>
 import { mapGetters } from 'vuex'
 import MdiIcon from '@/components/icons/MdiIcon'
-import { getNumberWithSuffix } from '@/mixins/formatting'
+import { getNumberWithSuffix, formatNumber } from '@/mixins/formatting'
 import { markedItemTypes } from '@/mixins/types'
 import { Pages } from '@/mixins/pages'
 import { mdiBroom } from '@mdi/js'
@@ -122,6 +121,7 @@ export default {
     clearTimeout(this.alertTimer)
   },
   methods: {
+    formatNumber,
     getNumberWithSuffix,
     getCount: function (itemType) {
       return (this.storeMarkedIds && this.storeMarkedIds[itemType]) ? this.storeMarkedIds[itemType].length : 0
@@ -280,17 +280,6 @@ body.dark-mode .marked-items-total {
 }
 body.dark-mode .marked-items-pinning {
   color: #8cc47e;
-}
-.marked-items-pinning > i {
-  animation: marked-items-pin-in 1.5s ease-in-out 2;
-}
-/* Pushed in (a little down), then tilted to the side on its tip, held, and back up */
-@keyframes marked-items-pin-in {
-  0% { transform: translateY(0) rotate(0); }
-  15% { transform: translateY(2px) rotate(0); }
-  35% { transform: translateY(2px) rotate(-30deg); }
-  70% { transform: translateY(2px) rotate(-30deg); }
-  100% { transform: translateY(0) rotate(0); }
 }
 .marked-items-name {
   flex: 1 1 auto;

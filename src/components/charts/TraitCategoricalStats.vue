@@ -39,7 +39,7 @@
         <b-dropdown-item link-class="top-nav-menu-item" :disabled="!chartShown" @click="downloadSvg"><i class="fa-solid fa-file-code fa-fw" aria-hidden="true" /> {{ $t('buttonDownloadSvg') }}</b-dropdown-item>
         <b-dropdown-item link-class="top-nav-menu-item" :disabled="!sourceFile" @click="downloadData"><i class="fa-solid fa-file-lines fa-fw" aria-hidden="true" /> {{ $t('buttonDownloadFile') }}</b-dropdown-item>
         <!-- The colours of the charts: those of the categories of a nominal scale -->
-        <b-dropdown-item link-class="top-nav-menu-item" @click="$refs.baseChart.$refs.customChartColorModal.show()"><i class="fa-solid fa-palette fa-fw" aria-hidden="true" /> {{ $t('buttonChangeChartColors') }}</b-dropdown-item>
+        <b-dropdown-item link-class="top-nav-menu-item" @click="$refs.baseChart.showColors()"><i class="fa-solid fa-palette fa-fw" aria-hidden="true" /> {{ $t('buttonChangeChartColors') }}</b-dropdown-item>
       </template>
       <template slot="additionalButtons">
         <b-button v-b-tooltip.hover :title="$t('chartTooltipMatrixTour')" :aria-label="$t('chartTooltipMatrixTour')" :disabled="!hasChart" @click="$refs.tour.start()">
@@ -65,7 +65,7 @@
         <template v-else-if="needsRows && rowsState !== 'loaded'">
           <div class="tvs-loading" v-if="rowsState === 'loading'"><b-spinner small type="grow" /><span class="tds-progress" v-if="rowsProgress && rowsProgress.total > rowsProgress.loaded">{{ $t('pageTraitDetailsStatsLoadingProgress', { loaded: formatNumber(rowsProgress.loaded), total: formatNumber(rowsProgress.total) }) }}</span></div>
           <div class="tds-single" v-else-if="rowsState === 'confirm'">
-            <p><i class="fa-solid fa-circle-info" aria-hidden="true" /> {{ $t('pageTraitDetailsStatsObservationsLarge', { count: formatNumber(total) }) }}</p>
+            <p><i class="fa-solid fa-circle-info" aria-hidden="true" /> {{ vt('pageTraitDetailsStatsObservationsLarge', { count: formatNumber(total) }) }}</p>
             <button type="button" class="tvs-values-link" @click="loadObservations"><i class="fa-solid fa-download" aria-hidden="true" /> {{ $t('pageTraitDetailsStatsLoadObservations') }}</button>
           </div>
         </template>
@@ -73,9 +73,9 @@
         <p class="tds-single" v-else-if="view === 'groups' && groupOptions.length < 1"><i class="fa-solid fa-circle-info" aria-hidden="true" /> {{ $t('pageTraitDetailsStatsNoGroups') }}</p>
         <!-- By germplasm: the share of consistent germplasm, only the mixed ones -->
         <div class="tcs-bar" v-if="chartShown && view === 'germplasm'">
-          <span class="tcs-summary"><i :class="['fa-solid', mixedCount > 0 ? 'fa-shuffle' : 'fa-circle-check']" aria-hidden="true" /> {{ $t('pageTraitDetailsStatsConsistentGermplasm', { count: formatNumber(germplasm.length - mixedCount), total: formatNumber(germplasm.length), percent: formatPercent((germplasm.length - mixedCount) / Math.max(1, germplasm.length)) }) }}</span>
+          <span class="tcs-summary"><i :class="['fa-solid', mixedCount > 0 ? 'fa-shuffle' : 'fa-circle-check']" aria-hidden="true" /> {{ vt('pageTraitDetailsStatsConsistentGermplasm', { count: formatNumber(germplasm.length - mixedCount), total: formatNumber(germplasm.length), percent: formatPercent((germplasm.length - mixedCount) / Math.max(1, germplasm.length)) }) }}</span>
           <button type="button" :class="['tds-pager-toggle', { active: onlyMixed }]" v-if="mixedCount > 0" @click="toggleOnlyMixed" :aria-pressed="onlyMixed ? 'true' : 'false'">
-            <i class="fa-solid fa-filter" aria-hidden="true" /> {{ onlyMixed ? $t('pageTraitDetailsStatsAllGermplasm') : $t('pageTraitDetailsStatsOnlyMixed') }}
+            <i class="fa-solid fa-filter" aria-hidden="true" /> {{ onlyMixed ? vt('pageTraitDetailsStatsAllGermplasm') : vt('pageTraitDetailsStatsOnlyMixed') }}
           </button>
         </div>
         <!-- By rep / block: which of them (both with more than one level) -->
@@ -84,12 +84,15 @@
             {{ getGroupLabel(option) }}
           </button>
         </div>
-        <div :class="['tvs-chart', { 'is-clickable': view !== 'groups' }]" ref="chart" v-show="chartShown" />
+        <div :class="['tvs-chart', { 'is-clickable': view === 'distribution' || (view === 'germplasm' && !isClimate) }]" ref="chart" v-show="chartShown" />
+        <!-- Over time: no recording dates; many observations grouped by month or year -->
+        <p class="tds-single" v-if="hasChart && view === 'time' && rowsState === 'loaded' && !chartShown"><i class="fa-solid fa-circle-info" aria-hidden="true" /> {{ $t('pageClimateDetailsStatsNoDates') }}</p>
+        <p class="tds-note" v-if="chartShown && timeUnit"><i class="fa-solid fa-circle-info" aria-hidden="true" /> {{ timeUnit === 'year' ? $t('pageClimateDetailsStatsTimeByYearCategory') : $t('pageClimateDetailsStatsTimeByMonthCategory') }}</p>
         <!-- By germplasm: many germplasm in pages -->
         <div class="tds-pager" v-if="chartShown && view === 'germplasm' && shownGermplasm.length > pageSize">
-          <button type="button" class="tds-pager-button" :disabled="page === 0" @click="setPage(page - 1)" :title="$t('pageTraitDetailsStatsPreviousGermplasm')" :aria-label="$t('pageTraitDetailsStatsPreviousGermplasm')"><i class="fa-solid fa-chevron-left" aria-hidden="true" /></button>
-          <span>{{ $t('pageTraitDetailsStatsGermplasmRange', { from: formatNumber(page * pageSize + 1), to: formatNumber(Math.min(shownGermplasm.length, (page + 1) * pageSize)), total: formatNumber(shownGermplasm.length) }) }}</span>
-          <button type="button" class="tds-pager-button" :disabled="(page + 1) * pageSize >= shownGermplasm.length" @click="setPage(page + 1)" :title="$t('pageTraitDetailsStatsNextGermplasm')" :aria-label="$t('pageTraitDetailsStatsNextGermplasm')"><i class="fa-solid fa-chevron-right" aria-hidden="true" /></button>
+          <button type="button" class="tds-pager-button" :disabled="page === 0" @click="setPage(page - 1)" :title="vt('pageTraitDetailsStatsPreviousGermplasm')" :aria-label="vt('pageTraitDetailsStatsPreviousGermplasm')"><i class="fa-solid fa-chevron-left" aria-hidden="true" /></button>
+          <span>{{ vt('pageTraitDetailsStatsGermplasmRange', { from: formatNumber(page * pageSize + 1), to: formatNumber(Math.min(shownGermplasm.length, (page + 1) * pageSize)), total: formatNumber(shownGermplasm.length) }) }}</span>
+          <button type="button" class="tds-pager-button" :disabled="(page + 1) * pageSize >= shownGermplasm.length" @click="setPage(page + 1)" :title="vt('pageTraitDetailsStatsNextGermplasm')" :aria-label="vt('pageTraitDetailsStatsNextGermplasm')"><i class="fa-solid fa-chevron-right" aria-hidden="true" /></button>
         </div>
         <!-- By rep / block: does the distribution differ between them? -->
         <p class="tds-note" v-if="chartShown && view === 'groups' && chiSquare">
@@ -116,8 +119,10 @@ import TraitValueStats from '@/components/charts/TraitValueStats'
 import PassportPreviewModal from '@/components/germplasm/PassportPreviewModal'
 import traitStats, { FONT } from '@/mixins/trait-stats'
 import { getColors } from '@/mixins/colors'
-import { formatNumber } from '@/mixins/formatting'
+import { getColorsFor } from '@/mixins/chart-palettes'
+import { formatNumber, formatDecimals, formatPercent } from '@/mixins/formatting'
 import { chiSquareP } from '@/mixins/stats-math'
+import { getCategoryTimeChart, getTimeUnit, hasDates } from '@/mixins/climate-time'
 
 const Plotly = require('plotly.js/lib/core')
 
@@ -190,13 +195,18 @@ export default {
         text: this.$t('pageTraitDetailsStatsViewDistribution')
       }, {
         key: 'germplasm',
-        icon: 'fa-seedling',
-        text: this.$t('pageTraitDetailsStatsViewByGermplasm')
+        icon: this.isClimate ? 'fa-location-dot' : 'fa-seedling',
+        text: this.vt('pageTraitDetailsStatsViewByGermplasm')
       }, {
         key: 'groups',
         icon: 'fa-table-cells',
         text: this.$t('pageTraitDetailsStatsViewByGroup')
-      }]
+      }, {
+        key: 'time',
+        icon: 'fa-timeline',
+        text: this.$t('pageClimateDetailsStatsViewOverTime')
+      }].filter(view => this.isClimate ? view.key !== 'groups' : view.key !== 'time')
+      // (a climate: no rep nor block, its values over the recording dates)
     },
     // The categories of the trait, in its order: the label (first scale) and the codes of every scale
     domain: function () {
@@ -278,7 +288,14 @@ export default {
       if (this.view === 'groups') {
         return this.groupOptions.length > 0
       }
+      if (this.view === 'time') {
+        return hasDates(this.rows)
+      }
       return this.view !== 'germplasm' || this.germplasm.length > 0
+    },
+    // Over time: the observations grouped by month or year (many of them), else null
+    timeUnit: function () {
+      return this.view === 'time' && this.rowsState === 'loaded' ? getTimeUnit(this.rows) : null
     },
     // By germplasm: its observations per category, its dominant category, how pure, mixed or not, its spread on an
     // ordinal scale. Mixed first (the widest spread first on an ordinal scale), then by their dominant category.
@@ -381,14 +398,17 @@ export default {
       if (this.view === 'groups') {
         return (this.groups.length + 1) * GROUP_ROW + GROUP_EXTRA
       }
+      if (this.view === 'time') {
+        return this.getTimeChart(this.getTheme()).layout.height
+      }
       return Math.max(1, this.categories.length) * DISTRIBUTION_ROW + DISTRIBUTION_EXTRA
     },
     // The help: what each number and each view tells; an ordinal scale: its badge
     tourNumberTexts: function () {
       return {
         categories: this.hasDomain ? this.$t('pageTraitDetailsTourNumberCategories') : this.$t('pageTraitDetailsTourNumberUnique'),
-        observations: this.$t('pageTraitDetailsTourNumberObservations'),
-        missing: this.$t('pageTraitDetailsTourNumberMissingShare'),
+        observations: this.vt('pageTraitDetailsTourNumberObservations'),
+        missing: this.vt('pageTraitDetailsTourNumberMissingShare'),
         top: this.$t('pageTraitDetailsTourNumberTopCategory'),
         median: this.$t('pageTraitDetailsTourNumberMedianCategory'),
         outside: this.$t('pageTraitDetailsTourNumberOutside')
@@ -396,8 +416,9 @@ export default {
     },
     tourViews: function () {
       const texts = {
-        distribution: this.$t('pageTraitDetailsTourCategoricalDistribution'),
-        germplasm: this.$t('pageTraitDetailsTourCategoricalGermplasm'),
+        distribution: this.vt('pageTraitDetailsTourCategoricalDistribution'),
+        germplasm: this.vt('pageTraitDetailsTourCategoricalGermplasm'),
+        time: this.$t('pageClimateDetailsTourCategoricalTime'),
         groups: this.$t('pageTraitDetailsTourCategoricalGroups')
       }
       return this.views.map(option => ({ key: option.key, title: option.text, text: texts[option.key] }))
@@ -571,14 +592,13 @@ export default {
         const from = Math.min(ORDINAL_COLORS.length - 2, Math.floor(t))
         return this.mixColor(ORDINAL_COLORS[from + 1], ORDINAL_COLORS[from], t - from)
       }
-      const colors = getColors() || []
+      // A colour each, all different: the colours of the charts when they cover the categories, else Paul Tol's rainbow
+      const colors = getColorsFor(getColors() || [], this.categories.filter(c => !c.outside).length)
       return colors.length > 0 ? colors[index % colors.length] : BAR_COLOR
     },
-    formatPercent: function (share) {
-      return `${(Math.round(share * 1000) / 10).toLocaleString(this.locale)} %`
-    },
+    formatPercent,
     formatDecimal: function (value, digits) {
-      return value.toLocaleString(this.locale, { minimumFractionDigits: digits, maximumFractionDigits: digits })
+      return formatDecimals(value, digits)
     },
     formatP: function (p) {
       return p < 0.001 ? `< ${this.formatDecimal(0.001, 3)}` : this.formatDecimal(p, 3)
@@ -603,7 +623,7 @@ export default {
         return
       }
       const theme = this.getTheme()
-      const figure = this.view === 'germplasm' ? this.getGermplasmChart(theme) : (this.view === 'groups' ? this.getGroupsChart(theme) : this.getDistribution(theme))
+      const figure = this.view === 'germplasm' ? this.getGermplasmChart(theme) : (this.view === 'groups' ? this.getGroupsChart(theme) : (this.view === 'time' ? this.getTimeChart(theme) : this.getDistribution(theme)))
       const layout = Object.assign({
         height: this.chartHeight,
         paper_bgcolor: 'rgba(0, 0, 0, 0)',
@@ -634,7 +654,10 @@ export default {
       element.on('plotly_click', event => {
         const point = event && event.points && event.points.length > 0 ? event.points[0] : null
         const custom = point ? point.customdata : null
-        if (custom && typeof custom === 'object') {
+        if (custom && typeof custom === 'object' && custom.value !== undefined) {
+          // Over time: the category of the point
+          this.emitCategory(custom.value)
+        } else if (custom && typeof custom === 'object') {
           this.showPassportPreview(custom.germplasmId)
         } else if (custom) {
           this.emitCategory(custom)
@@ -646,6 +669,24 @@ export default {
         this.bindGermplasmNames(this.pageGermplasm)
         element.on('plotly_afterplot', () => this.view === 'germplasm' && this.bindGermplasmNames(this.pageGermplasm))
       }
+      // A climate: the flags of the locations where their labels start
+      this.watchLocationFlags()
+    },
+    // Over time (a climate): a lane per location, a dot per observation at its recording date in the colour of its
+    // category
+    getTimeChart: function (theme) {
+      return getCategoryTimeChart(this.rows, {
+        theme,
+        locale: this.locale,
+        t: (key, params) => this.$t(key, params),
+        getFlags: labels => this.getLocationFlags(labels),
+        valueOf: row => {
+          const category = this.categoryMap[row.mapped]
+          return category
+            ? { key: category.key, label: this.getCategoryLabel(category), color: this.getCategoryColor(category), order: this.categories.indexOf(category) }
+            : { key: row.mapped, label: row.value, color: theme.muted, order: 9999 }
+        }
+      })
     },
     // A bar per category (in the order of the trait, then the values outside its categories, hatched), its count and
     // share at its end
@@ -771,7 +812,8 @@ export default {
             text: e.note,
             font: { family: FONT, size: 12, color: theme.muted }
           })),
-          shapes: options.shapes || []
+          shapes: options.shapes || [],
+          images: options.flags ? options.flags.images : []
         }
       }
     },
@@ -779,16 +821,19 @@ export default {
     getGermplasmChart: function (theme) {
       const spreadLabel = this.$t('pageTraitDetailsStatsSpread')
       const previewLabel = this.$t('tableTooltipGermplasmPreviewPassport')
+      // A climate: the flag of the country of each location before its name
+      const flags = this.getLocationFlags(this.pageGermplasm.map(g => g.name))
       const entries = this.pageGermplasm.map(g => ({
         germplasmId: g.germplasmId,
         label: g.name,
-        tick: g.mixed ? `<b>${this.getLabel(g.name)}</b>` : this.getLabel(g.name),
+        tick: flags.prefix + (g.mixed ? `<b>${this.getLabel(g.name)}</b>` : this.getLabel(g.name)),
         counts: g.counts,
         n: g.n,
         note: this.$t('pageTraitDetailsStatsSampleSize', { count: formatNumber(g.n) }),
         spread: g.spread
       }))
       return this.getStackedBars(theme, entries, {
+        flags,
         right: 70,
         custom: e => ({ germplasmId: e.germplasmId }),
         hover: e => [this.isOrdinal && e.spread > 0 ? `${spreadLabel}: ${e.spread}` : null, e.germplasmId ? `<i>${previewLabel}</i>` : null]

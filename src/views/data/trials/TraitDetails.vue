@@ -24,9 +24,19 @@
             <div class="td-tab-panel">
               <!-- Table showing all datasets this trait is scored in; one of them selected (first column) is the dataset of
                    the statistics -->
-              <DatasetTable :getData="getDatasetData" selectable selectionMode="single" :allowEditing="false" @selection-changed="datasetSelected" @data-changed="restoreDatasetSelection" ref="datasetTable" />
+              <!-- Embedded (the trials export): only its datasets, the filter fixed -->
+              <DatasetTable :getData="getDatasetData"
+                            :filterOn="datasetFilter"
+                            :filterLocked="embedded"
+                            :storeUrlParameters="!embedded"
+                            selectable
+                            selectionMode="single"
+                            :allowEditing="false"
+                            @selection-changed="datasetSelected"
+                            @data-changed="restoreDatasetSelection"
+                            ref="datasetTable" />
 
-              <div v-show="showAdditionalDatasets">
+              <div v-show="showAdditionalDatasets" v-if="!embedded">
                 <!-- Any additional datasets this trait is part of for which the license hasn't been accepted yet -->
                 <DatasetsWithUnacceptedLicense datasetType="trials" v-on:data-changed="checkNumbers"/>
               </div>
@@ -41,7 +51,7 @@
                 </header>
                 <div class="td-card-body">
                   <!-- Table showing all data points for this trait -->
-                  <TrialsDataTable :getData="getData" :getIds="getIds" :filterOn="tableFilter" ref="traitDetailsTable" />
+                  <TrialsDataTable :getData="getData" :getIds="getIds" :filterOn="tableFilter" :filterLocked="embedded" :storeUrlParameters="!embedded" ref="traitDetailsTable" />
                 </div>
               </section>
             </div>
@@ -110,6 +120,7 @@
                   <!-- Numeric traits: mean, median, SD, CV..., the distribution (histogram and box plot), the outliers,
                        the ranking of the germplasm, by rep / block; a bar clicked shows its observations below -->
                   <TraitNumericStats :traitId="traitId"
+                                     :unit="trait.unitAbbreviation || null"
                                      :traitName="trait.traitName"
                                      :traitDataType="trait.dataType"
                                      :traitRestrictions="trait.traitRestrictions"
@@ -140,7 +151,7 @@
 
           <b-tab :title="$t('pageTraitAttributesTitle')">
             <div class="td-tab-panel">
-              <TraitAttributeTable :filterOn="attributeFilter" :getData="getTraitAttributeData" />
+              <TraitAttributeTable :filterOn="attributeFilter" :getData="getTraitAttributeData" :storeUrlParameters="!embedded" />
             </div>
           </b-tab>
 
@@ -201,6 +212,17 @@ export default {
     imageCount: {
       type: Number,
       default: 0
+    },
+    // Embedded (a tab of the trials export): the trait given here (not by the route) ...
+    embeddedTraitId: {
+      type: Number,
+      default: null
+    },
+    // ... and its datasets: the datasets table and the data across them only these, their filter fixed (the filters of
+    // both tables cannot be changed)
+    datasetIds: {
+      type: Array,
+      default: null
     }
   },
   data: function () {
@@ -260,6 +282,18 @@ export default {
     // The dataset kept for the trait (selected here or in the traits table)
     storedDatasetId: function () {
       return getTraitDataset(this.traitId)
+    },
+    embedded: function () {
+      return this.embeddedTraitId !== null
+    },
+    // Embedded: the datasets of the export, fixed
+    datasetOnlyFilter: function () {
+      return this.embedded && this.datasetIds && this.datasetIds.length > 0
+        ? [{ column: { name: 'datasetId', type: Number }, comparator: 'inSet', operator: 'and', values: this.datasetIds.slice(), canBeChanged: false }]
+        : []
+    },
+    datasetFilter: function () {
+      return this.datasetOnlyFilter.length > 0 ? this.datasetOnlyFilter : null
     },
     userIsDataCurator: function () {
       return !!this.storeToken && userIsAtLeast(this.storeToken.userType, USER_TYPE_DATA_CURATOR)
@@ -405,7 +439,7 @@ export default {
         comparator: 'equals',
         operator: 'and',
         values: [point.x]
-      }]
+      }].concat(this.datasetOnlyFilter)
 
       this.$nextTick(() => {
         if (this.$refs.traitDetailsTable) {
@@ -523,9 +557,13 @@ export default {
     }
   },
   mounted: function () {
-    if (this.$route.params.traitId) {
-      this.traitId = parseInt(this.$route.params.traitId)
-      this.pendingDatasetId = getTraitDataset(this.traitId)
+    // The trait: given (embedded), else that of the route
+    const traitId = this.embedded ? this.embeddedTraitId : (this.$route.params.traitId ? parseInt(this.$route.params.traitId) : null)
+    if (traitId !== null) {
+      this.traitId = traitId
+      // Embedded: the dataset kept for the trait only when it is one of the export
+      const kept = getTraitDataset(this.traitId)
+      this.pendingDatasetId = this.embedded && kept !== null && !(this.datasetIds || []).includes(kept) ? null : kept
 
       this.tableFilter = [{
         column: {
@@ -536,7 +574,7 @@ export default {
         operator: 'and',
         values: [this.traitId],
         canBeChanged: false
-      }]
+      }].concat(this.datasetOnlyFilter)
 
       const request = {
         page: 1,
@@ -576,151 +614,5 @@ export default {
 </script>
 
 <style src="@/assets/custom-page.css"></style>
-<style scoped>
-/* Tabs below the main information: as those of the custom pages, without icons */
-.td-tabs {
-  margin-top: 2.25rem;
-}
-.td-tabs >>> .td-tabs-nav {
-  flex-wrap: wrap;
-  border-bottom: 1px solid var(--cp-border);
-}
-.td-tabs >>> .td-tabs-nav .nav-link {
-  padding: 0.7rem 1.25rem;
-  border: 1px solid transparent;
-  border-radius: 10px 10px 0 0;
-  color: var(--cp-muted);
-  font-weight: 600;
-  line-height: 1.5;
-}
-.td-tabs >>> .td-tabs-nav .nav-link:hover,
-.td-tabs >>> .td-tabs-nav .nav-link:focus {
-  border-color: transparent;
-  color: var(--cp-text);
-}
-.td-tabs >>> .td-tabs-nav .nav-link.active,
-body.dark-mode .td-tabs >>> .td-tabs-nav .nav-link.active,
-body.dark-mode .td-tabs >>> .td-tabs-nav .nav-link.active:focus {
-  border-color: var(--cp-border) var(--cp-border) var(--cp-surface);
-  background: var(--cp-surface);
-  color: var(--cp-text);
-}
-.td-tab-panel {
-  margin-top: 1.75rem;
-}
-/* Blocks (as those of the other custom pages): the icon in a soft green square beside the title, the content below */
-.td-card {
-  margin-top: 1.5rem;
-  overflow: hidden;
-  border: 1px solid var(--cp-border);
-  border-radius: 16px;
-  background: var(--cp-surface);
-  box-shadow: 0 1px 2px var(--cp-shadow);
-}
-.td-tab-panel > .td-card:first-child {
-  margin-top: 0;
-}
-.td-card-head {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.9rem;
-  padding: 1.25rem;
-}
-.td-card-icon {
-  display: inline-flex;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  width: 46px;
-  height: 46px;
-  border-radius: 12px;
-  background: var(--cp-green-soft);
-  color: var(--cp-green);
-  font-size: 1.25rem;
-}
-.td-card-title {
-  margin: 0.1rem 0 0.3rem;
-  color: var(--cp-text);
-  font-size: 1.2rem;
-  font-weight: 600;
-}
-.td-card-text {
-  margin: 0;
-  color: var(--cp-muted);
-  font-size: 0.9rem;
-  line-height: 1.55;
-}
-.td-card-body {
-  padding: 1.25rem;
-  border-top: 1px solid var(--cp-border);
-}
-/* A body filled by its content (the statistics of text traits: their strip of numbers from edge to edge) */
-.td-card-body.td-card-body-flush {
-  padding: 0;
-}
-.td-card-head-main {
-  flex: 1;
-  min-width: 0;
-}
-.td-card-close {
-  display: inline-flex;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--cp-muted);
-  cursor: pointer;
-}
-.td-card-close:hover,
-.td-card-close:focus-visible {
-  background: var(--cp-neutral-bg);
-  color: var(--cp-text);
-}
-/* The icon of the type of the selected dataset: its colour, on a soft background of it (as its chip in the table) */
-.td-card-icon.td-type-icon {
-  background: color-mix(in srgb, var(--td-type-color) 14%, transparent);
-  color: var(--td-type-color);
-}
-.td-type-icon >>> svg {
-  width: 1.5rem;
-  height: 1.5rem;
-  fill: var(--td-type-color);
-}
-/* No dataset selected: the message and its button, centred */
-.td-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1rem;
-  padding: 3rem 1.25rem;
-  text-align: center;
-}
-.td-empty-text {
-  max-width: 34rem;
-  margin: 0;
-  color: var(--cp-muted);
-  font-size: 0.95rem;
-  line-height: 1.55;
-}
-.td-empty-button {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.55rem 1.1rem;
-  border: 0;
-  border-radius: 10px;
-  background: var(--cp-button);
-  color: var(--cp-on-button);
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-.td-empty-button:hover,
-.td-empty-button:focus-visible {
-  background: var(--cp-button-hover);
-}
-</style>
+<!-- The look of the details (tabs, blocks, the empty state): shared with ClimateDetails -->
+<style scoped src="@/assets/variable-details.css"></style>

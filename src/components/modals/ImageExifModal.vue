@@ -27,6 +27,7 @@
 
 <script>
 import LocationMap from '@/components/map/LocationMap'
+import { formatDateTime } from '@/mixins/formatting'
 
 export default {
   components: {
@@ -111,7 +112,7 @@ export default {
           key: 'dateTime',
           img: require('@/assets/img/image-icon-date.svg'),
           text: () => this.$t('widgetExifDateTime'),
-          value: `${this.dateTime ? new Date(this.dateTime).toLocaleString() : ''}`
+          value: `${this.dateTime ? formatDateTime(this.dateTime, true) : ''}`
         }]
       } else {
         return []

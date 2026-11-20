@@ -54,7 +54,7 @@
                    :to="getCropGroup(crop) && !isCropDisabled(crop) ? getCropLink(crop) : null"
                    :class="['home-crop-card', { disabled: isCropDisabled(crop) }]"
                    :aria-disabled="isCropDisabled(crop)">
-          <div :class="['home-crop-icon', `home-crop-${crop.key}`]"><MdiIcon :path="crop.icon" :size="26" /></div>
+          <div :class="['home-crop-icon', `home-crop-${crop.key}`]"><MdiIcon :path="crop.homeIcon || crop.icon" :size="44" /></div>
           <div class="home-crop-name">{{ crop.name }}</div>
           <div class="home-crop-count">{{ getCropCountText(crop) }}</div>
         </component>
@@ -147,7 +147,7 @@
           <div class="home-panel-header">
             <div class="home-panel-heading">
               <h3 class="home-panel-title">Announcements</h3>
-              <span class="home-count-badge" :title="newsTotal + ' ' + pluralise(newsTotal, ['news item', 'news items'])">{{ newsTotal.toLocaleString() }}</span>
+              <span class="home-count-badge" :title="newsTotal + ' ' + pluralise(newsTotal, ['news item', 'news items'])">{{ formatNumber(newsTotal) }}</span>
             </div>
             <div class="home-panel-tools">
               <!-- Paging only while the list is open -->
@@ -285,6 +285,7 @@ import { apiPostMarkerTable, apiPostMapsTable } from '@/mixins/api/genotype'
 import { MAX_JAVA_INTEGER } from '@/mixins/api/base'
 import { userIsAtLeast, USER_TYPE_DATA_CURATOR, USER_TYPE_ADMINISTRATOR } from '@/mixins/api/auth'
 import SearchModule from '@/components/search/SearchModule'
+import { formatNumber } from '@/mixins/formatting'
 
 const emitter = require('tiny-emitter/instance')
 
@@ -657,6 +658,7 @@ export default {
     }
   },
   methods: {
+    formatNumber,
     // The images of the carousel, in the language in use (English when it has none)
     loadHeroImages: function () {
       apiGetTemplateCarouselConfig(result => {
@@ -791,7 +793,7 @@ export default {
         return '…'
       }
 
-      return `${count.toLocaleString()} ${this.pluralise(count, ['germplasm', 'germplasms'])}`
+      return `${formatNumber(count)} ${this.pluralise(count, ['germplasm', 'germplasms'])}`
     },
     // Crops without accessions (or without a matching group) are disabled once the counts are loaded
     isCropDisabled: function (crop) {
@@ -993,6 +995,7 @@ export default {
   --home-button-hover: #2f5a2a;
   --home-on-button: #ffffff;
   --home-text: #1f2120;
+  --home-crop-line: #000000;
   --home-text-subtle: #4a4d4b;
   --home-muted: #6b6f6c;
   --home-placeholder: #8a8d8a;
@@ -1038,6 +1041,7 @@ body.dark-mode .home {
   --home-button-hover: #578f4e;
   --home-on-button: #ffffff;
   --home-text: #e8e6e3;
+  --home-crop-line: #e8e6e3;
   --home-text-subtle: #c4beb5;
   --home-muted: #a39d93;
   --home-placeholder: #8c867d;
@@ -1213,6 +1217,11 @@ body.dark-mode .home-hero-veil {
   height: 64px;
   border-radius: 50%;
   border: 1px solid;
+}
+/* The line drawings: black lines (light grey in dark mode), their inner outlines left empty */
+.home-crop-icon ::v-deep svg {
+  fill: var(--home-crop-line);
+  fill-rule: evenodd;
 }
 .home-crop-name {
   font-size: 1.3rem;

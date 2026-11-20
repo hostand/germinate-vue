@@ -1,0 +1,208 @@
+/* The look of the statistics of a variable (TraitValueStats and the components extending it, the comparisons of the
+   trials export; scoped in each): the strip of the numbers, the options and the help at its right end, the chart */
+.tvs {
+  position: relative;
+  font-family: 'Inter', -apple-system, 'Segoe UI', Roboto, sans-serif;
+  color: var(--cp-text);
+}
+/* The numbers: a strip at the top, a cell each (the value above its label) with a line between them, a line below */
+.tvs-numbers {
+  display: flex;
+  flex-wrap: wrap;
+  min-height: 90px;
+  padding-right: 6.5rem;
+  border-bottom: 1px solid var(--cp-border);
+  /* The font of the titles of the blocks (custom pages), not that of the chart */
+  font-family: 'DM Sans', -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+.tvs-number {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.9rem 1.5rem;
+  border-right: 1px solid var(--cp-border);
+}
+.tvs-number:last-child {
+  border-right: none;
+}
+.tvs-number-value {
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+.tvs-number-label {
+  color: var(--cp-muted);
+  font-size: 0.92rem;
+}
+/* The options of the chart and its help: icons at the right end of the strip of the numbers */
+.tvs-base >>> .text-right:not(td):not(th) {
+  position: absolute;
+  top: 0;
+  right: 1rem;
+  display: flex;
+  align-items: center;
+  height: 90px;
+}
+.tvs-base >>> .text-right > .btn-group {
+  gap: 0.35rem;
+}
+.tvs-base >>> .text-right .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: none !important;
+  border-radius: 8px !important;
+  background: transparent;
+  color: var(--cp-text-subtle);
+  font-size: 1.05rem;
+  box-shadow: none !important;
+}
+.tvs-base >>> .text-right .btn:hover,
+.tvs-base >>> .text-right .btn:focus,
+.tvs-base >>> .text-right .show > .btn {
+  background: var(--cp-neutral-bg);
+  color: var(--cp-text);
+}
+/* Without a chart (free text): the options and the help disabled */
+.tvs-base >>> .text-right .btn:disabled,
+.tvs-base >>> .text-right .btn.disabled {
+  background: transparent;
+  color: var(--cp-muted);
+  opacity: 0.45;
+  cursor: default;
+}
+/* The chart under its title (the icon of the data type and the name of the trait, centred) */
+.tvs-chart-wrap {
+  padding: 1.5rem 1.25rem 1rem;
+}
+.tvs-head {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+.tvs-type {
+  display: inline-flex;
+  color: var(--tvs-type-color);
+}
+.tvs-type >>> svg {
+  width: 1.55rem;
+  height: 1.55rem;
+  fill: var(--tvs-type-color);
+}
+.tvs-name {
+  font-family: 'DM Sans', -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+/* The most frequent value: text, cut with "…" */
+.tvs-number.is-text {
+  max-width: 18rem;
+}
+.tvs-number.is-text .tvs-number-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Free text: why there is no chart, on one line on the right of the title of the table */
+.tvs-values-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+.tvs-values-head .tvs-values-title {
+  flex-shrink: 0;
+  margin-bottom: 0;
+}
+.tvs-note {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: var(--cp-muted);
+  font-size: 0.85rem;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tvs-note .fa-solid {
+  margin-right: 0.35rem;
+  color: var(--cp-green);
+}
+/* All the values: the link below the chart, the table */
+.tvs-values {
+  padding: 0 1.25rem 1.25rem;
+}
+.tvs-values-link-row {
+  display: flex;
+  justify-content: center;
+}
+.tvs-values-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.9rem;
+  border: 1px solid var(--cp-border);
+  border-radius: 10px;
+  background: var(--cp-surface);
+  color: var(--cp-text-subtle);
+  font-family: 'DM Sans', -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 0.88rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+.tvs-values-link:hover,
+.tvs-values-link:focus-visible {
+  border-color: var(--cp-muted);
+  background: var(--cp-surface-hover);
+  color: var(--cp-text);
+}
+.tvs-values-link > .fa-table-list,
+.tvs-values-link > .fa-chart-bar {
+  color: var(--cp-green);
+}
+/* Free text: the table right below the strip of the numbers and the title of the trait */
+.tvs-values.is-unique .tvs-values-table {
+  margin-top: 0.25rem;
+}
+.tvs-values-chevron {
+  font-size: 0.75rem;
+  transition: transform 0.2s ease;
+}
+.tvs-values-link.open .tvs-values-chevron {
+  transform: rotate(180deg);
+}
+.tvs-values-table {
+  margin-top: 1.25rem;
+}
+.tvs-values-title {
+  margin: 0 0 0.75rem;
+  font-family: 'DM Sans', -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+}
+.tvs-loading,
+.tvs-empty {
+  padding: 2rem 0;
+  color: var(--cp-muted);
+  text-align: center;
+}
+.tvs-empty {
+  margin: 0;
+}
+/* The bars can be clicked */
+.tvs-chart >>> .plotly .cursor-crosshair,
+.tvs-chart >>> .plotly .bars .point {
+  cursor: pointer;
+}
+@media (max-width: 575px) {
+  .tvs-number {
+    padding: 0.75rem 1rem;
+  }
+}

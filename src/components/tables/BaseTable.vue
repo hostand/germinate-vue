@@ -1,9 +1,12 @@
 <template>
-  <div :class="['base-table', modernLook ? 'bt-modern' : 'mb-3']" :id="id">
+  <!-- New look, while the data loads or the table works on all its rows (selecting / marking all: is-busy): the toolbar,
+       the active filters, the head of the table and the footer can not be used (inert: neither mouse nor keyboard) and
+       are faded out -->
+  <div :class="['base-table', modernLook ? 'bt-modern' : 'mb-3', { 'is-busy': modernLook && isBlocked, 'is-wide': modernLook && scrollsSideways }]" :id="id">
     <!-- New look: one card with a toolbar (tools on the left; count, jump to page and page size on the right), the active
          filters on a line below it, the table and the pagination at the bottom right -->
     <template v-if="modernLook">
-      <div class="bt-toolbar">
+      <div class="bt-toolbar" :inert="isBlocked ? '' : null">
         <TableFilter :columns="columns"
                      :texts="options.headings"
                      :tableName="options.tableName"
@@ -11,6 +14,7 @@
                      :storeUrlParameters="storeUrlParameters"
                      modernLook
                      :filterLocked="filterLocked"
+                     :toolsLocked="toolsLocked"
                      :autoHiddenColumns="autoHiddenColumns"
                      ref="tableFilter"
                      v-if="filterEnabled"
@@ -26,10 +30,10 @@
             <span v-else class="bt-count" id="table-row-count">{{ $tc('paginationCountCustom', pagination.totalCount, { from: formatNumber(currentRequestData.page * currentRequestData.limit + 1), to: formatNumber(Math.min((currentRequestData.page + 1) * currentRequestData.limit, pagination.totalCount)), count: formatNumber(pagination.totalCount) }) }}</span>
           </template>
           <template v-if="!showAllItems">
-            <button type="button" class="bt-tool" id="table-jump-to-page" :disabled="maxPage < 2" @click="showJumpToPage" v-b-tooltip.hover :title="$t('modalTitleJumpToPage')" :aria-label="$t('modalTitleJumpToPage')">
+            <button type="button" class="bt-tool" id="table-jump-to-page" :disabled="maxPage < 2 || toolsLocked" @click="showJumpToPage" v-b-tooltip.hover :title="$t('modalTitleJumpToPage')" :aria-label="$t('modalTitleJumpToPage')">
               <i class="fa-solid fa-book-open" aria-hidden="true" />
             </button>
-            <b-dropdown id="table-page-size-dropdown" right no-caret boundary="window" :popper-opts="{ positionFixed: true }" variant="link" toggle-class="bt-select" v-b-tooltip.hover :title="$t('tooltipTableItemsPerPage')">
+            <b-dropdown id="table-page-size-dropdown" :disabled="toolsLocked" right no-caret boundary="window" :popper-opts="{ positionFixed: true }" variant="link" toggle-class="bt-select" v-b-tooltip.hover :title="$t('tooltipTableItemsPerPage')">
               <template #button-content>{{ storeTablePerPage }} <i class="fa-solid fa-chevron-down" aria-hidden="true" /></template>
               <b-dropdown-item v-for="value in perPageValues" @click="onPerPageChanged(value)" :key="'table-per-page-' + value" :active="value === storeTablePerPage">{{ value }}</b-dropdown-item>
             </b-dropdown>
@@ -40,10 +44,15 @@
       <!-- Active filters: "Filter: 'Column' comparator 'values'", joined by their operator -->
       <!-- On one line, cut with "…" when wider than the table; then the chevron shows all of it -->
       <!-- Not the fixed filters of the page (the context of the table, e.g. the institutions of one dataset) -->
-      <div :class="['bt-filter-line', { 'is-expanded': filterExpanded }]" v-if="filterShown && visibleFilters.length > 0">
+      <!-- A note of the page first, always there (e.g. the dataset of a pivoted table), then the filters set -->
+      <div :class="['bt-filter-line', { 'is-expanded': filterExpanded }]" :inert="isBlocked ? '' : null" v-if="(filterShown && visibleFilters.length > 0) || filterNote">
         <div class="bt-filter-content" ref="filterContent">
           <span class="bt-filter-label">{{ $t('paginationFilter') }}:</span>
-          <template v-for="(item, index) in visibleFilters">
+          <template v-if="filterNote">
+            <span class="bt-filter-item is-note">{{ filterNote }}</span>
+            <span class="bt-filter-operator" v-if="filterShown && visibleFilters.length > 0">{{ getOperatorText('and') }}</span>
+          </template>
+          <template v-for="(item, index) in (filterShown ? visibleFilters : [])">
             <span :key="`bt-filter-${index}`" :class="['bt-filter-item', { 'is-invalid': !isValidFilter(item.filter) }]" v-b-tooltip="isValidFilter(item.filter) ? null : $t('tooltipTableFilterInvalid')">{{ item.text }}</span>
             <span :key="`bt-filter-operator-${index}`" class="bt-filter-operator" v-if="index < visibleFilters.length - 1">{{ getOperatorText(item.filter.operator) }}</span>
           </template>
@@ -54,7 +63,7 @@
       </div>
 
       <!-- Loading: a thin moving line above the table -->
-      <div class="bt-progress" :title="isLoading ? $t('tooltipTableLoadingIndicator') : null"><div class="bt-progress-bar" v-if="isLoading" /></div>
+      <div class="bt-progress" :title="isBlocked ? $t('tooltipTableLoadingIndicator') : null"><div class="bt-progress-bar" v-if="isBlocked" /></div>
     </template>
 
     <div v-if="!modernLook">
@@ -139,6 +148,13 @@
             ref="table">
       <!-- Pass on all named slots -->
       <slot v-for="slot in Object.keys($slots)" :name="slot" :slot="slot"/>
+      <!-- New look: while the data of the table loads, a row across all the columns (as the one of no results) with the
+           spinner and the message, in place of the rows; the table not faded out -->
+      <template #table-busy v-if="modernLook">
+        <div class="bt-busy" role="status">
+          <b-spinner small class="bt-busy-spinner" /> {{ busyText || $t('tooltipTableLoadingIndicator') }}
+        </div>
+      </template>
       <!-- Pass on all scoped slots. New look, every table: the dataset name and description (clampSlots, with or without
            a slot of the table) on one line, "..." where cut, and then a chevron that shows all of it (the row grows
            downwards); the chevron again folds it. One loop for both: two loops of slots lose the first one. -->
@@ -238,19 +254,40 @@
     </div>
 
     <!-- New look: below the table, the actions on the left and the pagination on the right -->
-    <div class="bt-footer" v-if="modernLook && (tableActions || downloadTable || (hasSelectionColumn && selectionMode === 'multi') || (!showAllItems && pagination.totalCount > storeTablePerPage))">
+    <div class="bt-footer" :inert="isBlocked ? '' : null" v-if="modernLook && (tableActions || downloadTable || (hasSelectionColumn && selectionMode === 'multi') || (!showAllItems && pagination.totalCount > storeTablePerPage))">
       <div class="bt-footer-start">
         <!-- Selecting several items: how -->
-        <span class="bt-footer-info" v-if="hasSelectionColumn && selectionMode === 'multi'"><i class="fa-solid fa-arrow-up" aria-hidden="true" /> {{ $t('widgetTableMultiSelectInfo') }}</span>
+        <transition name="bt-fade">
+          <span class="bt-footer-info" v-if="hasSelectionColumn && selectionMode === 'multi' && selectInfoShown !== false"><i class="fa-solid fa-arrow-up" aria-hidden="true" /> {{ $t('widgetTableMultiSelectInfo') }}</span>
+        </transition>
         <!-- Download: only when the table has rows (nothing to download otherwise) -->
         <button type="button" class="bt-tool" v-if="downloadTable !== null && pagination.totalCount !== 0" @click="onDownloadTableClicked" id="table-download" v-b-tooltip.hover.bottom :title="$t('buttonDownload')" :aria-label="$t('buttonDownload')">
           <i class="fa-solid fa-download" aria-hidden="true" />
         </button>
         <template v-if="tableActions">
-          <!-- An action: its icon (Font Awesome "icon" or MDI "path"), highlighted while active() -->
+          <!-- An action: its icon (Font Awesome "icon" or MDI "path"), highlighted while active() (the primary ones: at the
+               right end) -->
+          <template v-for="action in tableActions.filter(a => !a.primary)">
+          <!-- A choice of one option (type select: options [{ value, text }], value(), onSelect(value)): a dropdown in
+               the look of the table, the text of the option cut when long (its whole text in its tooltip) -->
+          <b-dropdown no-caret boundary="window" :popper-opts="{ positionFixed: true }" variant="link" toggle-class="bt-select bt-action-select" menu-class="bt-action-select-menu"
+                      :key="`base-table-action-${action.id}`"
+                      :disabled="action.disabled(selectedItems)"
+                      v-b-tooltip.hover.bottom
+                      :title="action.text"
+                      v-if="action.type === 'select'">
+            <template #button-content>
+              <span class="bt-action-select-text">{{ getActionOptionText(action) }}</span> <i class="fa-solid fa-chevron-down" aria-hidden="true" />
+            </template>
+            <b-dropdown-item v-for="option in action.options"
+                             :key="`base-table-action-${action.id}-${option.value}`"
+                             :active="option.value === action.value()"
+                             :title="option.text"
+                             @click="action.onSelect(option.value)">{{ option.label || option.text }}</b-dropdown-item>
+          </b-dropdown>
           <button type="button"
                   :class="['bt-tool', { 'is-active': action.active && action.active() }]"
-                  v-for="action in tableActions"
+                  v-else
                   :key="`base-table-action-${action.id}`"
                   :disabled="action.disabled(selectedItems)"
                   @click="action.callback(selectedItems)"
@@ -262,21 +299,35 @@
             <MdiIcon :path="action.path" v-else-if="action.path" />
             <span v-else>{{ action.text }}</span>
           </button>
+          </template>
         </template>
       </div>
-      <b-pagination v-model="pagination.currentPage"
-                    :total-rows="pagination.totalCount"
-                    :per-page="storeTablePerPage"
-                    :limit="5"
-                    last-number
-                    class="bt-pagination"
-                    id="table-pagination"
-                    v-if="!showAllItems && pagination.totalCount > storeTablePerPage">
-        <template #first-text><i class="fa-solid fa-angles-left" aria-hidden="true" /></template>
-        <template #prev-text><i class="fa-solid fa-angle-left" aria-hidden="true" /></template>
-        <template #next-text><i class="fa-solid fa-angle-right" aria-hidden="true" /></template>
-        <template #last-text><i class="fa-solid fa-angles-right" aria-hidden="true" /></template>
-      </b-pagination>
+      <!-- The pagination, then the primary actions (e.g. Next): a filled button with its text and its icon -->
+      <div class="bt-footer-end">
+        <b-pagination v-model="pagination.currentPage"
+                      :total-rows="pagination.totalCount"
+                      :per-page="storeTablePerPage"
+                      :limit="5"
+                      last-number
+                      class="bt-pagination"
+                      id="table-pagination"
+                      v-if="!showAllItems && pagination.totalCount > storeTablePerPage">
+          <template #first-text><i class="fa-solid fa-angles-left" aria-hidden="true" /></template>
+          <template #prev-text><i class="fa-solid fa-angle-left" aria-hidden="true" /></template>
+          <template #next-text><i class="fa-solid fa-angle-right" aria-hidden="true" /></template>
+          <template #last-text><i class="fa-solid fa-angles-right" aria-hidden="true" /></template>
+        </b-pagination>
+        <template v-if="tableActions">
+          <button type="button"
+                  class="bt-tool is-primary"
+                  v-for="action in tableActions.filter(a => a.primary)"
+                  :key="`base-table-action-${action.id}`"
+                  :disabled="action.disabled(selectedItems)"
+                  @click="action.callback(selectedItems)">
+            {{ action.text }} <i :class="action.icon" aria-hidden="true" v-if="action.icon" /><MdiIcon :path="action.path" v-else-if="action.path" />
+          </button>
+        </template>
+      </div>
     </div>
 
     <!-- Container below the table -->
@@ -396,7 +447,7 @@ const GERMPLASM_DEFAULT_HIDDEN_COLUMNS = [
 const GERMPLASM_DEFAULT_HIDDEN_APPLIED = 'germplasmColumnsDefaultHidden'
 
 // Columns cut on one line in every table (new look), a chevron showing all of the text
-const CLAMP_COLUMNS = ['datasetName', 'datasetDescription', 'collaboratorRoles']
+const CLAMP_COLUMNS = ['datasetName', 'datasetDescription', 'collaboratorRoles', 'attributeDescription', 'experimentDescription', 'fileresourceDescription', 'fileresourcetypeDescription', 'storyDescription', 'content', 'valuesText']
 // Columns whose web addresses (http:// or https://) are links, in every table
 const URL_COLUMNS = ['attributeValue']
 const URL_PATTERN = /^https?:\/\/\S+$/i
@@ -415,6 +466,27 @@ export default {
       default: true
     },
     // The filter button shown but disabled (the table shows a fixed selection)
+    // The tools of the toolbar (help, columns, filter, jump to page, page size) shown but inactive: a read-only table
+    toolsLocked: {
+      type: Boolean,
+      default: false
+    },
+    // Selecting several rows: the note on how (at the bottom) shown always (null), or only while true (e.g. while the
+    // column of the checkboxes draws the eye)
+    selectInfoShown: {
+      type: Boolean,
+      default: null
+    },
+    // A note always at the start of the line of the filters (e.g. the dataset of a pivoted table)
+    filterNote: {
+      type: String,
+      default: null
+    },
+    // The text of the row shown while the data loads (e.g. its progress); the default one without
+    busyText: {
+      type: String,
+      default: null
+    },
     filterLocked: {
       type: Boolean,
       default: false
@@ -515,6 +587,8 @@ export default {
       perPageValues: this.showAllItems ? [MAX_JAVA_INTEGER] : [10, 25, 50, 100],
       currentRequestData: null,
       isLoading: false,
+      // Working on all the rows (selecting / marking all): the controls locked, the rows stay
+      isWorking: false,
       groupTypeSelect: null,
       newGroup: null,
       selectedItems: [],
@@ -534,6 +608,8 @@ export default {
       // Cut columns (CLAMP_COLUMNS): the cells shown in full and those cut on their line ("<column>-<row index>")
       clampExpanded: {},
       clampCut: {},
+      // New look: the table wider than its block (it scrolls sideways): its cells on one line, no need to wrap them
+      scrollsSideways: false,
       Pages,
       filterExpanded: false,
       resizeObserver: null,
@@ -541,6 +617,24 @@ export default {
     }
   },
   watch: {
+    // Columns shown or hidden: the cut cells measured again, the table may scroll sideways or not
+    reformattedColumns: function () {
+      this.measureClamps()
+      this.checkSideways()
+    },
+    // New look, while the data loads or the table works: the head of the table (sorting, marking all) not usable,
+    // keyboard included
+    isBlocked: function (newValue) {
+      if (!this.modernLook) {
+        return
+      }
+      this.$nextTick(() => {
+        const head = this.$refs.table && this.$refs.table.$el ? this.$refs.table.$el.querySelector('thead') : null
+        if (head) {
+          head.toggleAttribute('inert', !!newValue)
+        }
+      })
+    },
     filter: function () {
       this.filterExpanded = false
       this.$nextTick(() => this.checkFilterOverflow())
@@ -574,6 +668,10 @@ export default {
     }
   },
   computed: {
+    // The controls of the table locked: its data loading, or the table working on all its rows
+    isBlocked: function () {
+      return this.isLoading || this.isWorking
+    },
     ...mapGetters([
       'storeHiddenColumns',
       'storeMarkedIds',
@@ -755,22 +853,57 @@ export default {
       this.$set(this.clampExpanded, key, !this.clampExpanded[key])
     },
     // Which cut cells do not fit on their line (after the rows are shown, and when the width changes)
+    // Many cells changing width at once: measured once, at the next frame
+    measureClampsLater: function () {
+      if (this.clampFrame) {
+        return
+      }
+      this.clampFrame = requestAnimationFrame(() => {
+        this.clampFrame = null
+        this.measureClamps()
+      })
+    },
     measureClamps: function () {
       if (this.clampSlots.length === 0 || !this.$el || !this.$el.querySelectorAll) {
         return
       }
       this.$nextTick(() => {
         this.$el.querySelectorAll('.bt-clamp').forEach(element => {
+          // Measured again whenever its cell changes width (the columns settle after the rows are shown)
+          if (this.clampObserver) {
+            this.clampObserver.observe(element)
+          }
           const key = element.getAttribute('data-clamp')
           if (this.clampExpanded[key]) {
             return
           }
+          // Cut when the text does not fit in the whole cell (the room of the chevron included: without it, the text
+          // has all of it)
           const text = element.querySelector('.bt-clamp-text')
-          const cut = text.scrollWidth > text.clientWidth + 1
+          if (!text || element.clientWidth === 0) {
+            return
+          }
+          const cut = text.scrollWidth > element.clientWidth + 1
           if (this.clampCut[key] !== cut) {
             this.$set(this.clampCut, key, cut)
           }
         })
+      })
+    },
+    // Does the table scroll sideways? (its cells on one line when it does: wrapping them would not make it fit)
+    checkSideways: function () {
+      if (!this.modernLook || !this.$el || !this.$el.querySelector) {
+        return
+      }
+      this.$nextTick(() => {
+        const wrapper = this.$el.querySelector('.table-responsive') || (this.$refs.table && this.$refs.table.$el)
+        if (!wrapper || wrapper.clientWidth === 0) {
+          return
+        }
+        const wide = wrapper.scrollWidth > wrapper.clientWidth + 1
+        if (wide !== this.scrollsSideways) {
+          this.scrollsSideways = wide
+        }
       })
     },
     notifyLoaded: function () {
@@ -778,6 +911,7 @@ export default {
       this.clampExpanded = {}
       this.clampCut = {}
       this.measureClamps()
+      this.checkSideways()
       this.$emit('loaded', {
         data: this.$refs.table.paginatedItems,
         count: this.pagination.totalCount
@@ -828,7 +962,9 @@ export default {
       // Only the values the comparator uses, without the empty ones (the second field of the filter stays "")
       const needed = comparator ? (comparator.values || 0) : (f.values || []).length
       const values = (f.values || []).slice(0, needed).filter(v => v !== null && v !== undefined && `${v}`.trim() !== '')
-      return `'${column ? column.label : f.column}' ${comparator ? comparator.text() : f.comparator}${values.length > 0 ? ` '${values.join(', ')}'` : ''}`
+      // A column whose values are keys (e.g. the climate type): their names
+      const shown = column && column.filterValueText ? values.map(v => column.filterValueText(v)) : values
+      return `'${column ? column.label : f.column}' ${comparator ? comparator.text() : f.comparator}${shown.length > 0 ? ` '${shown.join(', ')}'` : ''}`
     },
     /**
      * Hides the columns with less than half of their values filled in, in the rows of the first page with data (all the
@@ -988,18 +1124,47 @@ export default {
         return true
       }
     },
+    // All the rows of the table (not only the page) marked or not: the table works meanwhile (new look: its controls
+    // locked, the rows stay; old look: the loading modal)
     markAllItems: function (mark) {
       if (this.getIds) {
-        emitter.emit('show-loading', true)
+        this.startWork()
         this.getIds(this.currentRequestData, result => {
           if (mark) {
             this.$store.dispatch('addMarkedIds', { type: this.itemType, ids: result.data })
           } else {
             this.$store.dispatch('removeMarkedIds', { type: this.itemType, ids: result.data })
           }
-          emitter.emit('show-loading', false)
+          this.endWork()
+        }, {
+          codes: [],
+          callback: () => this.endWork()
         })
       }
+    },
+    // The text of a choice of the footer: its option chosen (cut), else its placeholder
+    getActionOptionText: function (action) {
+      const value = action.value()
+      const option = (action.options || []).find(o => o.value === value)
+      return option ? (option.label || option.text) : (action.placeholder || action.text)
+    },
+    startWork: function () {
+      if (this.modernLook) {
+        this.isWorking = true
+      } else {
+        emitter.emit('show-loading', true)
+      }
+    },
+    endWork: function () {
+      if (this.modernLook) {
+        this.isWorking = false
+      } else {
+        emitter.emit('show-loading', false)
+      }
+    },
+    // The rows of the page shown again as selected or not (no new request: the rows stay)
+    updatePageRowVariants: function () {
+      ;(this.pageItems || []).forEach(item => this.updateRowVariant(item))
     },
     onPerPageChanged: function (value) {
       this.$store.dispatch('setTablePerPage', value)
@@ -1181,29 +1346,40 @@ export default {
     },
     onSelectionHeaderClicked: function (value) {
       if (value && this.getIds) {
-        emitter.emit('show-loading', true)
+        this.startWork()
         // Get all ids in the current table
         this.getIds(this.currentRequestData, result => {
           this.selectedItems = result.data
-          emitter.emit('show-loading', false)
-          this.$refs.table.refresh()
+          this.endWork()
+          this.updatePageRowVariants()
+        }, {
+          codes: [],
+          callback: () => this.endWork()
         })
       } else {
         this.selectedItems = []
-        this.$refs.table.refresh()
+        this.updatePageRowVariants()
       }
     },
+    // Download the current table data: the table works meanwhile (new look: its controls locked, the rows stay; old
+    // look: the loading modal)
     requestDownload: function () {
-      emitter.emit('show-loading', true)
-      // Download the current table data
-      this.downloadTable(this.currentRequestData, result => {
+      this.startWork()
+      const result = this.downloadTable(this.currentRequestData, blob => {
         downloadBlob({
-          blob: result,
+          blob,
           filename: `${this.options.tableName}-table-${getDateTimeString()}`,
           extension: 'zip'
         })
-        emitter.emit('show-loading', false)
+        this.endWork()
+      }, {
+        codes: [],
+        callback: () => this.endWork()
       })
+      // A request that failed (its promise rejected): the table usable again
+      if (result && result.catch) {
+        result.catch(() => this.endWork())
+      }
     },
     updateTableTour: function () {
       const tableTourSteps = [
@@ -1316,8 +1492,11 @@ export default {
       this.resizeObserver = new ResizeObserver(() => {
         this.checkFilterOverflow()
         this.measureClamps()
+        this.checkSideways()
       })
       this.resizeObserver.observe(this.$el)
+      // The cut cells: measured again when their own width changes
+      this.clampObserver = new ResizeObserver(() => this.measureClampsLater())
     }
 
     // New look: a cell with a single link is clickable as a whole (see onCellClick)
@@ -1340,6 +1519,12 @@ export default {
     }
     if (this.resizeObserver) {
       this.resizeObserver.disconnect()
+    }
+    if (this.clampObserver) {
+      this.clampObserver.disconnect()
+    }
+    if (this.clampFrame) {
+      cancelAnimationFrame(this.clampFrame)
     }
   }
 }

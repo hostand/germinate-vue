@@ -6,9 +6,12 @@ import App from '@/App.vue'
 import '@fortawesome/fontawesome-free/css/all.min.css'
 // The look of the custom pages for every modal
 import '@/assets/modal-global.css'
+import '@/assets/toasts.css'
 import router from '@/router'
 import store from '@/store'
 import { i18n } from '@/plugins/i18n.js'
+// Every chart with the numbers of the tables (see formatting.js)
+import '@/plugins/charts/plotly-defaults'
 
 import VueGtag from 'vue-gtag'
 

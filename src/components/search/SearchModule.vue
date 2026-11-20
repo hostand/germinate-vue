@@ -264,7 +264,7 @@
              :class="['home-typeahead-item', { active: index === typeaheadHighlight, loading: typeaheadLoading, 'has-badges': item.badges.length > 0, 'home-typeahead-germplasm': item.germplasm, 'home-typeahead-institution': item.institution || item.person || item.datasetInstitution }]"
              @mousedown.prevent
              @click="openTypeaheadItem(item)">
-          <span class="home-typeahead-icon" :style="item.iconStyle" :title="item.iconTitle"><MdiIcon :path="item.icon" :size="18" /></span>
+          <span :class="['home-typeahead-icon', { 'home-typeahead-line-icon': item.lineIcon }]" :style="item.lineIcon ? null : item.iconStyle" :title="item.iconTitle"><MdiIcon :path="item.icon" :size="item.lineIcon ? 36 : 18" /></span>
           <!-- A FAO WIEWS institute (code, name below) or a collaborator (name, institute below), the flag of its country -->
           <template v-if="item.institution || item.person || item.datasetInstitution">
             <span class="home-typeahead-germplasm-text">
@@ -531,6 +531,7 @@ export default {
   --home-button-hover: #2f5a2a;
   --home-on-button: #ffffff;
   --home-text: #1f2120;
+  --home-crop-line: #000000;
   --home-text-subtle: #4a4d4b;
   --home-muted: #6b6f6c;
   --home-placeholder: #8a8d8a;
@@ -567,6 +568,7 @@ body.dark-mode .search-module {
   --home-button-hover: #578f4e;
   --home-on-button: #ffffff;
   --home-text: #e8e6e3;
+  --home-crop-line: #e8e6e3;
   --home-text-subtle: #c4beb5;
   --home-muted: #a39d93;
   --home-placeholder: #8c867d;
@@ -886,6 +888,16 @@ body.dark-mode .search-module {
 }
 .home-typeahead-type.selected .home-typeahead-name {
   color: var(--home-green);
+}
+/* The line drawing of a flagship crop (germplasm): no square behind it, the size of the box; black lines (light grey in
+   dark mode), inner outlines left empty */
+.home-typeahead-line-icon ::v-deep svg {
+  fill: var(--home-crop-line);
+  fill-rule: evenodd;
+}
+.search-module-compact .home-typeahead-line-icon ::v-deep svg {
+  width: 30px;
+  height: 30px;
 }
 .home-typeahead-icon {
   display: inline-flex;

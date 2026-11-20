@@ -5,7 +5,8 @@
     <router-link :to="{ name: Pages.passport, params: { germplasmId: germplasmId } }" event="" @click.native.prevent="showPreview" class="gt-passport-preview" v-b-tooltip.hover="$t('tableTooltipGermplasmPreviewPassport')" :aria-label="$t('tableTooltipGermplasmPreviewPassport')">
       <i class="fa-solid fa-passport" aria-hidden="true" />
     </router-link>
-    <router-link :to="{ name: Pages.passport, params: { germplasmId: germplasmId } }">{{ name }}</router-link>
+    <router-link :to="{ name: Pages.passport, params: { germplasmId: germplasmId } }" v-if="link">{{ name }}</router-link>
+    <span v-else>{{ name }}</span>
 
     <!-- The preview of the passport (modal), only there while open -->
     <PassportPreviewModal :germplasmId="germplasmId" ref="passportPreview" v-if="previewShown" @hidden="previewShown = false" />
@@ -26,6 +27,11 @@ export default {
     name: {
       type: String,
       default: null
+    },
+    // The name links to the passport page (off: only the preview of the passport, e.g. the data exports)
+    link: {
+      type: Boolean,
+      default: true
     }
   },
   data: function () {

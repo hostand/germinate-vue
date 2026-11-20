@@ -13,7 +13,7 @@
        chart and its help at the right end of the strip, then the chart under its title -->
   <div class="tvs tds" :id="id">
     <div class="tvs-numbers">
-      <div :class="['tvs-number', { 'is-text': number.text }]" v-for="number in numbers" :key="`tvs-number-${number.key}`" :data-tour-number="number.key">
+      <div :class="['tvs-number', { 'is-text': number.text, 'is-danger': number.danger }]" v-for="number in numbers" :key="`tvs-number-${number.key}`" :data-tour-number="number.key">
         <span class="tvs-number-value" :title="number.text ? number.value : null">{{ number.value === null ? '–' : (number.text ? number.value : formatNumber(number.value)) }}</span>
         <span class="tvs-number-label">{{ number.label }}</span>
       </div>
@@ -35,7 +35,7 @@
         <b-dropdown-item link-class="top-nav-menu-item" :disabled="!hasChart" @click="downloadSvg"><i class="fa-solid fa-file-code fa-fw" aria-hidden="true" /> {{ $t('buttonDownloadSvg') }}</b-dropdown-item>
         <b-dropdown-item link-class="top-nav-menu-item" :disabled="!sourceFile" @click="downloadData"><i class="fa-solid fa-file-lines fa-fw" aria-hidden="true" /> {{ $t('buttonDownloadFile') }}</b-dropdown-item>
         <!-- The colours of the charts: the first one for the bars and the calendar, one per rep in the timeline -->
-        <b-dropdown-item link-class="top-nav-menu-item" @click="$refs.baseChart.$refs.customChartColorModal.show()"><i class="fa-solid fa-palette fa-fw" aria-hidden="true" /> {{ $t('buttonChangeChartColors') }}</b-dropdown-item>
+        <b-dropdown-item link-class="top-nav-menu-item" @click="$refs.baseChart.showColors()"><i class="fa-solid fa-palette fa-fw" aria-hidden="true" /> {{ $t('buttonChangeChartColors') }}</b-dropdown-item>
       </template>
       <template slot="additionalButtons">
         <b-button v-b-tooltip.hover :title="$t('chartTooltipMatrixTour')" :aria-label="$t('chartTooltipMatrixTour')" :disabled="!hasChart" @click="$refs.tour.start()">
@@ -57,24 +57,24 @@
         <div class="tvs-loading" v-if="loading"><b-spinner small type="grow" /></div>
         <p class="tvs-empty" v-else-if="values.length < 1">{{ $t('headingNoData') }}</p>
         <!-- All the dates the same: no chart -->
-        <p class="tds-single" v-else-if="singleDate"><i class="fa-solid fa-calendar-day" aria-hidden="true" /> {{ $t('pageTraitDetailsStatsSingleDate', { date: formatDay(values[0].day) }) }}</p>
+        <p class="tds-single" v-else-if="singleDate"><i class="fa-solid fa-calendar-day" aria-hidden="true" /> {{ vt('pageTraitDetailsStatsSingleDate', { date: formatDay(values[0].day) }) }}</p>
         <!-- The timeline needs every observation (germplasm, rep): loaded when it is opened, after a confirmation when
              there are very many -->
         <template v-else-if="view === 'timeline' && rowsState !== 'loaded'">
           <div class="tvs-loading" v-if="rowsState === 'loading'"><b-spinner small type="grow" /><span class="tds-progress" v-if="rowsProgress && rowsProgress.total > rowsProgress.loaded">{{ $t('pageTraitDetailsStatsLoadingProgress', { loaded: formatNumber(rowsProgress.loaded), total: formatNumber(rowsProgress.total) }) }}</span></div>
           <div class="tds-single" v-else-if="rowsState === 'confirm'">
-            <p><i class="fa-solid fa-circle-info" aria-hidden="true" /> {{ $t('pageTraitDetailsStatsTimelineLarge', { count: formatNumber(dayStats.total) }) }}</p>
+            <p><i class="fa-solid fa-circle-info" aria-hidden="true" /> {{ vt('pageTraitDetailsStatsTimelineLarge', { count: formatNumber(dayStats.total) }) }}</p>
             <button type="button" class="tvs-values-link" @click="loadTimeline"><i class="fa-solid fa-bars-staggered" aria-hidden="true" /> {{ $t('pageTraitDetailsStatsLoadTimeline') }}</button>
           </div>
         </template>
         <div class="tvs-chart" ref="chart" v-show="chartShown" />
         <!-- The timeline: many germplasm in pages; many observations shown as the median of each rep -->
         <template v-if="chartShown && view === 'timeline'">
-          <p class="tds-note" v-if="timelineSummary"><i class="fa-solid fa-circle-info" aria-hidden="true" /> {{ $t('pageTraitDetailsStatsTimelineSummary') }}</p>
+          <p class="tds-note" v-if="timelineSummary"><i class="fa-solid fa-circle-info" aria-hidden="true" /> {{ vt('pageTraitDetailsStatsTimelineSummary') }}</p>
           <div class="tds-pager" v-if="germplasm.length > timelinePageSize">
-            <button type="button" class="tds-pager-button" :disabled="timelinePage === 0" @click="setTimelinePage(timelinePage - 1)" :title="$t('pageTraitDetailsStatsPreviousGermplasm')" :aria-label="$t('pageTraitDetailsStatsPreviousGermplasm')"><i class="fa-solid fa-chevron-left" aria-hidden="true" /></button>
-            <span>{{ $t('pageTraitDetailsStatsGermplasmRange', { from: formatNumber(timelinePage * timelinePageSize + 1), to: formatNumber(Math.min(germplasm.length, (timelinePage + 1) * timelinePageSize)), total: formatNumber(germplasm.length) }) }}</span>
-            <button type="button" class="tds-pager-button" :disabled="(timelinePage + 1) * timelinePageSize >= germplasm.length" @click="setTimelinePage(timelinePage + 1)" :title="$t('pageTraitDetailsStatsNextGermplasm')" :aria-label="$t('pageTraitDetailsStatsNextGermplasm')"><i class="fa-solid fa-chevron-right" aria-hidden="true" /></button>
+            <button type="button" class="tds-pager-button" :disabled="timelinePage === 0" @click="setTimelinePage(timelinePage - 1)" :title="vt('pageTraitDetailsStatsPreviousGermplasm')" :aria-label="vt('pageTraitDetailsStatsPreviousGermplasm')"><i class="fa-solid fa-chevron-left" aria-hidden="true" /></button>
+            <span>{{ vt('pageTraitDetailsStatsGermplasmRange', { from: formatNumber(timelinePage * timelinePageSize + 1), to: formatNumber(Math.min(germplasm.length, (timelinePage + 1) * timelinePageSize)), total: formatNumber(germplasm.length) }) }}</span>
+            <button type="button" class="tds-pager-button" :disabled="(timelinePage + 1) * timelinePageSize >= germplasm.length" @click="setTimelinePage(timelinePage + 1)" :title="vt('pageTraitDetailsStatsNextGermplasm')" :aria-label="vt('pageTraitDetailsStatsNextGermplasm')"><i class="fa-solid fa-chevron-right" aria-hidden="true" /></button>
           </div>
         </template>
       </div>
@@ -124,8 +124,15 @@ const CALENDAR_EXTRA = 80
 const BAR_COLOR = '#5b9cf6'
 const FONT = 'Inter, -apple-system, "Segoe UI", Roboto, sans-serif'
 
-// A date of the data (YYYY-MM-DD, also YYYYMMDD) as a day number (days since 1970-01-01, UTC); null when not a date
+// A date of the data (YYYY-MM-DD, also YYYYMMDD) as a day number (days since 1970-01-01, UTC); null when not a date.
+// Also a date of a spreadsheet kept as its serial number (5 digits, days since 1899-12-30: e.g. 45740 = 2025-03-24), as
+// some climate data was imported.
+const EXCEL_EPOCH_DAY = -25569
 const parseDay = value => {
+  const serial = /^\s*(\d{5})(?:\.0+)?\s*$/.exec(`${value || ''}`)
+  if (serial) {
+    return +serial[1] + EXCEL_EPOCH_DAY
+  }
   const match = /^\s*(\d{4})-?(\d{1,2})-?(\d{1,2})/.exec(`${value || ''}`)
   if (!match) {
     return null
@@ -289,16 +296,17 @@ export default {
       return {
         earliest: this.$t('pageTraitDetailsTourNumberEarliest'),
         latest: this.$t('pageTraitDetailsTourNumberLatest'),
+        recording: this.$t('pageClimateDetailsTourNumberRecording'),
         median: this.$t('pageTraitDetailsTourNumberMedianDate'),
         span: this.$t('pageTraitDetailsTourNumberSpan'),
-        observations: this.$t('pageTraitDetailsTourNumberObservations'),
-        missing: this.$t('pageTraitDetailsTourNumberMissing')
+        observations: this.vt('pageTraitDetailsTourNumberObservations'),
+        missing: this.vt('pageTraitDetailsTourNumberMissing')
       }
     },
     tourViews: function () {
       const texts = {
         histogram: this.$t('pageTraitDetailsTourDateHistogram'),
-        timeline: this.$t('pageTraitDetailsTourDateTimeline'),
+        timeline: this.vt('pageTraitDetailsTourDateTimeline'),
         calendar: this.$t('pageTraitDetailsTourDateCalendar')
       }
       return this.views.map(option => ({ key: option.key, title: option.text, text: texts[option.key] }))
@@ -337,7 +345,32 @@ export default {
         key: 'missing',
         value: loaded ? this.missing : null,
         label: this.$t('pageTraitDetailsStatsMissingValues')
+      }].concat(this.recordingNumbers)
+    },
+    // A climate: observations whose date is not their recording date (the median gap in days)
+    recordingNumbers: function () {
+      if (this.loading || !this.recordingGap) {
+        return []
+      }
+      return [{
+        key: 'recording',
+        danger: true,
+        value: this.recordingGap.count,
+        label: this.$t('pageClimateDetailsStatsDiffersFromRecording', { days: formatNumber(this.recordingGap.days) })
       }]
+    },
+    // A climate: the observations whose value (a date) differs from their recording date, and the median of the gaps
+    // (days, either way); null when they all match (or the observations are not loaded)
+    recordingGap: function () {
+      if (!this.isClimate || this.rowsState !== 'loaded') {
+        return null
+      }
+      const gaps = this.rows.filter(row => row.date).map(row => Math.abs(row.day - parseDay(row.date))).filter(gap => !isNaN(gap) && gap > 0)
+      if (gaps.length < 1) {
+        return null
+      }
+      gaps.sort((a, b) => a - b)
+      return { count: gaps.length, days: median(gaps) }
     }
   },
   watch: {
@@ -371,6 +404,9 @@ export default {
         this.loading = false
         if (this.view === 'timeline') {
           this.prepareTimeline()
+        } else if (this.isClimate && this.values.length > 0 && (!this.dayStats || this.dayStats.total <= TIMELINE_CONFIRM)) {
+          // A climate: every observation (its recording date), to compare it with the date recorded as its value
+          this.loadTimeline()
         }
         this.$nextTick(() => this.draw())
       })
@@ -423,8 +459,22 @@ export default {
       }
       this.$nextTick(() => this.draw())
     },
+    // A day (days since 1970) as a date (ISO 8601, see formatting.js): 2026-11-18; without its day (a month): 2026-11; without
+    // its year (the ticks of the weeks): 18 Nov; with its weekday: Wed 2026-11-18; only the weekday: Wed
     formatDay: function (day, options) {
-      return new Date(day * DAY_MS).toLocaleDateString(this.locale, Object.assign({ day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }, options || {}))
+      const o = Object.assign({ day: 'numeric', month: 'short', year: 'numeric' }, options || {})
+      const date = new Date(day * DAY_MS)
+      const iso = date.toISOString().substring(0, 10)
+      const weekday = o.weekday ? date.toLocaleDateString(this.locale, { weekday: o.weekday, timeZone: 'UTC' }) : null
+      let text
+      if (!o.day && !o.month && !o.year) {
+        text = ''
+      } else if (!o.year) {
+        text = o.day ? `${date.getUTCDate()} ${date.toLocaleDateString(this.locale, { month: 'short', timeZone: 'UTC' })}` : date.toLocaleDateString(this.locale, { month: 'short', timeZone: 'UTC' })
+      } else {
+        text = o.day ? iso : iso.substring(0, 7)
+      }
+      return [weekday, text].filter(t => t).join(' ')
     },
     getBarColor: function () {
       const colors = this.storeCustomChartColors
@@ -485,6 +535,8 @@ export default {
         this.bindGermplasmNames(this.timelineGermplasm)
         element.on('plotly_afterplot', () => this.view === 'timeline' && this.bindGermplasmNames(this.timelineGermplasm))
       }
+      // A climate: the flags of the locations where their labels start
+      this.watchLocationFlags()
     },
     // Observations per day (a bar each, clickable), per week or per month; the median as a dotted line
     getHistogram: function (theme) {
@@ -528,7 +580,7 @@ export default {
             zeroline: false,
             showline: true,
             linecolor: theme.grid,
-            tickformat: this.bin === 'month' ? '%b %Y' : '%d %b',
+            tickformat: this.bin === 'month' ? '%Y-%m' : '%Y-%m-%d',
             tickfont: { family: FONT, size: 12, color: theme.muted },
             fixedrange: true
           },
@@ -571,6 +623,8 @@ export default {
     // a diamond (clicked, as its name: the preview of its passport)
     getTimeline: function (theme) {
       const germplasm = this.timelineGermplasm
+      // A climate: the flag of the country of each location beside its name
+      const flags = this.getLocationFlags(germplasm.map(g => g.name))
       const summary = this.timelineSummary
       const ranges = { x: [], y: [] }
       germplasm.forEach((g, i) => {
@@ -669,7 +723,7 @@ export default {
             gridcolor: theme.grid,
             griddash: 'dot',
             zeroline: false,
-            tickformat: this.span > WEEK_BINS_MAX ? '%b %Y' : '%d %b',
+            tickformat: this.span > WEEK_BINS_MAX ? '%Y-%m' : '%Y-%m-%d',
             tickfont: { family: FONT, size: 12, color: theme.muted },
             fixedrange: true
           },
@@ -677,7 +731,7 @@ export default {
             autorange: 'reversed',
             tickmode: 'array',
             tickvals: germplasm.map((g, i) => i),
-            ticktext: germplasm.map(g => this.getLabel(g.name)),
+            ticktext: germplasm.map(g => flags.prefix + this.getLabel(g.name)),
             showgrid: false,
             zeroline: false,
             showline: false,
@@ -686,7 +740,8 @@ export default {
             automargin: true,
             tickfont: { family: FONT, size: 12, color: theme.text },
             fixedrange: true
-          }
+          },
+          images: flags.images
         }
       }
     },

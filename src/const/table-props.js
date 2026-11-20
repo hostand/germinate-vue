@@ -15,6 +15,11 @@ export default {
       type: Boolean,
       default: false
     },
+    // Every tool of the toolbar shown but inactive (help, columns, filter, jump to page, page size): a read-only table
+    toolsLocked: {
+      type: Boolean,
+      default: false
+    },
     // Columns with less than half of their values filled in hidden when the table loads (see BaseTable)
     autoHideColumns: {
       type: Boolean,
@@ -74,6 +79,11 @@ export default {
     },
     // The filter button shown but disabled (the table shows a fixed selection)
     filterLocked: {
+      type: Boolean,
+      default: false
+    },
+    // Every tool of the toolbar shown but inactive (help, columns, filter, jump to page, page size): a read-only table
+    toolsLocked: {
       type: Boolean,
       default: false
     },

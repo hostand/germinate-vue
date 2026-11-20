@@ -4,10 +4,11 @@
               :getData="getDataWithDetails"
               :columns="columns"
               :options="options"
-              :tableActions="userIsDataCurator && allowEditing ? localTableActions : null"
+              :tableActions="allTableActions"
               primary-key="datasetId"
               class="dataset-table"
               ref="datasetTable"
+              :selectInfoShown="selectHint ? selectHighlight : null"
               @data-changed="measureCells"
               @filter-removed="autoDetailsDismissed = true"
               v-on="$listeners">
@@ -68,7 +69,7 @@
         <template v-if="data.item.locations !== undefined && data.item.locations !== null && data.item.locations.length > 0">
           <div :class="['dt-clamp', { expanded: isCellExpanded('locations', data.item), cut: isCellCut('locations', data.item) }]" :ref="`clamp-locations-${data.item.datasetId}`" v-if="data.item.locations.length === 1">
             <span class="dt-clamp-text">
-              <a href="#" class="dt-location" @click.prevent="showDetails('location', data)" :title="data.item.locations[0].locationName" v-if="hasCoordinates(data.item.locations)">
+              <a href="#" class="dt-location" @click.prevent="showDetails('location', data)" :title="data.item.locations[0].locationName" v-if="hasCoordinates(data.item.locations) && !disableLinks">
                 <i :class="`fi fi-${data.item.locations[0].countryCode2.toLowerCase()}`" :title="data.item.locations[0].countryName" v-if="data.item.locations[0].countryCode2" /> {{ data.item.locations[0].locationName }}<template v-if="data.item.locations[0].countryCode3"> ({{ data.item.locations[0].countryCode3 }})</template>
               </a>
               <span class="dt-location" :title="data.item.locations[0].locationName" v-else>
@@ -80,11 +81,11 @@
             </button>
           </div>
           <template v-else>
-            <a href="#" class="bt-chip dt-location-chip" :style="{ '--bt-chip-color': locationChipColor }" @click.prevent="showDetails('location', data)" v-b-tooltip.hover :title="$t('tableTooltipDatasetLocations')" v-if="hasCoordinates(data.item.locations)">
-              <MdiIcon :path="mdiMapMarker" /><span class="bt-chip-count" :style="{ color: locationChipCountColor }">{{ data.item.locations.length }}</span>
+            <a href="#" class="bt-chip dt-location-chip" :style="{ '--bt-chip-color': locationChipColor }" @click.prevent="showDetails('location', data)" v-b-tooltip.hover :title="$t('tableTooltipDatasetLocations')" v-if="hasCoordinates(data.item.locations) && !disableLinks">
+              <MdiIcon :path="mdiMapMarker" /> {{ data.item.locations.length }}
             </a>
             <span class="bt-chip" :style="{ '--bt-chip-color': locationChipColor }" v-else>
-              <MdiIcon :path="mdiMapMarker" /><span class="bt-chip-count" :style="{ color: locationChipCountColor }">{{ data.item.locations.length }}</span>
+              <MdiIcon :path="mdiMapMarker" /> {{ data.item.locations.length }}
             </span>
           </template>
         </template>
@@ -255,6 +256,7 @@ export default {
   name: 'DatasetTable',
   props: {
     ...defaultProps.FULL,
+    ...defaultProps.ACTIONS,
     // Details shown on every row when the data arrives: 'collaborators', 'location', 'attributes', 'institutions' or
     // 'fileresources'
     openDetails: {
@@ -276,6 +278,17 @@ export default {
     disableLinks: {
       type: Boolean,
       default: false
+    },
+    // Several rows selected: the column of the checkboxes without its blue, drawing the eye instead (highlightSelection),
+    // the note on how to select shown only meanwhile
+    selectHint: {
+      type: Boolean,
+      default: false
+    },
+    // Only these columns, in this order (e.g. the datasets of an accession); the table then has a name of its own
+    onlyColumns: {
+      type: Array,
+      default: null
     },
     datasetType: {
       type: String,
@@ -319,7 +332,7 @@ export default {
       mdiTextBoxOutline,
       options: {
         idColumn: 'datasetId',
-        tableName: 'datasets'
+        tableName: this.onlyColumns ? 'datasetsShort' : 'datasets'
       },
       dataset: null,
       license: null,
@@ -348,13 +361,9 @@ export default {
       'storeToken',
       'storeSelectedProjects'
     ]),
-    // The location chips: in the colour of the dataset locations, the count in a contrasting colour
+    // The location chips: in the colour of the dataset locations, the count beside the icon
     locationChipColor: function () {
       return locationTypes.datasets.color() || 'currentColor'
-    },
-    locationChipCountColor: function () {
-      const color = locationTypes.datasets.color()
-      return color ? getHighContrastTextColor(color) : null
     },
     // The options of the dataset of the menu: what can be seen of it (count; disabled when not allowed) and the download.
     // Those with nothing to count only for data curators (who can add to them); the details shown below the row marked.
@@ -420,6 +429,11 @@ export default {
     },
     userIsDataCurator: function () {
       return this.storeToken && userIsAtLeast(this.storeToken.userType, USER_TYPE_DATA_CURATOR)
+    },
+    // The actions given (e.g. Next) and, for data curators, adding a dataset
+    allTableActions: function () {
+      const actions = (this.tableActions || []).concat(this.userIsDataCurator && this.allowEditing ? this.localTableActions : [])
+      return actions.length > 0 ? actions : null
     },
     localTableActions: function () {
       return [{
@@ -556,9 +570,14 @@ export default {
           type: undefined,
           sortable: false,
           // One selected only (new look): no blue column, the row is tinted when selected
-          class: this.selectionMode === 'single' ? 'dt-select-cell' : 'table-primary',
+          class: this.selectionMode === 'single' || this.selectHint ? 'dt-select-cell' : 'table-primary',
           label: ''
         })
+      }
+
+      // Only some columns, in their order
+      if (this.onlyColumns) {
+        return this.onlyColumns.map(key => result.find(c => c.key === key)).filter(c => c)
       }
 
       return result
@@ -668,8 +687,9 @@ export default {
     },
     // The table brought into view, its column of checkboxes highlighted for a moment (e.g. when a dataset has to be
     // selected first)
-    highlightSelection: function () {
-      if (this.$el && this.$el.scrollIntoView) {
+    // The column of the checkboxes drawing the eye for a moment (brought into view first, unless asked not to)
+    highlightSelection: function (scroll = true) {
+      if (scroll && this.$el && this.$el.scrollIntoView) {
         this.$el.scrollIntoView({ behavior: 'smooth', block: 'center' })
       }
       clearTimeout(this.selectHighlightTimer)

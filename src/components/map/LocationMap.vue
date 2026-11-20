@@ -44,8 +44,8 @@
     </l-map>
     <!-- Add color gradient for heatmapping -->
     <ColorGradient v-if="mapType === 'heatmap'" ref="gradient" />
-    <!-- Popup content -->
-    <div v-if="location" ref="popupContent" :class="customLook ? 'lm-popup' : 'p-3'">
+    <!-- Popup content (moved into the popup of a marker; none without popups) -->
+    <div v-if="location && popups" ref="popupContent" :class="customLook ? 'lm-popup' : 'p-3'">
       <dl class="row">
         <dt class="col-4 text-right">{{ $t('tableColumnLocationName') }}</dt>
         <dd class="col-8 location-name">
@@ -175,6 +175,11 @@ export default {
     baseLayer: {
       type: String,
       default: null
+    },
+    // The details popup of a location (its marker clicked); none: the markers only (e.g. the page shows the details)
+    popups: {
+      type: Boolean,
+      default: true
     },
     // Whether the details popup opens by itself when the map shows a single location
     openPopup: {
@@ -400,14 +405,17 @@ export default {
             map.panTo(new L.LatLng(this.location.locationLatitude, this.location.locationLongitude))
           })
 
-          const marker = L.marker([this.location.locationLatitude, this.location.locationLongitude]).bindPopup('')
-          marker.on('click', e => {
-            const popup = e.target.getPopup()
-            // Set the popup content on click
-            this.$nextTick(() => popup.setContent(this.$refs.popupContent))
-          })
+          const marker = L.marker([this.location.locationLatitude, this.location.locationLongitude])
+          if (this.popups) {
+            marker.bindPopup('')
+            marker.on('click', e => {
+              const popup = e.target.getPopup()
+              // Set the popup content on click
+              this.$nextTick(() => popup.setContent(this.$refs.popupContent))
+            })
+          }
           marker.addTo(map)
-          if (this.openPopup) {
+          if (this.popups && this.openPopup) {
             marker.fire('click')
           }
 
@@ -441,12 +449,15 @@ export default {
           }
           const clusterMarker = this.internalLocations.filter(l => l.locationLatitude && l.locationLongitude)
             .map(l => {
-              const marker = L.marker([l.locationLatitude, l.locationLongitude]).bindPopup('')
-              marker.on('click', e => {
-                const popup = e.target.getPopup()
-                this.location = l
-                this.$nextTick(() => popup.setContent(this.$refs.popupContent))
-              })
+              const marker = L.marker([l.locationLatitude, l.locationLongitude])
+              if (this.popups) {
+                marker.bindPopup('')
+                marker.on('click', e => {
+                  const popup = e.target.getPopup()
+                  this.location = l
+                  this.$nextTick(() => popup.setContent(this.$refs.popupContent))
+                })
+              }
               return marker
             })
           this.markerClusterer.addLayers(clusterMarker)
@@ -478,13 +489,16 @@ export default {
         } else {
           this.internalLocations.filter(l => l.locationLatitude && l.locationLongitude)
             .forEach(l => {
-              const marker = L.marker([l.locationLatitude, l.locationLongitude]).bindPopup('')
-              marker.on('click', e => {
-                const popup = e.target.getPopup()
-                this.location = l
-                // Set the popup content on click
-                this.$nextTick(() => popup.setContent(this.$refs.popupContent))
-              })
+              const marker = L.marker([l.locationLatitude, l.locationLongitude])
+              if (this.popups) {
+                marker.bindPopup('')
+                marker.on('click', e => {
+                  const popup = e.target.getPopup()
+                  this.location = l
+                  // Set the popup content on click
+                  this.$nextTick(() => popup.setContent(this.$refs.popupContent))
+                })
+              }
               marker.addTo(map)
               this.markers.push(marker)
             })

@@ -5,7 +5,7 @@
        others); with values mostly unique (free text): no chart, the table. A value clicked: value-clicked. -->
   <!-- Meant to fill the body of a block (no padding of its own around the numbers): the numbers on a strip at the top,
        the options of the chart and its help at the right end of the strip, then the chart under its title -->
-  <div class="tvs" :id="id">
+  <div :class="['tvs', { tds: isClimate }]" :id="id">
     <div class="tvs-numbers">
       <div :class="['tvs-number', { 'is-text': number.text }]" v-for="number in numbers" :key="`tvs-number-${number.key}`" :data-tour-number="number.key">
         <span class="tvs-number-value" :title="number.text ? number.value : null">{{ number.value === null ? '–' : (number.text ? number.value : formatNumber(number.value)) }}</span>
@@ -28,12 +28,12 @@
                v-on:force-redraw="draw">
       <template slot="additionalMenuItems">
         <b-dropdown-item link-class="top-nav-menu-item" :disabled="values.length < 1" @click="downloadPng"><i class="fa-solid fa-image fa-fw" aria-hidden="true" /> {{ $t('buttonDownloadPng') }}</b-dropdown-item>
-        <b-dropdown-item link-class="top-nav-menu-item" :disabled="values.length < 1 || mode === 'unique'" @click="downloadSvg"><i class="fa-solid fa-file-code fa-fw" aria-hidden="true" /> {{ $t('buttonDownloadSvg') }}</b-dropdown-item>
+        <b-dropdown-item link-class="top-nav-menu-item" :disabled="values.length < 1 || (mode === 'unique' && view !== 'time')" @click="downloadSvg"><i class="fa-solid fa-file-code fa-fw" aria-hidden="true" /> {{ $t('buttonDownloadSvg') }}</b-dropdown-item>
         <b-dropdown-item link-class="top-nav-menu-item" :disabled="!sourceFile" @click="downloadData"><i class="fa-solid fa-file-lines fa-fw" aria-hidden="true" /> {{ $t('buttonDownloadFile') }}</b-dropdown-item>
         <!-- Free text shown as a chart all the same: back to the table -->
         <b-dropdown-item link-class="top-nav-menu-item" @click="forceChart = false" v-if="forceChart"><i class="fa-solid fa-table-list fa-fw" aria-hidden="true" /> {{ $t('pageTraitDetailsStatsShowTable') }}</b-dropdown-item>
         <!-- The colours of the charts (the modal of the options of the charts): the first one for the bars -->
-        <b-dropdown-item link-class="top-nav-menu-item" @click="$refs.baseChart.$refs.customChartColorModal.show()"><i class="fa-solid fa-palette fa-fw" aria-hidden="true" /> {{ $t('buttonChangeChartColors') }}</b-dropdown-item>
+        <b-dropdown-item link-class="top-nav-menu-item" @click="$refs.baseChart.showColors()"><i class="fa-solid fa-palette fa-fw" aria-hidden="true" /> {{ $t('buttonChangeChartColors') }}</b-dropdown-item>
       </template>
       <template slot="additionalButtons">
         <b-button v-b-tooltip.hover :title="$t('chartTooltipMatrixTour')" :aria-label="$t('chartTooltipMatrixTour')" :disabled="!hasChart" @click="$refs.tour.start()">
@@ -46,14 +46,30 @@
           <span class="tvs-type" :style="{ '--tvs-type-color': typeColor }" v-if="dataType"><MdiIcon :path="dataType.path" /></span>
           <span class="tvs-name">{{ traitName }}</span>
         </div>
+        <!-- A climate: its values, or its values over the recording dates -->
+        <div class="tds-views" role="tablist" v-if="isClimate && !loading && values.length > 0">
+          <button type="button" :class="['tds-view', { active: view === option.key }]" :data-tour-view="option.key" role="tab" :aria-selected="view === option.key ? 'true' : 'false'" v-for="option in views" :key="`tvs-view-${option.key}`" @click="setView(option.key)">
+            <i :class="['fa-solid', option.icon]" aria-hidden="true" /> {{ option.text }}
+          </button>
+        </div>
         <div class="tvs-loading" v-if="loading"><b-spinner small type="grow" /></div>
         <p class="tvs-empty" v-else-if="values.length < 1">{{ $t('headingNoData') }}</p>
-        <div class="tvs-chart" ref="chart" v-show="!loading && values.length > 0 && mode !== 'unique'" />
+        <!-- Over time: every observation needed, loaded when opened (very many: once confirmed) -->
+        <template v-else-if="view === 'time' && rowsState !== 'loaded'">
+          <div class="tvs-loading" v-if="rowsState === 'loading'"><b-spinner small type="grow" /><span class="tds-progress" v-if="rowsProgress && rowsProgress.total > rowsProgress.loaded">{{ $t('pageTraitDetailsStatsLoadingProgress', { loaded: formatNumber(rowsProgress.loaded), total: formatNumber(rowsProgress.total) }) }}</span></div>
+          <div class="tds-single" v-else-if="rowsState === 'confirm'">
+            <p><i class="fa-solid fa-circle-info" aria-hidden="true" /> {{ vt('pageTraitDetailsStatsObservationsLarge', { count: formatNumber(total) }) }}</p>
+            <button type="button" class="tvs-values-link" @click="loadObservations"><i class="fa-solid fa-download" aria-hidden="true" /> {{ $t('pageTraitDetailsStatsLoadObservations') }}</button>
+          </div>
+        </template>
+        <p class="tds-single" v-else-if="view === 'time' && !timeShown"><i class="fa-solid fa-circle-info" aria-hidden="true" /> {{ $t('pageClimateDetailsStatsNoDates') }}</p>
+        <div class="tvs-chart" ref="chart" v-show="view === 'time' ? timeShown : (!loading && values.length > 0 && mode !== 'unique')" />
+        <p class="tds-note" v-if="timeShown && timeUnit"><i class="fa-solid fa-circle-info" aria-hidden="true" /> {{ timeUnit === 'year' ? $t('pageClimateDetailsStatsTimeByYearCategory') : $t('pageClimateDetailsStatsTimeByMonthCategory') }}</p>
       </div>
     </BaseChart>
 
     <!-- All the values (many of them): a link showing / hiding their table, or the table itself (free text) -->
-    <div :class="['tvs-values', { 'is-unique': mode === 'unique' }]" v-if="!loading && values.length > 0 && (mode !== 'all' || forceChart)">
+    <div :class="['tvs-values', { 'is-unique': mode === 'unique' }]" v-if="!loading && values.length > 0 && (mode !== 'all' || forceChart) && view !== 'time'">
       <div class="tvs-values-link-row" v-if="mode === 'top'">
         <button type="button" :class="['tvs-values-link', { open: showAllValues }]" @click="toggleAllValues" :aria-expanded="showAllValues ? 'true' : 'false'">
           <i class="fa-solid fa-table-list" aria-hidden="true" />
@@ -65,7 +81,7 @@
         <!-- The title; free text: on its right, on one line, why there is no chart -->
         <div class="tvs-values-head">
           <h4 class="tvs-values-title">{{ $t('pageTraitDetailsStatsAllValuesTitle') }}</h4>
-          <p class="tvs-note" :title="$t('pageTraitDetailsStatsMostlyUnique')" v-if="mode === 'unique'"><i class="fa-solid fa-circle-info" aria-hidden="true" /> {{ $t('pageTraitDetailsStatsMostlyUnique') }}</p>
+          <p class="tvs-note" :title="vt('pageTraitDetailsStatsMostlyUnique')" v-if="mode === 'unique'"><i class="fa-solid fa-circle-info" aria-hidden="true" /> {{ vt('pageTraitDetailsStatsMostlyUnique') }}</p>
         </div>
         <!-- Free text: at the bottom left of the table, the chart all the same (a bar per value) -->
         <TraitValueTable :values="values" :barColor="barColor" :tableActions="mode === 'unique' ? valueTableActions : null" @value-clicked="$emit('value-clicked', $event)" />
@@ -90,22 +106,30 @@ import BaseChart from '@/components/charts/BaseChart'
 import Tour from '@/components/util/Tour'
 import TraitValueTable from '@/components/tables/TraitValueTable'
 import { uuidv4, downloadBlob } from '@/mixins/util'
-import { apiPostTraitStatsCategorical } from '@/mixins/api/dataset'
+import { apiPostTraitStatsCategorical, apiPostClimateStatsCategorical } from '@/mixins/api/dataset'
 import { apiPostTrialsDataTable } from '@/mixins/api/trait'
+import { apiPostClimateDataTable } from '@/mixins/api/climate'
+import { CLIMATE_KEYS, VARIABLES } from '@/mixins/variable-stats'
+import traitStats from '@/mixins/trait-stats'
+import { getCategoryTimeChart, getTimeUnit, hasDates } from '@/mixins/climate-time'
+import { getColors } from '@/mixins/colors'
+import { withoutFlags } from '@/mixins/location-flags'
 import { dataTypes } from '@/mixins/types'
-import { formatNumber, getDateTimeString } from '@/mixins/formatting'
+import { formatNumber, formatPercent, getDateTimeString } from '@/mixins/formatting'
 import '@/assets/fonts/inter.css'
 
 const d3Dsv = require('d3-dsv')
 const Plotly = require('plotly.js/lib/core')
 
-// Only the bar chart is used here
+// The bar chart (and the dots of a climate over time)
 Plotly.register([
-  require('plotly.js/lib/bar')
+  require('plotly.js/lib/bar'),
+  require('plotly.js/lib/scatter')
 ])
+// Over time: the most frequent values in a colour each, the others grey; every observation above this many: confirmed
+const TIME_TOP_VALUES = 10
+const ROWS_CONFIRM = 50000
 
-// The value column of the statistics file (the others: one count per dataset)
-const VALUE_COLUMN = 'phenotype_value'
 // Labels longer than this are cut with "…" (the whole value in the hover)
 const LABEL_LENGTH = 18
 // Height of a bar and its gap, and of the axis below the bars
@@ -140,6 +164,8 @@ const toRgba = value => value.replace(/color\(srgb\s+([\d.e-]+)\s+([\d.e-]+)\s+(
 })
 
 export default {
+  // The observations of the variable (a climate over time)
+  mixins: [traitStats],
   components: {
     BaseChart,
     MdiIcon,
@@ -152,9 +178,16 @@ export default {
       type: String,
       default: '.td-card'
     },
+    // The id of the variable: a trait, or a climate (variable = climate)
     traitId: {
       type: Number,
       required: true
+    },
+    // What the variable is: a trait (observations of germplasm, rep, block) or a climate (observations of a location at a
+    // recording date: the location in place of the germplasm, no rep nor block)
+    variable: {
+      type: String,
+      default: 'trait'
     },
     traitName: {
       type: String,
@@ -183,7 +216,12 @@ export default {
       // Many values: their table shown (from the link below the chart, or the bar of the others)
       showAllValues: false,
       // Free text: the chart shown all the same (a bar per value, no grouping)
-      forceChart: false
+      forceChart: false,
+      // A climate: its values ('values') or its values over the recording dates ('time', every observation loaded:
+      // none, confirm, loading, loaded)
+      view: 'values',
+      rows: [],
+      rowsState: 'none'
     }
   },
   computed: {
@@ -198,6 +236,12 @@ export default {
     dataType: function () {
       return dataTypes[this.traitDataType] || null
     },
+    isClimate: function () {
+      return this.variable === 'climate'
+    },
+    variableConfig: function () {
+      return VARIABLES[this.variable] || VARIABLES.trait
+    },
     // At the bottom left of the table of the values (free text): the chart all the same
     valueTableActions: function () {
       return [{
@@ -211,7 +255,25 @@ export default {
     },
     // A chart drawn (the options of the chart and its help only then)
     hasChart: function () {
-      return !this.loading && this.values.length > 0 && this.mode !== 'unique'
+      return !this.loading && this.values.length > 0 && (this.mode !== 'unique' || this.view === 'time')
+    },
+    // A climate: its views
+    views: function () {
+      return [{
+        key: 'values',
+        icon: 'fa-chart-bar',
+        text: this.$t('pageTraitDetailsStatsViewDistribution')
+      }, {
+        key: 'time',
+        icon: 'fa-timeline',
+        text: this.$t('pageClimateDetailsStatsViewOverTime')
+      }]
+    },
+    timeShown: function () {
+      return this.view === 'time' && this.rowsState === 'loaded' && hasDates(this.rows)
+    },
+    timeUnit: function () {
+      return this.timeShown ? getTimeUnit(this.rows) : null
     },
     total: function () {
       return this.values.reduce((sum, v) => sum + v.count, 0)
@@ -236,8 +298,11 @@ export default {
         label: this.$t('pageTraitDetailsStatsOther', { count: formatNumber(others.length) })
       }])
     },
-    // As drawn: a row per bar and the axis
+    // As drawn: a row per bar and the axis (over time: a lane per location)
     chartHeight: function () {
+      if (this.view === 'time') {
+        return this.timeShown ? this.getTimeChart(this.getTheme()).layout.height : 300
+      }
       return Math.max(1, this.bars.length) * ROW_HEIGHT + AXIS_HEIGHT
     },
     downloadName: function () {
@@ -253,7 +318,7 @@ export default {
       const target = selector => () => `#${this.id} ${selector}`
       const steps = [{
         title: () => this.$t('pageTraitDetailsTourNumbersTitle'),
-        text: () => this.$t('pageTraitDetailsTourNumbersText'),
+        text: () => this.vt('pageTraitDetailsTourNumbersText'),
         target: target('.tvs-numbers'),
         position: 'bottom'
       }]
@@ -297,18 +362,30 @@ export default {
     tourNumberTexts: function () {
       return {
         unique: this.$t('pageTraitDetailsTourNumberUnique'),
-        observations: this.$t('pageTraitDetailsTourNumberObservations'),
-        missing: this.$t('pageTraitDetailsTourNumberMissing'),
+        observations: this.vt('pageTraitDetailsTourNumberObservations'),
+        missing: this.vt('pageTraitDetailsTourNumberMissing'),
         top: this.$t('pageTraitDetailsTourNumberTop'),
         singletons: this.$t('pageTraitDetailsTourNumberSingletons')
       }
     },
-    // The help: each view ({ key, title, text }, its button: data-tour-view = key); text: no views, the chart
+    // The help: each view ({ key, title, text }, its button: data-tour-view = key); text: no views (a climate: its
+    // values, over time), the chart
     tourViews: function () {
-      return []
+      if (!this.isClimate) {
+        return []
+      }
+      const texts = {
+        values: this.$t('pageTraitDetailsTourTextChart'),
+        time: this.$t('pageClimateDetailsTourTextTime')
+      }
+      return this.views.map(option => ({ key: option.key, title: option.text, text: texts[option.key] }))
     },
     // The help: other steps after the views ({ title, text, selector })
     tourExtraSteps: function () {
+      // (a climate: the chart explained by its views)
+      if (this.isClimate) {
+        return []
+      }
       return [{
         title: this.$t('pageTraitDetailsTourChartTitle'),
         text: this.$t('pageTraitDetailsTourTextChart'),
@@ -334,7 +411,7 @@ export default {
         key: 'top',
         text: true,
         value: loaded && this.values.length > 0 ? `${this.values[0].value}` : null,
-        label: this.$t('pageTraitDetailsStatsTopValue', { percent: loaded && this.total > 0 ? `${(Math.round(this.values[0].count / this.total * 1000) / 10).toLocaleString()} %` : '–' })
+        label: this.$t('pageTraitDetailsStatsTopValue', { percent: loaded && this.total > 0 ? formatPercent(this.values[0].count / this.total) : '–' })
       }, {
         key: 'singletons',
         value: loaded ? this.values.filter(v => v.count === 1).length : null,
@@ -356,29 +433,143 @@ export default {
   },
   methods: {
     formatNumber,
+    // A text of the statistics: its climate version for a climate (CLIMATE_KEYS)
+    vt: function (key, params) {
+      return this.$t(this.isClimate && CLIMATE_KEYS[key] ? CLIMATE_KEYS[key] : key, params)
+    },
+    // The observations of the variable (the data table of the trials or of the climates)
+    fetchDataTable: function (request, onSuccess, onError) {
+      return (this.isClimate ? apiPostClimateDataTable : apiPostTrialsDataTable)(request, onSuccess, onError)
+    },
+    // The filter of the observations of the variable in the dataset
+    getVariableFilter: function () {
+      return [{
+        column: this.variableConfig.idColumn,
+        comparator: 'equals',
+        operator: 'and',
+        values: [this.traitId]
+      }, {
+        column: 'datasetId',
+        comparator: 'equals',
+        operator: 'and',
+        values: [this.datasetId]
+      }]
+    },
     update: function () {
       this.loading = true
       this.showAllValues = false
       this.forceChart = false
+      this.rows = []
+      this.rowsState = 'none'
       Promise.all([this.loadValues(), this.loadMissing()]).then(([values, missing]) => {
         this.values = values
         this.missing = missing
       }).finally(() => {
         this.loading = false
+        if (this.view === 'time') {
+          this.prepareRows()
+        }
         this.$nextTick(() => this.draw())
+      })
+    },
+    // A climate: its values or its values over time (every observation, loaded once; very many: once confirmed)
+    setView: function (view) {
+      this.view = view
+      if (this.$refs.chart) {
+        Plotly.purge(this.$refs.chart)
+      }
+      if (view === 'time') {
+        this.prepareRows()
+      }
+      this.$nextTick(() => this.draw())
+    },
+    prepareRows: function () {
+      if (this.rowsState !== 'none' || this.values.length < 1) {
+        return
+      }
+      if (this.total > ROWS_CONFIRM) {
+        this.rowsState = 'confirm'
+      } else {
+        this.loadObservations()
+      }
+    },
+    loadObservations: function () {
+      this.rowsState = 'loading'
+      const datasetId = this.datasetId
+      const traitId = this.traitId
+      this.loadTrialRows(value => value).then(rows => {
+        if (datasetId !== this.datasetId || traitId !== this.traitId) {
+          return
+        }
+        this.rows = Object.freeze(rows)
+        this.rowsState = 'loaded'
+        this.$nextTick(() => this.draw())
+      })
+    },
+    // Over time: a lane per location, a dot per observation at its recording date in the colour of its value (the most
+    // frequent values; the others grey)
+    getTimeChart: function (theme) {
+      const colors = getColors() || []
+      const top = this.values.slice(0, TIME_TOP_VALUES).map(v => `${v.value}`)
+      const otherLabel = this.$t('pageTraitDetailsStatsOther', { count: formatNumber(Math.max(0, this.values.length - TIME_TOP_VALUES)) })
+      return getCategoryTimeChart(this.rows, {
+        theme,
+        locale: (this.$store.getters.storeLocale || 'en_GB').replace('_', '-'),
+        t: (key, params) => this.$t(key, params),
+        getFlags: labels => this.getLocationFlags(labels),
+        valueOf: row => {
+          const index = top.indexOf(row.value)
+          return index !== -1
+            ? { key: row.value, label: this.getLabel(row.value), color: colors.length > 0 ? colors[index % colors.length] : this.barColor, order: index }
+            : { key: OTHER_VALUE, label: otherLabel, color: this.storeDarkMode ? OTHER_COLOR_DARK : OTHER_COLOR, order: TIME_TOP_VALUES }
+        }
+      })
+    },
+    drawTime: function () {
+      const element = this.$refs.chart
+      if (!this.timeShown) {
+        Plotly.purge(element)
+        this.figure = null
+        return
+      }
+      const theme = this.getTheme()
+      const figure = this.getTimeChart(theme)
+      const layout = Object.assign({
+        paper_bgcolor: 'rgba(0, 0, 0, 0)',
+        plot_bgcolor: 'rgba(0, 0, 0, 0)',
+        font: { family: FONT, size: 13, color: theme.text },
+        dragmode: false,
+        hovermode: 'closest'
+      }, figure.layout)
+      figure.data.forEach(trace => { trace.hoverlabel = theme.hoverlabel })
+      this.figure = { data: figure.data, layout }
+      Plotly.react(element, figure.data, layout, { displayModeBar: false, responsive: true })
+      // The flags of the locations where their labels start
+      element.removeAllListeners && element.removeAllListeners('plotly_afterplot')
+      this.watchLocationFlags()
+      // A dot clicked: the observations of its value (the others: none)
+      element.removeAllListeners && element.removeAllListeners('plotly_click')
+      element.on('plotly_click', event => {
+        const point = event && event.points && event.points.length > 0 ? event.points[0] : null
+        const custom = point ? point.customdata : null
+        if (custom && custom.value !== undefined && custom.value !== OTHER_VALUE) {
+          this.$emit('value-clicked', custom.value)
+        }
       })
     },
     // The count of each value in the dataset (blank values: missing, not a value)
     loadValues: function () {
       return new Promise(resolve => {
-        apiPostTraitStatsCategorical({ datasetIds: [this.datasetId], xIds: [this.traitId] }, result => {
+        const valueColumn = this.variableConfig.valueColumn
+        const load = this.isClimate ? apiPostClimateStatsCategorical : apiPostTraitStatsCategorical
+        load({ datasetIds: [this.datasetId], xIds: [this.traitId] }, result => {
           this.sourceFile = result || null
           const read = result && result.text ? result.text() : Promise.resolve('')
           read.then(text => {
             const rows = text ? d3Dsv.tsvParse(text) : []
-            const countColumns = rows.columns ? rows.columns.filter(c => c !== VALUE_COLUMN) : []
+            const countColumns = rows.columns ? rows.columns.filter(c => c !== valueColumn) : []
             const values = rows.map(row => ({
-              value: row[VALUE_COLUMN],
+              value: row[valueColumn],
               count: countColumns.reduce((sum, c) => sum + (+row[c] || 0), 0)
             })).filter(v => v.value !== undefined && v.value !== null && `${v.value}`.trim() !== '' && v.count > 0)
             values.sort((a, b) => b.count - a.count || `${a.value}`.localeCompare(`${b.value}`))
@@ -396,25 +587,15 @@ export default {
     // Observations of the trait in the dataset without a value
     loadMissing: function () {
       return new Promise(resolve => {
-        apiPostTrialsDataTable({
+        this.fetchDataTable({
           page: 1,
           limit: 1,
-          filter: [{
-            column: 'traitId',
-            comparator: 'equals',
-            operator: 'and',
-            values: [this.traitId]
-          }, {
-            column: 'datasetId',
-            comparator: 'equals',
-            operator: 'and',
-            values: [this.datasetId]
-          }, {
-            column: 'traitValue',
+          filter: this.getVariableFilter().concat([{
+            column: this.variableConfig.dataValueColumn,
             comparator: 'isNull',
             operator: 'and',
             values: []
-          }]
+          }])
         }, result => resolve(result && result.count !== undefined ? result.count : null), {
           codes: [],
           callback: () => resolve(null)
@@ -424,6 +605,10 @@ export default {
     draw: function () {
       const element = this.$refs.chart
       if (!element) {
+        return
+      }
+      if (this.view === 'time') {
+        this.drawTime()
         return
       }
       if (this.values.length < 1 || this.mode === 'unique') {
@@ -539,7 +724,12 @@ export default {
     getChartImage: function (format, withTitle) {
       const element = this.$refs.chart
       const width = Math.round(element.getBoundingClientRect().width) || 1280
-      const layout = Object.assign({}, this.figure.layout)
+      // SVG: the locations of a climate without their flags (only their name and ISO 3 code); a legend kept out of the
+      // chart on the page (the locations over time) in the chart
+      const layout = Object.assign({}, format === 'svg' ? withoutFlags(this.figure.layout) : this.figure.layout)
+      if (format === 'svg' && layout.meta && layout.meta.exportLegend) {
+        layout.showlegend = true
+      }
       let height = this.chartHeight
       if (withTitle) {
         height += 50
@@ -637,6 +827,13 @@ export default {
     },
     getLabel: function (value) {
       const label = `${value}`
+      const country = this.isClimate ? /^(.*) (\([A-Z]{3}\))$/.exec(label) : null
+      if (country && country[1].length > LABEL_LENGTH) {
+        return `${country[1].substring(0, LABEL_LENGTH).trim()}… ${country[2]}`
+      }
+      if (country) {
+        return label
+      }
       return label.length > LABEL_LENGTH ? `${label.substring(0, LABEL_LENGTH).trim()}…` : label
     }
   },
@@ -653,211 +850,7 @@ export default {
 
 <!-- The look of the help (the tour of the tables) -->
 <style src="@/assets/table-modern.css"></style>
-<style scoped>
-.tvs {
-  position: relative;
-  font-family: 'Inter', -apple-system, 'Segoe UI', Roboto, sans-serif;
-  color: var(--cp-text);
-}
-/* The numbers: a strip at the top, a cell each (the value above its label) with a line between them, a line below */
-.tvs-numbers {
-  display: flex;
-  flex-wrap: wrap;
-  min-height: 90px;
-  padding-right: 6.5rem;
-  border-bottom: 1px solid var(--cp-border);
-  /* The font of the titles of the blocks (custom pages), not that of the chart */
-  font-family: 'DM Sans', -apple-system, 'Segoe UI', Roboto, sans-serif;
-}
-.tvs-number {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 0.45rem;
-  padding: 0.9rem 1.5rem;
-  border-right: 1px solid var(--cp-border);
-}
-.tvs-number:last-child {
-  border-right: none;
-}
-.tvs-number-value {
-  font-size: 1.25rem;
-  font-weight: 600;
-  line-height: 1.2;
-}
-.tvs-number-label {
-  color: var(--cp-muted);
-  font-size: 0.92rem;
-}
-/* The options of the chart and its help: icons at the right end of the strip of the numbers */
-.tvs-base >>> .text-right {
-  position: absolute;
-  top: 0;
-  right: 1rem;
-  display: flex;
-  align-items: center;
-  height: 90px;
-}
-.tvs-base >>> .text-right > .btn-group {
-  gap: 0.35rem;
-}
-.tvs-base >>> .text-right .btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  padding: 0;
-  border: none !important;
-  border-radius: 8px !important;
-  background: transparent;
-  color: var(--cp-text-subtle);
-  font-size: 1.05rem;
-  box-shadow: none !important;
-}
-.tvs-base >>> .text-right .btn:hover,
-.tvs-base >>> .text-right .btn:focus,
-.tvs-base >>> .text-right .show > .btn {
-  background: var(--cp-neutral-bg);
-  color: var(--cp-text);
-}
-/* Without a chart (free text): the options and the help disabled */
-.tvs-base >>> .text-right .btn:disabled,
-.tvs-base >>> .text-right .btn.disabled {
-  background: transparent;
-  color: var(--cp-muted);
-  opacity: 0.45;
-  cursor: default;
-}
-/* The chart under its title (the icon of the data type and the name of the trait, centred) */
-.tvs-chart-wrap {
-  padding: 1.5rem 1.25rem 1rem;
-}
-.tvs-head {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  margin-bottom: 0.75rem;
-}
-.tvs-type {
-  display: inline-flex;
-  color: var(--tvs-type-color);
-}
-.tvs-type >>> svg {
-  width: 1.55rem;
-  height: 1.55rem;
-  fill: var(--tvs-type-color);
-}
-.tvs-name {
-  font-family: 'DM Sans', -apple-system, 'Segoe UI', Roboto, sans-serif;
-  font-size: 1.3rem;
-  font-weight: 600;
-}
-/* The most frequent value: text, cut with "…" */
-.tvs-number.is-text {
-  max-width: 18rem;
-}
-.tvs-number.is-text .tvs-number-value {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-/* Free text: why there is no chart, on one line on the right of the title of the table */
-.tvs-values-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 0.75rem;
-}
-.tvs-values-head .tvs-values-title {
-  flex-shrink: 0;
-  margin-bottom: 0;
-}
-.tvs-note {
-  min-width: 0;
-  margin: 0;
-  overflow: hidden;
-  color: var(--cp-muted);
-  font-size: 0.85rem;
-  text-align: right;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.tvs-note .fa-solid {
-  margin-right: 0.35rem;
-  color: var(--cp-green);
-}
-/* All the values: the link below the chart, the table */
-.tvs-values {
-  padding: 0 1.25rem 1.25rem;
-}
-.tvs-values-link-row {
-  display: flex;
-  justify-content: center;
-}
-.tvs-values-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.45rem 0.9rem;
-  border: 1px solid var(--cp-border);
-  border-radius: 10px;
-  background: var(--cp-surface);
-  color: var(--cp-text-subtle);
-  font-family: 'DM Sans', -apple-system, 'Segoe UI', Roboto, sans-serif;
-  font-size: 0.88rem;
-  font-weight: 500;
-  cursor: pointer;
-}
-.tvs-values-link:hover,
-.tvs-values-link:focus-visible {
-  border-color: var(--cp-muted);
-  background: var(--cp-surface-hover);
-  color: var(--cp-text);
-}
-.tvs-values-link > .fa-table-list,
-.tvs-values-link > .fa-chart-bar {
-  color: var(--cp-green);
-}
-/* Free text: the table right below the strip of the numbers and the title of the trait */
-.tvs-values.is-unique .tvs-values-table {
-  margin-top: 0.25rem;
-}
-.tvs-values-chevron {
-  font-size: 0.75rem;
-  transition: transform 0.2s ease;
-}
-.tvs-values-link.open .tvs-values-chevron {
-  transform: rotate(180deg);
-}
-.tvs-values-table {
-  margin-top: 1.25rem;
-}
-.tvs-values-title {
-  margin: 0 0 0.75rem;
-  font-family: 'DM Sans', -apple-system, 'Segoe UI', Roboto, sans-serif;
-  font-size: 1rem;
-  font-weight: 600;
-}
-.tvs-loading,
-.tvs-empty {
-  padding: 2rem 0;
-  color: var(--cp-muted);
-  text-align: center;
-}
-.tvs-empty {
-  margin: 0;
-}
-/* The bars can be clicked */
-.tvs-chart >>> .plotly .cursor-crosshair,
-.tvs-chart >>> .plotly .bars .point {
-  cursor: pointer;
-}
-@media (max-width: 575px) {
-  .tvs-number {
-    padding: 0.75rem 1rem;
-  }
-}
-</style>
+<!-- A climate: the views, the notes (as the other statistics) -->
+<style src="@/assets/trait-stats.css"></style>
+<!-- The look of the statistics (shared with the comparisons of the trials export) -->
+<style scoped src="@/assets/variable-stats.css"></style>

@@ -1,27 +1,30 @@
 <template>
-  <div>
-    <h1>{{ $t('pageDataResourcesTitle') }} <b-button size="sm" v-if="storeToken && userIsAtLeast(storeToken.userType, USER_TYPE_DATA_CURATOR)" @click="onShowAddModal"><MdiIcon :path="mdiPlus" /></b-button></h1>
-    <hr />
-    <p>{{ $t('pageDataResourcesText') }}</p>
+  <!-- Data resources in the look of the custom pages: title and the table; data curators upload from the
+       footer of the table -->
+  <div class="custom-page data-resources-page">
+    <header class="cp-page-header">
+      <h1 class="cp-page-title">{{ $t('pageDataResourcesTitle') }}</h1>
+    </header>
 
-    <FileresourceTable :getData="getFileResourcesTable" ref="dataresourceTable" />
+    <div class="dr-table">
+      <FileresourceTable :getData="getFileResourcesTable" :tableActions="tableActions" ref="dataresourceTable" />
+    </div>
 
     <!-- Modal to allow adding new file resources -->
-    <FileResourceModal ref="fileResourceModal" v-on:resource-added="update" v-if="storeToken && userIsAtLeast(storeToken.userType, USER_TYPE_DATA_CURATOR)" />
+    <FileResourceModal ref="fileResourceModal" v-on:resource-added="update" v-if="isDataCurator" />
   </div>
 </template>
 
 <script>
 import { mapGetters } from 'vuex'
 
-import MdiIcon from '@/components/icons/MdiIcon'
 import FileResourceModal from '@/components/modals/FileResourceModal'
 import FileresourceTable from '@/components/tables/FileresourceTable'
 
 import { userIsAtLeast, USER_TYPE_DATA_CURATOR, USER_TYPE_ADMINISTRATOR } from '@/mixins/api/auth'
-import { apiPostFileResourceTable, apiPostFileresourceDatasetTable, apiGetFileResourceTypes } from '@/mixins/api/dataset'
+import { apiPostFileResourceTable, apiGetFileResourceTypes } from '@/mixins/api/dataset'
 
-import { mdiPlus } from '@mdi/js'
+import { mdiPlusBox } from '@mdi/js'
 
 // Data resources of this type are only listed for administrators
 const ADMIN_ONLY_TYPE = 'Video'
@@ -31,13 +34,10 @@ const emitter = require('tiny-emitter/instance')
 export default {
   components: {
     FileResourceModal,
-    FileresourceTable,
-    MdiIcon
+    FileresourceTable
   },
   data: function () {
     return {
-      mdiPlus,
-      USER_TYPE_DATA_CURATOR,
       // Names of the resource types everyone can see, loaded once when needed
       visibleTypeNames: null
     }
@@ -48,6 +48,23 @@ export default {
     ]),
     isAdmin: function () {
       return !!this.storeToken && userIsAtLeast(this.storeToken.userType, USER_TYPE_ADMINISTRATOR)
+    },
+    isDataCurator: function () {
+      return !!this.storeToken && userIsAtLeast(this.storeToken.userType, USER_TYPE_DATA_CURATOR)
+    },
+    // Data curators: the upload, in the footer of the table (as the new dataset on the datasets page)
+    tableActions: function () {
+      if (!this.isDataCurator) {
+        return null
+      }
+      return [{
+        id: 'upload',
+        text: this.$t('modalTitleFileResource'),
+        variant: null,
+        disabled: () => false,
+        path: mdiPlusBox,
+        callback: () => this.$refs.fileResourceModal.show()
+      }]
     }
   },
   watch: {
@@ -57,13 +74,9 @@ export default {
     }
   },
   methods: {
-    userIsAtLeast,
     update: function () {
       this.$refs.dataresourceTable.refresh()
       emitter.emit('update-sidebar-menu')
-    },
-    onShowAddModal: function () {
-      this.$refs.fileResourceModal.show()
     },
     getVisibleTypeNames: function () {
       if (this.visibleTypeNames) {
@@ -95,14 +108,17 @@ export default {
 
         return apiPostFileResourceTable(data, callback)
       })
-    },
-    getDatasetTable: function (data, callback) {
-      return apiPostFileresourceDatasetTable(this.fileresource.fileresourceId, data, callback)
     }
   }
 }
 </script>
 
-<style>
-
+<style src="@/assets/custom-page.css"></style>
+<style scoped>
+.data-resources-page {
+  padding: 0.5rem 0 3rem;
+}
+.dr-table {
+  margin-top: 2rem;
+}
 </style>

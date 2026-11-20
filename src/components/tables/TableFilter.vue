@@ -3,11 +3,12 @@
     <div>
       <!-- New look of the tables: help | columns, filter and clear filter as icons -->
       <div class="bt-tools" v-if="modernLook">
-        <button type="button" class="bt-tool" @click="$emit('help-clicked')" v-b-tooltip.hover :title="$t('tooltipTableHelp')" :aria-label="$t('tooltipTableHelp')">
+        <button type="button" class="bt-tool" :disabled="toolsLocked" @click="$emit('help-clicked')" v-b-tooltip.hover :title="$t('tooltipTableHelp')" :aria-label="$t('tooltipTableHelp')">
           <i class="fa-solid fa-circle-question" aria-hidden="true" />
         </button>
         <span class="bt-tools-separator" aria-hidden="true" />
         <b-dropdown left
+                    :disabled="toolsLocked"
                     no-caret
                     variant="link"
                     toggle-class="bt-select"
@@ -31,7 +32,7 @@
         </b-dropdown>
         <button type="button"
                 :class="['bt-tool', { 'is-active': userFilterCount > 0 }]"
-                :disabled="filterLocked"
+                :disabled="filterLocked || toolsLocked"
                 v-b-modal="'table-filter-modal-' + id"
                 @click="$emit('filter-opened')"
                 id="filter-toggle"
@@ -190,6 +191,11 @@
                     <b-form-select :options="getDataTypeOptions()" v-model="f.values[0]" v-if="comparators[f.comparator].values > 0" />
                     <b-form-select disabled v-else />
                   </template>
+                  <!-- Climate type (virtual column of the climates table, see climate-types.js) -->
+                  <template v-else-if="isType(f, 'climateType')">
+                    <b-form-select :options="getClimateTypeOptions()" v-model="f.values[0]" v-if="comparators[f.comparator].values > 0" />
+                    <b-form-select disabled v-else />
+                  </template>
                   <!-- Group type columns -->
                   <template v-else-if="isType(f, 'groupType')">
                     <b-form-select :options="getGroupTypeOptions()" v-model="f.values[0]" v-if="comparators[f.comparator].values > 0" />
@@ -225,6 +231,7 @@ import { mapGetters } from 'vuex'
 
 import { operators, comparators } from '@/mixins/search'
 import { CONSERVATION_OPTIONS } from '@/mixins/conservation'
+import { CLIMATE_TYPES } from '@/mixins/climate-types'
 import { dataTypes, entityTypes, groupTypes, locationTypes } from '@/mixins/types'
 import { uuidv4, objectArraysAreSame } from '@/mixins/util'
 
@@ -245,6 +252,11 @@ export default {
       default: false
     },
     // The filter button shown but disabled
+    // Every tool shown but inactive (a read-only table, e.g. a summary)
+    toolsLocked: {
+      type: Boolean,
+      default: false
+    },
     filterLocked: {
       type: Boolean,
       default: false
@@ -289,6 +301,7 @@ export default {
       validComparatorsForType: {
         Boolean: ['equals', 'isNull', 'isNotNull'],
         conservation: ['equals'],
+        climateType: ['equals'],
         dataType: ['equals', 'isNull', 'isNotNull'],
         locationType: ['equals', 'isNull', 'isNotNull'],
         entityType: ['equals', 'isNull', 'isNotNull'],
@@ -417,6 +430,10 @@ export default {
           text: groupTypes[l].text()
         }
       })
+    },
+    // The climate types (see climate-types.js)
+    getClimateTypeOptions: function () {
+      return CLIMATE_TYPES.map(t => ({ value: t.key, text: this.$t(t.text) }))
     },
     getDataTypeOptions: function () {
       return Object.keys(dataTypes).map(l => {

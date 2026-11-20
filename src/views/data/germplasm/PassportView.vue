@@ -2501,8 +2501,8 @@ export default {
             this.loadMcpd()
           }
           emitter.emit('toast', {
-            message: 'The new metadata were added to the germplasm.',
-            title: 'Changes saved',
+            message: this.$t('toastMetadataAdded'),
+            title: this.$t('toastTitleChangesSaved'),
             variant: 'success',
             autoHideDelay: 5000,
             appendToast: true
@@ -2510,8 +2510,8 @@ export default {
         })
         .catch(error => {
           emitter.emit('toast', {
-            message: `The new metadata could not be saved. ${error.message}`,
-            title: 'Changes not saved',
+            message: this.$t('toastMetadataNotAdded', { error: error.message }),
+            title: this.$t('toastTitleChangesNotSaved'),
             variant: 'danger',
             noAutoHide: true,
             appendToast: true
@@ -2591,8 +2591,8 @@ export default {
             this.loadMcpd()
           }
           emitter.emit('toast', {
-            message: 'The changes to the metadata were saved.',
-            title: 'Changes saved',
+            message: this.$t('toastMetadataSaved'),
+            title: this.$t('toastTitleChangesSaved'),
             variant: 'success',
             autoHideDelay: 5000,
             appendToast: true
@@ -2600,8 +2600,8 @@ export default {
         })
         .catch(error => {
           emitter.emit('toast', {
-            message: `The changes could not be saved. ${error.message}`,
-            title: 'Changes not saved',
+            message: this.$t('toastChangesNotSaved', { error: error.message }),
+            title: this.$t('toastTitleChangesNotSaved'),
             variant: 'danger',
             noAutoHide: true,
             appendToast: true
@@ -2697,8 +2697,8 @@ export default {
         !!maintenanceCode && !!maintenanceLookup && maintenanceLookup.status === 'found' && maintenanceLookup.code === maintenanceCode
       if (!valid) {
         emitter.emit('toast', {
-          message: 'Fill in the mandatory fields and correct the ones in red before saving.',
-          title: 'Germplasm not saved',
+          message: this.$t('toastMandatoryFields'),
+          title: this.$t('toastTitleGermplasmNotSaved'),
           variant: 'warning',
           autoHideDelay: 5000,
           appendToast: true
@@ -2769,8 +2769,8 @@ export default {
           // A new value is suggested next time
           clearMcpdSuggestions()
           emitter.emit('toast', {
-            message: `The germplasm ${accenumb} was created.`,
-            title: 'Germplasm saved',
+            message: this.$t('toastGermplasmCreated', { accenumb }),
+            title: this.$t('toastTitleGermplasmSaved'),
             variant: 'success',
             autoHideDelay: 5000,
             appendToast: true
@@ -2779,8 +2779,8 @@ export default {
         })
         .catch(error => {
           emitter.emit('toast', {
-            message: `The germplasm could not be saved. ${error.message}`,
-            title: 'Germplasm not saved',
+            message: this.$t('toastGermplasmNotSaved', { error: error.message }),
+            title: this.$t('toastTitleGermplasmNotSaved'),
             variant: 'danger',
             noAutoHide: true,
             appendToast: true
@@ -3024,8 +3024,8 @@ export default {
           // A new value is suggested next time
           clearMcpdSuggestions()
           emitter.emit('toast', {
-            message: 'The changes to the germplasm were saved.',
-            title: 'Changes saved',
+            message: this.$t('toastGermplasmChangesSaved'),
+            title: this.$t('toastTitleChangesSaved'),
             variant: 'success',
             autoHideDelay: 5000,
             appendToast: true
@@ -3033,8 +3033,8 @@ export default {
         })
         .catch(error => {
           emitter.emit('toast', {
-            message: `The changes could not be saved. ${error.message}`,
-            title: 'Changes not saved',
+            message: this.$t('toastChangesNotSaved', { error: error.message }),
+            title: this.$t('toastTitleChangesNotSaved'),
             variant: 'danger',
             noAutoHide: true,
             appendToast: true
@@ -3245,7 +3245,7 @@ export default {
         this.qrCodeImage = canvas.toDataURL('image/png')
         this.$refs.qrCodeModal.show()
       }).catch(() => {
-        this.$bvToast.toast('The QR-code could not be generated.', { title: 'QR-code', variant: 'danger', autoHideDelay: 5000, appendToast: true })
+        this.$bvToast.toast(this.$t('toastQrCodeFailed'), { title: this.$t('toastTitleQrCode'), variant: 'danger', autoHideDelay: 5000, appendToast: true })
       })
     },
     // The full link of this page (data/germplasm/<id>)
@@ -3273,7 +3273,7 @@ export default {
         return
       }
       if (this.isEditing || this.isEditingInstitutions || this.isSelectingOnMap || this.savingGermplasm) {
-        this.$bvToast.toast('Finish or cancel the changes first.', { title: 'Booklet page', variant: 'warning', autoHideDelay: 5000, appendToast: true })
+        this.$bvToast.toast(this.$t('toastFinishChangesFirst'), { title: this.$t('toastTitleBookletPage'), variant: 'warning', autoHideDelay: 5000, appendToast: true })
         return
       }
       this.generatingBooklet = true
@@ -3320,7 +3320,7 @@ export default {
           pdf.save(`${name}-booklet.pdf`)
         })
       }).catch(() => {
-        this.$bvToast.toast('The booklet page could not be generated.', { title: 'Booklet page', variant: 'danger', autoHideDelay: 5000, appendToast: true })
+        this.$bvToast.toast(this.$t('toastBookletPageFailed'), { title: this.$t('toastTitleBookletPage'), variant: 'danger', autoHideDelay: 5000, appendToast: true })
       }).finally(() => {
         if (container && container.parentNode) {
           container.parentNode.removeChild(container)
@@ -3963,8 +3963,8 @@ export default {
           // The liaison institution of in-situ populations comes from the attributes
           this.loadAttributes()
           emitter.emit('toast', {
-            message: 'The institutions were added to the germplasm.',
-            title: 'Changes saved',
+            message: this.$t('toastInstitutionsAdded'),
+            title: this.$t('toastTitleChangesSaved'),
             variant: 'success',
             autoHideDelay: 5000,
             appendToast: true
@@ -3972,8 +3972,8 @@ export default {
         })
         .catch(error => {
           emitter.emit('toast', {
-            message: `The changes could not be saved. ${error.message}`,
-            title: 'Changes not saved',
+            message: this.$t('toastChangesNotSaved', { error: error.message }),
+            title: this.$t('toastTitleChangesNotSaved'),
             variant: 'danger',
             noAutoHide: true,
             appendToast: true

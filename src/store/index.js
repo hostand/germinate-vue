@@ -77,6 +77,8 @@ const userState = {
   asyncJobCount: 0,
   cookiesAccepted: null,
   customChartColors: null,
+  // The palette of the custom chart colours (its key; null: the colours edited by hand, or none chosen)
+  customChartPalette: null,
   darkMode: false,
   changelogVersionNumber: null,
   activeStory: null,
@@ -110,6 +112,7 @@ const storeState = {
     storeHiddenColumns: (state, getters) => state.userStates[getters.storeUserId].hiddenColumns,
     storeTablePerPage: (state, getters) => state.userStates[getters.storeUserId].tablePerPage,
     storeCustomChartColors: (state, getters) => state.userStates[getters.storeUserId].customChartColors,
+    storeCustomChartPalette: (state, getters) => state.userStates[getters.storeUserId].customChartPalette,
     storeAsyncJobUuids: (state, getters) => state.userStates[getters.storeUserId].asyncJobUuids,
     storeAsyncJobCount: (state, getters) => state.userStates[getters.storeUserId].asyncJobCount,
     storeOriginalTarget: (state, getters) => state.userStates[getters.storeUserId].originalTarget,
@@ -313,6 +316,9 @@ const storeState = {
     ON_CUSTOM_CHART_COLORS_CHANGED_MUTATION: function (state, newCustomChartColors) {
       state.userStates[state.token ? state.token.id : null].customChartColors = newCustomChartColors
     },
+    ON_CUSTOM_CHART_PALETTE_CHANGED_MUTATION: function (state, newCustomChartPalette) {
+      Vue.set(state.userStates[state.token ? state.token.id : null], 'customChartPalette', newCustomChartPalette)
+    },
     ON_DARK_MODE_CHANGED_MUTATION: function (state, newDarkMode) {
       state.userStates[state.token ? state.token.id : null].darkMode = newDarkMode
     },
@@ -482,6 +488,9 @@ const storeState = {
     },
     setCustomChartColors: function ({ commit }, customChartColors) {
       commit('ON_CUSTOM_CHART_COLORS_CHANGED_MUTATION', customChartColors)
+    },
+    setCustomChartPalette: function ({ commit }, customChartPalette) {
+      commit('ON_CUSTOM_CHART_PALETTE_CHANGED_MUTATION', customChartPalette)
     },
     setDarkMode: function ({ commit }, darkMode) {
       commit('ON_DARK_MODE_CHANGED_MUTATION', darkMode)

@@ -49,13 +49,13 @@ import { FLAGSHIP_CROPS, findFlagshipCrop } from '@/mixins/crops'
 import { apiPostGroupTable } from '@/mixins/api/group'
 import { datasetTypes, datasetStates, dataTypes, locationTypes } from '@/mixins/types'
 import { Pages } from '@/mixins/pages'
-import { getNumberWithSuffix } from '@/mixins/formatting'
+import { getNumberWithSuffix, formatNumber } from '@/mixins/formatting'
 import { mdiHelpCircle, mdiDna, mdiDatabaseRemoveOutline, mdiTagText, mdiWeatherSnowyRainy, mdiMap, mdiSprout, mdiOfficeBuildingMarkerOutline, mdiCamera, mdiIdentifier, mdiBookOpenVariant, mdiCardAccountDetails, mdiSitemap } from '@mdi/js'
 
 const PAGE_SIZE = 5
 // Text searches (typeahead and Search button) need at least this many characters (fields with short values set their
 // own "minChars"). A number needs one digit.
-const MIN_CHARS = 3
+const MIN_CHARS = 2
 const TYPING_DELAY = 200
 const CACHE_SIZE = 100
 // Part of a description shown around the text found: characters before and after it
@@ -902,7 +902,7 @@ export default {
         }
         // An elevation searched: shown with the text
         if (field === 'elevation') {
-          const elevation = record.locationElevation !== null && record.locationElevation !== undefined ? `${Number(record.locationElevation).toLocaleString()} m` : '—'
+          const elevation = record.locationElevation !== null && record.locationElevation !== undefined ? `${formatNumber(record.locationElevation)} m` : '—'
           textParts = [{ text: elevation, match: true }].concat(textParts[0] && textParts[0].text ? [{ text: ` · ${textParts[0].text}`, match: false }] : [])
         }
         // Badges at the right: the count of the scope (markers, data points), the data type, the country
@@ -1010,7 +1010,7 @@ export default {
       if (this.isPdciSearch) {
         return true
       }
-      // An institute code: complete; an institute name: 3 characters
+      // An institute code: complete; an institute name: MIN_CHARS characters
       if (this.isInstitutionCodeSearch) {
         return INSTITUTE_CODE_PATTERN.test(this.typeaheadTerm)
       }
@@ -1556,7 +1556,7 @@ export default {
     getCountBadge: function (value, unit) {
       const raw = value && typeof value === 'object' ? value.value : value
       const number = raw === null || raw === undefined ? 0 : Number(raw)
-      return { text: getNumberWithSuffix(number, 2), title: `${number.toLocaleString()} ${unit}` }
+      return { text: getNumberWithSuffix(number, 2), title: `${formatNumber(number)} ${unit}` }
     },
     // A result of the list: the table of the scope showing it
     openTypeaheadItem: function (item) {
@@ -1889,7 +1889,9 @@ export default {
         id: record.germplasmId,
         record,
         germplasm: true,
-        icon: crop ? crop.icon : mdiSprout,
+        // A flagship crop: its line drawing of the home page (black lines in the square of its colours)
+        icon: crop ? (crop.homeIcon || crop.icon) : mdiSprout,
+        lineIcon: !!(crop && crop.homeIcon),
         iconStyle: { color: `var(--cp-crop-${crop ? crop.key : 'other'}-fg)`, background: `var(--cp-crop-${crop ? crop.key : 'other'}-bg)` },
         iconTitle: group ? group.name : null,
         // The group as a badge, in the colours of its crop

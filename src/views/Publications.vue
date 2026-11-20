@@ -147,6 +147,7 @@ import { apiPostPublicationGermplasmTable } from '@/mixins/api/germplasm'
 import { apiPostPublicationGroupTable } from '@/mixins/api/group'
 import { apiPostPublicationsTable } from '@/mixins/api/misc'
 import { Pages } from '@/mixins/pages'
+import { formatNumber } from '@/mixins/formatting'
 
 const emitter = require('tiny-emitter/instance')
 
@@ -283,10 +284,10 @@ export default {
         facts.push({ key: 'published', icon: 'fa-regular fa-calendar', label: this.$t('pagePublicationDetailsPublished'), value: published })
       }
       if (csl['is-referenced-by-count'] !== undefined) {
-        facts.push({ key: 'cited', icon: 'fa-solid fa-quote-right', label: this.$t('pagePublicationDetailsCitedBy'), value: csl['is-referenced-by-count'].toLocaleString() })
+        facts.push({ key: 'cited', icon: 'fa-solid fa-quote-right', label: this.$t('pagePublicationDetailsCitedBy'), value: formatNumber(csl['is-referenced-by-count']) })
       }
       if (csl['reference-count'] !== undefined || csl['references-count'] !== undefined) {
-        facts.push({ key: 'references', icon: 'fa-solid fa-list-ol', label: this.$t('pagePublicationDetailsReferences'), value: (csl['reference-count'] !== undefined ? csl['reference-count'] : csl['references-count']).toLocaleString() })
+        facts.push({ key: 'references', icon: 'fa-solid fa-list-ol', label: this.$t('pagePublicationDetailsReferences'), value: formatNumber(csl['reference-count'] !== undefined ? csl['reference-count'] : csl['references-count']) })
       }
       if (license && license.URL) {
         facts.push({ key: 'license', icon: 'fa-solid fa-scale-balanced', label: this.$t('tableColumnDatasetLicenseName'), value: licenseName.length === 3 ? `CC ${licenseName[1].toUpperCase()} ${licenseName[2]}` : license.URL.replace(/^https?:\/\//, '').replace(/\/$/, ''), link: license.URL })

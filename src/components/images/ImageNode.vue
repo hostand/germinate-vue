@@ -25,7 +25,7 @@
       </div>
       <div class="mb-2" v-else>{{ image.imageDescription }}</div>
       <b-badge variant="info" v-if="image.imageIsReference">{{ $t('tableColumnImageIsReference') }}</b-badge>
-      <div class="text-muted mb-2" v-if="image.createdOn"><MdiIcon :path="mdiCalendarClock" /> {{ new Date(image.createdOn).toLocaleString() }}</div>
+      <div class="text-muted mb-2" v-if="image.createdOn"><MdiIcon :path="mdiCalendarClock" /> {{ formatDateTime(image.createdOn) }}</div>
       <div class="mb-2"  v-if="hasExif">
         <b-button @click="$refs.imageExifModal.show()"><MdiIcon :path="mdiImageText" /> {{ $t('buttonShowExif') }}</b-button>
       </div>
@@ -73,6 +73,7 @@ import { getImageUrl } from '@/mixins/image'
 import { userIsAtLeast, USER_TYPE_DATA_CURATOR } from '@/mixins/api/auth'
 
 import { mdiDelete, mdiContentSave, mdiCalendarClock, mdiPencil, mdiImageText } from '@mdi/js'
+import { formatDateTime } from '@/mixins/formatting'
 
 export default {
   props: {
@@ -113,6 +114,7 @@ export default {
     }
   },
   methods: {
+    formatDateTime,
     userIsAtLeast,
     showTagEditModal: function () {
       this.$refs.editTagModal.show()

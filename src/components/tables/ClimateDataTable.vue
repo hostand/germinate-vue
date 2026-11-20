@@ -1,5 +1,8 @@
 <template>
   <BaseTable v-bind="$props"
+            :getData="getTypedData"
+            :getIds="getTypedIds"
+            :downloadTable="downloadTable ? downloadTypedTable : null"
             :columns="columns"
             :options="options"
             itemType="locations"
@@ -22,7 +25,20 @@
       </span>
     </template>
 
-    <!-- Trait data type icon -->
+    <!-- Climate name: clickable when asked (its details) -->
+    <template v-slot:cell(climateName)="data">
+      <button type="button" class="tdt-trait-link" @click="$emit('climate-clicked', { climateId: data.item.climateId, climateName: data.item.climateName, climateDataType: data.item.climateDataType })" v-if="climateClickable">{{ data.item.climateName }}</button>
+      <span v-else>{{ data.item.climateName }}</span>
+    </template>
+    <!-- The abbreviation of the unit of the climate (given by the page) -->
+    <template v-slot:cell(unitAbbreviation)="data">
+      <span v-if="unitAbbreviations && unitAbbreviations[data.item.climateId]">{{ unitAbbreviations[data.item.climateId] }}</span>
+    </template>
+    <!-- Climate type: by its data type (see climate-types.js) -->
+    <template v-slot:cell(climateType)="data">
+      <ClimateTypeChip :dataType="data.item.climateDataType" />
+    </template>
+    <!-- Climate data type icon (hidden by default: the climate type tells it) -->
     <template v-slot:cell(climateDataType)="data">
       <span class="bt-chip" :style="{ '--bt-chip-color': dataTypes[data.item.climateDataType].color() }"><MdiIcon :path="dataTypes[data.item.climateDataType].path" /> {{ dataTypes[data.item.climateDataType].text() }}</span>
     </template>
@@ -35,11 +51,30 @@ import BaseTable from '@/components/tables/BaseTable'
 import defaultProps from '@/const/table-props.js'
 import { locationTypes, dataTypes } from '@/mixins/types.js'
 import { formatDate, formatNumber } from '@/mixins/formatting'
+import ClimateTypeChip from '@/components/tables/ClimateTypeChip'
+import { CLIMATE_TYPES, translateClimateTypeRequest, addClimateTypeColumn } from '@/mixins/climate-types'
 
 export default {
   name: 'LocationTable',
   props: {
-    ...defaultProps.FULL
+    ...defaultProps.FULL,
+    ...defaultProps.ACTIONS,
+    // The abbreviation of the unit of each climate ({ climateId: abbreviation }): a column of its own after the unit
+    unitAbbreviations: {
+      type: Object,
+      default: null
+    },
+    // The name of a climate clickable: "climate-clicked" with { climateId, climateName, climateDataType } (the climate
+    // export opens its details)
+    climateClickable: {
+      type: Boolean,
+      default: false
+    },
+    // The data exports: no marking column
+    plainLocations: {
+      type: Boolean,
+      default: false
+    }
   },
   data: function () {
     return {
@@ -53,7 +88,7 @@ export default {
   },
   computed: {
     columns: function () {
-      const result = [
+      let result = [
         {
           key: 'locationId',
           type: Number,
@@ -106,6 +141,11 @@ export default {
           sortable: true,
           label: this.$t('tableColumnLocationCountryName')
         }, {
+          key: 'datasetName',
+          type: String,
+          sortable: true,
+          label: this.$t('tableColumnDatasetName')
+        }, {
           key: 'climateId',
           type: Number,
           sortable: true,
@@ -118,9 +158,18 @@ export default {
           label: this.$t('tableColumnClimateName'),
           preferredSortingColumn: true
         }, {
+          // Virtual: the type of the climate by its data type (sorted and filtered by the data type on the server)
+          key: 'climateType',
+          type: 'climateType',
+          sortable: true,
+          autoHide: false,
+          label: this.$t('tableColumnClimateType'),
+          filterValueText: value => this.getTypeText(value)
+        }, {
           key: 'climateDataType',
           type: 'dataType',
           sortable: true,
+          defaultHidden: true,
           label: this.$t('tableColumnTraitDataType')
         }, {
           key: 'unitName',
@@ -147,6 +196,21 @@ export default {
         }
       ]
 
+      // The abbreviation of the unit (not in the rows of the server: not sortable nor filtered)
+      if (this.unitAbbreviations) {
+        const unit = result.findIndex(c => c.key === 'unitName')
+        result.splice(unit + 1, 0, {
+          key: 'unitAbbreviation',
+          type: undefined,
+          sortable: false,
+          label: this.$t('tableColumnTraitUnitAbbreviation')
+        })
+      }
+      // The exports: no marking
+      if (this.plainLocations) {
+        result = result.filter(c => c.key !== 'marked')
+      }
+
       if (this.selectable === true) {
         result.unshift({
           key: 'selected',
@@ -162,11 +226,27 @@ export default {
   },
   components: {
     BaseTable,
+    ClimateTypeChip,
     MdiIcon
   },
   methods: {
     formatNumber,
     formatDate,
+    getTypeText: function (key) {
+      const type = CLIMATE_TYPES.find(t => t.key === key)
+      return type ? this.$t(type.text) : key
+    },
+    // The requests of the table: the climate type (filter, order) turned into the data type first
+    getTypedData: function (data, callback) {
+      return this.getData(translateClimateTypeRequest(data, 'climateDataType'), callback)
+    },
+    getTypedIds: function (data, callback) {
+      return this.getIds(translateClimateTypeRequest(data, 'climateDataType'), callback)
+    },
+    // The download: the climate type also as a column of its file (put in by the browser, see climate-types.js)
+    downloadTypedTable: function (data, callback, onError) {
+      return this.downloadTable(translateClimateTypeRequest(data, 'climateDataType'), blob => addClimateTypeColumn(blob).then(callback), onError)
+    },
     refresh: function () {
       this.$refs.climateDataTable.refresh()
     }

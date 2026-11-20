@@ -14,7 +14,7 @@
             <b-badge>{{ getNumberWithSuffix(selectedProjects.length, 1) }}</b-badge>
           </div>
           <b-popover target="popover-target-projects" triggers="focus" placement="top">
-            <template #title>{{ `${$t('widgetHeaderSelectedProjects')}: ${(selectedProjects || []).length.toLocaleString()}` }}</template>
+            <template #title>{{ `${$t('widgetHeaderSelectedProjects')}: ${formatNumber((selectedProjects || []).length)}` }}</template>
 
             <b-list-group>
               <b-list-group-item v-for="project in selectedProjects" :key="`selected-project-${project.projectId}`" class="d-flex justify-content-between align-items-center">
@@ -41,7 +41,7 @@
 <script>
 import MdiIcon from '@/components/icons/MdiIcon'
 import { getHighContrastTextColor } from '@/mixins/colors'
-import { getNumberWithSuffix } from '@/mixins/formatting'
+import { getNumberWithSuffix, formatNumber } from '@/mixins/formatting'
 import { markedItemTypes } from '@/mixins/types'
 import { Pages } from '@/mixins/pages'
 
@@ -82,6 +82,7 @@ export default {
     }
   },
   methods: {
+    formatNumber,
     getNumberWithSuffix,
     getHighContrastTextColor,
     fetchSelectedProjects: function () {

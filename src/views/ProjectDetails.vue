@@ -70,6 +70,7 @@ import { apiPostGroupTable } from '@/mixins/api/group'
 import { getImageUrlById } from '@/mixins/image'
 import { apiPostPublicationsTable } from '@/mixins/api/misc'
 import { mdiCalendarArrowRight, mdiCalendarArrowLeft, mdiDatabase, mdiGroup, mdiNewspaperVariant, mdiAccountMultiple } from '@mdi/js'
+import { formatDate } from '@/mixins/formatting'
 
 export default {
   data: function () {
@@ -121,10 +122,10 @@ export default {
 
         let i = 0
         if (this.project.projectStartDate) {
-          result.push({ index: i++, title: 'pageProjectsPublicationStartDate', icon: mdiCalendarArrowRight, textValue: new Date(this.project.projectStartDate).toLocaleDateString() })
+          result.push({ index: i++, title: 'pageProjectsPublicationStartDate', icon: mdiCalendarArrowRight, textValue: formatDate(this.project.projectStartDate) })
         }
         if (this.project.projectEndDate) {
-          result.push({ index: i++, title: 'pageProjectsPublicationEndDate', icon: mdiCalendarArrowLeft, textValue: new Date(this.project.projectEndDate).toLocaleDateString() })
+          result.push({ index: i++, title: 'pageProjectsPublicationEndDate', icon: mdiCalendarArrowLeft, textValue: formatDate(this.project.projectEndDate) })
         }
         result.push({ index: i++, title: 'pageProjectsDatasetsTitle', icon: mdiDatabase, numericValue: this.projectStats.datasetCount })
         result.push({ index: i++, title: 'pageProjectsPublicationsTitle', icon: mdiNewspaperVariant, numericValue: this.projectStats.publicationCount })

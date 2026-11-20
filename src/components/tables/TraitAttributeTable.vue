@@ -14,8 +14,10 @@
         <router-link :to="{ name: Pages.traitDetails, params: { traitId: data.item.traitId } }">{{ data.item.traitName }}</router-link>
       </template>
       <template v-slot:cell(attributeDescription)="data">
-        <span :title="data.item.attributeDescription" v-if="data.item.attributeDescription">{{ truncateAfterWords(data.item.attributeDescription, 10) }}</span>
-        <a href="#" class="table-icon-link" @click.prevent="showFullAttributeDescription(data.item.attributeDescription)" v-b-tooltip="$t('buttonReadMore')" v-if="isTruncatedAfterWords(data.item.attributeDescription, 10)" >&nbsp;
+        <!-- New look: all of it (cut by the table, its chevron shows the rest); else cut after 10 words, "read more" -->
+        <span v-if="modernLook && data.item.attributeDescription">{{ data.item.attributeDescription }}</span>
+        <span :title="data.item.attributeDescription" v-else-if="data.item.attributeDescription">{{ truncateAfterWords(data.item.attributeDescription, 10) }}</span>
+        <a href="#" class="table-icon-link" @click.prevent="showFullAttributeDescription(data.item.attributeDescription)" v-b-tooltip="$t('buttonReadMore')" v-if="!modernLook && isTruncatedAfterWords(data.item.attributeDescription, 10)" >&nbsp;
           <MdiIcon :path="mdiPageNext" />
         </a>
       </template>

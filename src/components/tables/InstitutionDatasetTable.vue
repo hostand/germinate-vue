@@ -37,20 +37,20 @@
           {{ data.item.countryName }}
         </span>
       </template>
-      <template v-slot:cell(allDatasetIds)="data">
-        <a href="#" class="text-decoration-none text-nowrap" @click="redirectToDatasets(data.item.allDatasetIds)" :style="`color: ${data.item.trialsDatasetIds ? getPrimaryColor() : 'grey'};`" v-b-tooltip.hover :title="$t('tableTooltipInstitutionDatasetsAll')"><MdiIcon :path="mdiDatabase" /> <span> {{ (data.item.allDatasetIds || []).length }}</span></a>
-      </template>
-      <template v-slot:cell(trialsDatasetIds)="data">
-        <a href="#" class="text-decoration-none text-nowrap" @click="redirectToDatasets(data.item.trialsDatasetIds)" :style="`color: ${data.item.trialsDatasetIds ? datasetTypes.trials.color() : 'grey'};`" v-b-tooltip.hover :title="datasetTypes.trials.text()"><MdiIcon :path="datasetTypes.trials.path" /> <span> {{ (data.item.trialsDatasetIds || []).length }}</span></a>
-      </template>
-      <template v-slot:cell(genotypeDatasetIds)="data">
-        <a href="#" class="text-decoration-none text-nowrap" @click="redirectToDatasets(data.item.genotypeDatasetIds)" :style="`color: ${data.item.genotypeDatasetIds ? datasetTypes.genotype.color() : 'grey'};`" v-b-tooltip.hover :title="datasetTypes.genotype.text()"><MdiIcon :path="datasetTypes.genotype.path" /> <span> {{ (data.item.genotypeDatasetIds || []).length }}</span></a>
-      </template>
-      <template v-slot:cell(pedigreeDatasetIds)="data">
-        <a href="#" class="text-decoration-none text-nowrap" @click="redirectToDatasets(data.item.pedigreeDatasetIds)" :style="`color: ${data.item.pedigreeDatasetIds ? datasetTypes.pedigree.color() : 'grey'};`" v-b-tooltip.hover :title="datasetTypes.pedigree.text()"><MdiIcon :path="datasetTypes.pedigree.path" /> <span> {{ (data.item.pedigreeDatasetIds || []).length }}</span></a>
-      </template>
-      <template v-slot:cell(climateDatasetIds)="data">
-        <a href="#" class="text-decoration-none text-nowrap" @click="redirectToDatasets(data.item.climateDatasetIds)" :style="`color: ${data.item.climateDatasetIds ? datasetTypes.climate.color() : 'grey'};`" v-b-tooltip.hover :title="datasetTypes.climate.text()"><MdiIcon :path="datasetTypes.climate.path" /> <span> {{ (data.item.climateDatasetIds || []).length }}</span></a>
+      <!-- The datasets of the institution: a chip for all of them, then one per type it has, each with its count; a click
+           shows them on the datasets page -->
+      <template v-slot:cell(datasets)="data">
+        <span class="bt-chips">
+          <a href="#"
+             class="badge bt-chip"
+             v-for="chip in getDatasetChips(data.item)"
+             :key="`institution-datasets-${data.item.institutionId}-${chip.key}`"
+             :style="{ '--bt-chip-color': chip.color }"
+             :title="chip.title"
+             @click.prevent="redirectToDatasets(chip.ids)">
+            <MdiIcon :path="chip.path" /> {{ chip.ids.length }}
+          </a>
+        </span>
       </template>
     </BaseTable>
   </div>
@@ -144,35 +144,10 @@ export default {
         sortable: true,
         label: this.$t('tableColumnInstitutionCountry')
       }, {
-        key: 'allDatasetIds',
+        key: 'datasets',
         type: undefined,
         sortable: false,
-        class: 'px-1',
-        label: ''
-      }, {
-        key: 'trialsDatasetIds',
-        type: undefined,
-        sortable: false,
-        class: 'px-1',
-        label: ''
-      }, {
-        key: 'genotypeDatasetIds',
-        type: undefined,
-        sortable: false,
-        class: 'px-1',
-        label: ''
-      }, {
-        key: 'pedigreeDatasetIds',
-        type: undefined,
-        sortable: false,
-        class: 'px-1',
-        label: ''
-      }, {
-        key: 'climateDatasetIds',
-        type: undefined,
-        sortable: false,
-        class: 'px-1',
-        label: ''
+        label: this.$t('menuDatasets')
       }]
     }
   },
@@ -185,6 +160,24 @@ export default {
     getHighContrastTextColor,
     refresh: function () {
       this.$refs.institutionDatasetTable.refresh()
+    },
+    // The chips of the datasets of an institution: all of them, then each type it has (none: nothing)
+    getDatasetChips: function (item) {
+      const all = item.allDatasetIds || []
+      if (all.length === 0) {
+        return []
+      }
+      const primary = getPrimaryColor()
+      const chips = [{ key: 'all', ids: all, path: mdiDatabase, text: this.$t('menuDatasets'), title: this.$t('tableTooltipInstitutionDatasetsAll'), color: primary }]
+      ;['trials', 'genotype', 'pedigree', 'climate'].forEach(type => {
+        const ids = item[`${type}DatasetIds`] || []
+        if (ids.length > 0) {
+          const t = datasetTypes[type]
+          const color = t.color()
+          chips.push({ key: type, ids, path: t.path, text: t.text(), title: t.text(), color })
+        }
+      })
+      return chips
     },
     redirectToDatasets: function (datasetIds) {
       const filter = [{

@@ -1,7 +1,10 @@
-// Shared by the statistics of the traits per data type (TraitDateStats, TraitCategoricalStats; both extend
-// TraitValueStats): the colours of the page for Plotly, the observations of a trait in a dataset (the trial export) and
-// the preview of the passport of a germplasm clicked in a chart (its name on the axis, its point / bar).
-import { apiPostTrialsDataTable } from '@/mixins/api/trait'
+// Shared by the statistics of the traits and climates per data type (TraitDateStats, TraitCategoricalStats,
+// TraitNumericStats; all extend TraitValueStats): the colours of the page for Plotly, the observations of a variable in a
+// dataset (the data table) and the preview of the passport of a germplasm clicked in a chart (its name on the axis, its
+// point / bar). A climate: its observations by location (in place of the germplasm, no passport), no rep nor block.
+import { getFlagLayout, placeFlags } from '@/mixins/location-flags'
+
+const Plotly = require('plotly.js/lib/core')
 
 // Observations per request when every observation of a trait in a dataset is loaded
 const ROWS_PAGE = 10000
@@ -54,20 +57,12 @@ export default {
     // mapValue(value as in the data) gives what is kept of the value (e.g. its day), or null to leave the observation out.
     loadTrialRows: function (mapValue) {
       const rows = []
-      const filter = [{
-        column: 'traitId',
-        comparator: 'equals',
-        operator: 'and',
-        values: [this.traitId]
-      }, {
-        column: 'datasetId',
-        comparator: 'equals',
-        operator: 'and',
-        values: [this.datasetId]
-      }]
+      const filter = this.getVariableFilter()
+      const climate = this.isClimate
+      const valueColumn = this.variableConfig.dataValueColumn
       this.rowsProgress = { loaded: 0, total: null }
       const loadPage = page => new Promise(resolve => {
-        apiPostTrialsDataTable({ page, limit: ROWS_PAGE, filter: JSON.parse(JSON.stringify(filter)), orderBy: 'germplasmId', ascending: 1 }, result => resolve(result || { data: [], count: 0 }), {
+        this.fetchDataTable({ page, limit: ROWS_PAGE, filter: JSON.parse(JSON.stringify(filter)), orderBy: this.variableConfig.orderBy, ascending: 1 }, result => resolve(result || { data: [], count: 0 }), {
           codes: [],
           callback: () => resolve(null)
         })
@@ -75,9 +70,23 @@ export default {
       const next = page => loadPage(page).then(result => {
         const data = (result && result.data) || []
         data.forEach(row => {
-          const raw = row.traitValue
+          const raw = row[valueColumn]
           const mapped = raw === null || raw === undefined || `${raw}`.trim() === '' ? null : mapValue(`${raw}`.trim())
-          if (mapped !== null && mapped !== undefined) {
+          if (mapped !== null && mapped !== undefined && climate) {
+            // A climate: the location in place of the germplasm (no passport: no id): its name and the ISO 3 code of its
+            // country, the ISO 2 code (its flag in the charts); its recording date
+            const name = row.locationName || row.locationId
+            rows.push({
+              germplasmId: null,
+              germplasm: row.countryCode3 ? `${name} (${row.countryCode3})` : name,
+              country: row.countryCode2 ? `${row.countryCode2}`.toLowerCase() : null,
+              rep: null,
+              block: null,
+              date: row.recordingDate ? `${row.recordingDate}`.substring(0, 10) : null,
+              value: `${raw}`.trim(),
+              mapped
+            })
+          } else if (mapped !== null && mapped !== undefined) {
             rows.push({
               germplasmId: row.germplasmId || null,
               germplasm: row.germplasmName || row.germplasmDisplayName || row.germplasmId,
@@ -95,6 +104,39 @@ export default {
         return data.length === ROWS_PAGE && loaded < total ? next(page + 1) : rows
       })
       return next(1)
+    },
+    // A climate: the flags of the locations of the rows of a chart (labels: the label of each row, y its index) and the
+    // prefix of the labels (the room of the flag, "[flag] Name (ISO 3)"); the chart drawn again when a flag arrives
+    getLocationFlags: function (labels) {
+      if (!this.isClimate) {
+        return { images: [], prefix: '' }
+      }
+      const codes = {}
+      this.rows.forEach(row => { codes[`${row.germplasm}`] = row.country })
+      return getFlagLayout(labels.map((label, y) => ({ y, code: codes[`${label}`] || null })), () => this.draw())
+    },
+    // A climate, once the chart is drawn (and whenever Plotly draws it anew): its flags where the labels start
+    watchLocationFlags: function () {
+      const element = this.$refs.chart
+      if (!this.isClimate || !element || !element.on) {
+        return
+      }
+      const place = () => {
+        const images = placeFlags(element)
+        if (images) {
+          if (this.figure && this.figure.layout) {
+            this.figure.layout.images = images
+          }
+          Plotly.relayout(element, { images })
+        }
+      }
+      element.on('plotly_afterplot', place)
+      place()
+    },
+    // A climate: the ISO 2 code of the country of a location (its label)
+    getLocationCountry: function (label) {
+      const row = this.rows.find(r => `${r.germplasm}` === `${label}`)
+      return row ? row.country : null
     },
     showPassportPreview: function (germplasmId) {
       if (germplasmId === null || germplasmId === undefined || germplasmId === '') {

@@ -29,7 +29,7 @@
             <div><MdiIcon :path="exportJobTypes[index].path" :color="exportJobTypes[index].color()" /><strong>&nbsp;{{ exportJobTypes[index].text() }}</strong></div>
             <!-- Date time -->
             <div class="text-muted" v-if="job.updatedOn">
-              <MdiIcon :path="mdiCalendarClock" /><small> {{ new Date(job.updatedOn).toLocaleString() }}</small>
+              <MdiIcon :path="mdiCalendarClock" /><small> {{ formatDateTime(job.updatedOn, true) }}</small>
             </div>
             <!-- Dataset ids -->
             <div class="text-muted" v-if="job.datasetIds">
@@ -93,7 +93,7 @@
             </div>
             <!-- Date time and filename -->
             <div class="text-muted">
-              <MdiIcon :path="mdiCalendarClock" /><small v-if="job.updatedOn"> {{ new Date(job.updatedOn).toLocaleString() }}</small><br/>
+              <MdiIcon :path="mdiCalendarClock" /><small v-if="job.updatedOn"> {{ formatDateTime(job.updatedOn, true) }}</small><br/>
               <template v-if="job.originalFilename"><MdiIcon :path="mdiFile" /><small class="text-filename">&nbsp;{{ job.originalFilename }}</small></template>
             </div>
             <!-- Status -->
@@ -152,7 +152,7 @@ import { userIsAtLeast, USER_TYPE_DATA_CURATOR } from '@/mixins/api/auth'
 import { apiPostDataAsyncImport, apiDeleteDataAsyncImport, apiGetDataAsyncImportStart, apiGetDataAsyncImportLog } from '@/mixins/api/misc'
 import { templateImportTypes } from '@/mixins/types'
 import { downloadBlob } from '@/mixins/util'
-import { getNumberWithSuffix } from '@/mixins/formatting'
+import { getNumberWithSuffix, formatDateTime } from '@/mixins/formatting'
 
 const axios = require('axios').default
 
@@ -336,6 +336,7 @@ export default {
     }
   },
   methods: {
+    formatDateTime,
     userIsAtLeast,
     getNumberWithSuffix,
     getHeliumExportUrl: function (jobUuid) {

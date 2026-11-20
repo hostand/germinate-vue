@@ -15,19 +15,23 @@
       <!-- /HEADS -->
       <!-- Trait id link -->
       <template v-slot:cell(traitId)="data">
-        <router-link :to="{ name: Pages.traitDetails, params: { traitId: data.item.traitId } }">{{ data.item.traitId }}</router-link>
+        <span v-if="disableLinks">{{ data.item.traitId }}</span>
+        <router-link :to="{ name: Pages.traitDetails, params: { traitId: data.item.traitId } }" v-else>{{ data.item.traitId }}</router-link>
       </template>
       <!-- Trait name link -->
       <template v-slot:cell(traitName)="data">
-        <router-link :to="{ name: Pages.traitDetails, params: { traitId: data.item.traitId } }">{{ data.item.traitName }}</router-link>
+        <span v-if="disableLinks">{{ data.item.traitName }}</span>
+        <router-link :to="{ name: Pages.traitDetails, params: { traitId: data.item.traitId } }" v-else>{{ data.item.traitName }}</router-link>
       </template>
       <!-- Trait short name link -->
       <template v-slot:cell(traitNameShort)="data">
-        <router-link :to="{ name: Pages.traitDetails, params: { traitId: data.item.traitId } }">{{ data.item.traitNameShort }}</router-link>
+        <span v-if="disableLinks">{{ data.item.traitNameShort }}</span>
+        <router-link :to="{ name: Pages.traitDetails, params: { traitId: data.item.traitId } }" v-else>{{ data.item.traitNameShort }}</router-link>
       </template>
       <!-- Trait description link -->
       <template v-slot:cell(traitDescription)="data">
-        <router-link :to="{ name: Pages.traitDetails, params: { traitId: data.item.traitId } }">{{ data.item.traitDescription }}</router-link>
+        <span v-if="disableLinks">{{ data.item.traitDescription }}</span>
+        <router-link :to="{ name: Pages.traitDetails, params: { traitId: data.item.traitId } }" v-else>{{ data.item.traitDescription }}</router-link>
       </template>
       <!-- Dataset type icon -->
       <template v-slot:cell(dataType)="data">
@@ -113,6 +117,11 @@ export default {
     selectionMode: {
       type: String,
       default: 'multi'
+    },
+    // Show only: the id, name, short name and description as text, not links to the page of the trait
+    disableLinks: {
+      type: Boolean,
+      default: false
     }
   },
   data: function () {

@@ -1,6 +1,7 @@
 <template>
   <!-- The datasets a trait is scored in (below its row in the traits table): one of them selected is the dataset of the
-       statistics of the trait, shown selected in its datasets tab too -->
+       statistics of the trait, shown selected in its datasets tab too. The same for a climate (variable = climate, below
+       its row in the climates table) -->
   <div class="trait-dataset-details">
     <DatasetTable :getData="getData"
                   selectable
@@ -15,13 +16,25 @@
 
 <script>
 import { apiPostTraitDatasetTable } from '@/mixins/api/trait'
-import { getTraitDataset, setTraitDataset } from '@/mixins/trait-dataset-selection'
+import { apiPostClimateDatasetTable } from '@/mixins/api/climate'
+import { getTraitDataset, setTraitDataset, getClimateDataset, setClimateDataset } from '@/mixins/trait-dataset-selection'
+
+// The datasets of a variable and the dataset kept for it, by its type
+const VARIABLES = {
+  trait: { getData: apiPostTraitDatasetTable, get: getTraitDataset, set: setTraitDataset },
+  climate: { getData: apiPostClimateDatasetTable, get: getClimateDataset, set: setClimateDataset }
+}
 
 export default {
   props: {
+    // The id of the trait (or of the climate: variable = climate)
     traitId: {
       type: Number,
       required: true
+    },
+    variable: {
+      type: String,
+      default: 'trait'
     }
   },
   components: {
@@ -31,12 +44,15 @@ export default {
   data: function () {
     return {
       // The dataset selected before (kept for the trait), selected in the table once its rows arrived
-      pendingDatasetId: getTraitDataset(this.traitId)
+      pendingDatasetId: (VARIABLES[this.variable] || VARIABLES.trait).get(this.traitId)
     }
   },
   computed: {
+    store: function () {
+      return VARIABLES[this.variable] || VARIABLES.trait
+    },
     storedDatasetId: function () {
-      return getTraitDataset(this.traitId)
+      return this.store.get(this.traitId)
     }
   },
   watch: {
@@ -54,7 +70,7 @@ export default {
   },
   methods: {
     getData: function (data, callback) {
-      return apiPostTraitDatasetTable(this.traitId, data, callback)
+      return this.store.getData(this.traitId, data, callback)
     },
     restoreSelection: function (request, result) {
       if (this.pendingDatasetId === null) {
@@ -73,7 +89,7 @@ export default {
       if (this.pendingDatasetId !== null) {
         return
       }
-      setTraitDataset(this.traitId, selected && selected.length > 0 ? selected[0] : null)
+      this.store.set(this.traitId, selected && selected.length > 0 ? selected[0] : null)
     }
   }
 }

@@ -209,13 +209,18 @@ const routes = [
               {
                 path: 'climates',
                 name: Pages.climates,
+                // The same page with its list and the selected item in a tab: not rebuilt when the item changes
+                meta: { viewKey: 'climates' },
                 component: () => import(/* webpackChunkName: "climates" */ '@/views/data/climate/Climates.vue'),
                 beforeEnter: requireAuth
               },
               {
                 path: 'climates/:climateId',
                 name: Pages.climateDetails,
-                component: () => import(/* webpackChunkName: "climate-details" */ '@/views/data/climate/ClimateDetails.vue'),
+                // The same page with its list and the selected item in a tab: not rebuilt when the item changes
+                meta: { viewKey: 'climates' },
+                // The climates page, the climate in a tab of its own (its content: ClimateDetails.vue)
+                component: () => import(/* webpackChunkName: "climates" */ '@/views/data/climate/Climates.vue'),
                 beforeEnter: requireAuth
               }
             ]

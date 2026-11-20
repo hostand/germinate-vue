@@ -12,7 +12,7 @@
             <div class="border-left pl-3 flex-column align-items-start flex-grow-1">
               <div class="d-flex w-100 justify-content-between">
                 <h5 class="mb-1">{{ newsItem.newsTitle }}</h5>
-                <small class="text-nowrap" v-b-tooltip="new Date(newsItem.createdOn).toLocaleDateString()" v-if="newsItem.createdOn"><MdiIcon :path="mdiCalendarClock" /> {{ formatTimeAgo(newsItem.createdOn) }}</small>
+                <small class="text-nowrap" v-b-tooltip="formatDateText(newsItem.createdOn)" v-if="newsItem.createdOn"><MdiIcon :path="mdiCalendarClock" /> {{ formatTimeAgo(newsItem.createdOn) }}</small>
               </div>
               <p class="mb-1" v-if="newsItem.newsContent">{{ getContent(newsItem) }}</p>
               <b-badge>{{ newsTypes[newsItem.newstypeName].text() }}</b-badge>
@@ -95,6 +95,7 @@ import { getImageUrl } from '@/mixins/image'
 import { MAX_JAVA_INTEGER } from '@/mixins/api/base'
 
 import { mdiNewspaperVariantOutline, mdiDatabase, mdiRefresh, mdiNewspaper, mdiDelete, mdiOpenInNew, mdiCalendarClock } from '@mdi/js'
+import { formatDateText } from '@/mixins/formatting'
 
 const DIVISIONS = [
   { amount: 60, name: 'seconds' },
@@ -199,6 +200,7 @@ export default {
     MdiIcon
   },
   methods: {
+    formatDateText,
     userIsAtLeast,
     formatTimeAgo: function (date) {
       let duration = (new Date(date) - new Date()) / 1000

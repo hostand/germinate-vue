@@ -21,8 +21,10 @@
       </template>
       <!-- Story description -->
       <template v-slot:cell(storyDescription)="data">
-        <span :title="data.item.storyDescription" v-if="data.item.storyDescription">{{ truncateAfterWords(data.item.storyDescription, 20) }}</span>
-        <a href="#" class="table-icon-link" @click.prevent="showFullDescription(data.item.storyDescription)" v-b-tooltip="$t('buttonReadMore')" v-if="isTruncatedAfterWords(data.item.storyDescription, 20)" >&nbsp;
+        <!-- New look: all of it (cut by the table, its chevron shows the rest); else cut after 20 words, "read more" -->
+        <span v-if="modernLook && data.item.storyDescription">{{ data.item.storyDescription }}</span>
+        <span :title="data.item.storyDescription" v-else-if="data.item.storyDescription">{{ truncateAfterWords(data.item.storyDescription, 20) }}</span>
+        <a href="#" class="table-icon-link" @click.prevent="showFullDescription(data.item.storyDescription)" v-b-tooltip="$t('buttonReadMore')" v-if="!modernLook && isTruncatedAfterWords(data.item.storyDescription, 20)" >&nbsp;
           <MdiIcon :path="mdiPageNext" />
         </a>
       </template>

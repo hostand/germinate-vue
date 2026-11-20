@@ -15,6 +15,7 @@
 </template>
 
 <script>
+import { installToasts } from '@/plugins/toasts'
 import Vue from 'vue'
 import { VuePlausible } from 'vue-plausible'
 import { loadLanguageAsync } from '@/plugins/i18n'
@@ -91,6 +92,8 @@ export default {
     }
   },
   created: async function () {
+    // Every toast in the look of the custom pages (src/plugins/toasts.js), before any child shows one
+    installToasts(this)
     loadLanguageAsync(this.storeLocale).then(() => {
       this.i18nLoaded = true
     })

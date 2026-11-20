@@ -13,7 +13,7 @@
         <MdiIcon :path="mdiTag" /> {{ version.version }}
       </b-card-title>
       <b-card-sub-title v-if="version.date" class="mb-3">
-        <MdiIcon :path="mdiCalendarClockOutline" /> {{ new Date(version.date).toLocaleDateString() }}
+        <MdiIcon :path="mdiCalendarClockOutline" /> {{ formatDate(version.date) }}
       </b-card-sub-title>
       <dl class="row mb-0">
         <template v-for="(item, index) in version.items">
@@ -37,6 +37,7 @@ import changelogData from '@/plugins/changelog/'
 import { getTemplateColor } from '@/mixins/colors'
 
 import { mdiCalendarClockOutline, mdiTag } from '@mdi/js'
+import { formatDate } from '@/mixins/formatting'
 
 const semver = require('semver')
 
@@ -120,6 +121,7 @@ export default {
     }
   },
   methods: {
+    formatDate,
     /**
      * Shows and resets modal dialog
      */

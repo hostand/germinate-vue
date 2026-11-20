@@ -4,7 +4,7 @@
 
     <b-card-body>
       <b-card-title>{{ story.storyName }}</b-card-title>
-      <b-card-sub-title class="mb-3" v-if="story.storyCreatedOn"><MdiIcon :path="mdiCalendar" /> {{ new Date(story.storyCreatedOn).toLocaleDateString() }}</b-card-sub-title>
+      <b-card-sub-title class="mb-3" v-if="story.storyCreatedOn"><MdiIcon :path="mdiCalendar" /> {{ formatDateText(story.storyCreatedOn) }}</b-card-sub-title>
       <b-card-text v-if="story.storyDescription">{{ story.storyDescription }}</b-card-text>
 
       <hr />
@@ -83,6 +83,7 @@ import { apiPostDatasetTable } from '@/mixins/api/dataset'
 import { userIsAtLeast, USER_TYPE_DATA_CURATOR } from '@/mixins/api/auth'
 import { apiDeleteStoryById } from '@/mixins/api/misc'
 import { Pages } from '@/mixins/pages'
+import { formatDateText } from '@/mixins/formatting'
 
 export default {
   props: {
@@ -125,6 +126,7 @@ export default {
     }
   },
   methods: {
+    formatDateText,
     userIsAtLeast,
     showPublication: function () {
       this.$router.push({ name: Pages.publicationDetails, params: { publicationId: this.story.publicationId } })

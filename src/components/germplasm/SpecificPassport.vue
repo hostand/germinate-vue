@@ -44,7 +44,7 @@
 
         <section v-if="dataWarnings && dataWarnings.length > 0" class="mb-3">
           <div :class="`data-warning-banner bg-warning ${index > 0 ? 'border-top border-light' : ''} ${storeDarkMode ? 'text-light' : 'text-dark'} text-center p-2`" v-for="(warning, index) in dataWarnings" :key="`data-warning-${index}`">
-            <MdiIcon :path="dataWarningTypes[warning.category]" /> {{ warning.description }} <b-badge variant="dark" v-if="warning.createdOn">{{ new Date(warning.createdOn).toLocaleDateString() }}</b-badge>
+            <MdiIcon :path="dataWarningTypes[warning.category]" /> {{ warning.description }} <b-badge variant="dark" v-if="warning.createdOn">{{ formatDate(warning.createdOn) }}</b-badge>
           </div>
         </section>
 
@@ -226,6 +226,7 @@ import { apiPostGermplasmInstitutionTable, apiPostCommentsTable } from '@/mixins
 import { entityTypes } from '@/mixins/types'
 
 import { mdiPlaylistPlus, mdiCommentAccountOutline, mdiCheckboxBlankOutline, mdiCity, mdiCheckboxMarked, mdiBarcode, mdiChartDonut, mdiHelpCircle, mdiTagTextOutline, mdiTextBoxCheckOutline, mdiLinkVariant, mdiSpeedometer, mdiDatabase, mdiFamilyTree, mdiMapMarker, mdiTable, mdiImageMultiple, mdiGroup, mdiFileTree, mdiCircleMedium, mdiSubdirectoryArrowRight, mdiFileCertificate, mdiHistory, mdiHelpRhombus, mdiFileDocumentAlert, mdiAlert, mdiInvoiceTextArrowRight } from '@mdi/js'
+import { formatDate } from '@/mixins/formatting'
 
 export default {
   data: function () {
@@ -361,6 +362,7 @@ export default {
     }
   },
   methods: {
+    formatDate,
     updateGermplasmLocation: function (location) {
       apiPatchGermplasmLocation(this.germplasmTableData.germplasmId, {
         id: location

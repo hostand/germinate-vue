@@ -240,7 +240,163 @@ const repeatability = groups => {
   }
 }
 
+// The eigenvalues and eigenvectors of a symmetric matrix (Jacobi rotations): { values, vectors }, the largest value
+// first, vectors[k] the eigenvector of values[k]
+const symmetricEigen = matrix => {
+  const n = matrix.length
+  const a = matrix.map(row => row.slice())
+  const v = matrix.map((row, i) => row.map((x, j) => i === j ? 1 : 0))
+  for (let sweep = 0; sweep < 100; sweep++) {
+    let off = 0
+    for (let i = 0; i < n; i++) {
+      for (let j = i + 1; j < n; j++) {
+        off += a[i][j] * a[i][j]
+      }
+    }
+    if (off < 1e-20) {
+      break
+    }
+    for (let p = 0; p < n; p++) {
+      for (let q = p + 1; q < n; q++) {
+        if (Math.abs(a[p][q]) < 1e-300) {
+          continue
+        }
+        const theta = (a[q][q] - a[p][p]) / (2 * a[p][q])
+        const t = Math.sign(theta || 1) / (Math.abs(theta) + Math.sqrt(theta * theta + 1))
+        const c = 1 / Math.sqrt(t * t + 1)
+        const sn = t * c
+        for (let k = 0; k < n; k++) {
+          const akp = a[k][p]
+          const akq = a[k][q]
+          a[k][p] = c * akp - sn * akq
+          a[k][q] = sn * akp + c * akq
+        }
+        for (let k = 0; k < n; k++) {
+          const apk = a[p][k]
+          const aqk = a[q][k]
+          a[p][k] = c * apk - sn * aqk
+          a[q][k] = sn * apk + c * aqk
+        }
+        for (let k = 0; k < n; k++) {
+          const vkp = v[k][p]
+          const vkq = v[k][q]
+          v[k][p] = c * vkp - sn * vkq
+          v[k][q] = sn * vkp + c * vkq
+        }
+      }
+    }
+  }
+  const order = a.map((row, i) => i).sort((i, j) => a[j][j] - a[i][i])
+  return {
+    values: order.map(i => a[i][i]),
+    vectors: order.map(i => v.map(row => row[i]))
+  }
+}
+
+// Principal component analysis of the rows of a matrix (rows: the individuals, columns: the variables, no missing
+// value), each variable standardized first (mean 0, standard deviation 1: the correlation matrix), so that variables in
+// different units weigh the same: { scores (per row, per component), loadings (per variable, per component: its
+// correlation with the component), explained (share of the variance of each component), used (the variables kept: those
+// that vary) }
+const pca = rows => {
+  const n = rows.length
+  const p = n > 0 ? rows[0].length : 0
+  const means = []
+  const sds = []
+  for (let j = 0; j < p; j++) {
+    const column = rows.map(r => r[j])
+    const m = mean(column)
+    means.push(m)
+    sds.push(n > 1 ? Math.sqrt(column.reduce((sum, x) => sum + (x - m) * (x - m), 0) / (n - 1)) : 0)
+  }
+  const used = sds.map((s, j) => j).filter(j => sds[j] > 0)
+  const z = rows.map(r => used.map(j => (r[j] - means[j]) / sds[j]))
+  const k = used.length
+  const correlation = used.map((_, i) => used.map((__, j) => z.reduce((sum, r) => sum + r[i] * r[j], 0) / (n - 1)))
+  const { values, vectors } = symmetricEigen(correlation)
+  const total = values.reduce((sum, x) => sum + Math.max(x, 0), 0) || 1
+  return {
+    used,
+    explained: values.map(x => Math.max(x, 0) / total),
+    scores: z.map(r => vectors.map(vec => vec.reduce((sum, x, i) => sum + x * r[i], 0))),
+    loadings: Array.from({ length: k }, (_, i) => vectors.map((vec, c) => vec[i] * Math.sqrt(Math.max(values[c], 0))))
+  }
+}
+
+// Pearson's correlation of two lists of numbers of the same length; null with fewer than three pairs or a list that
+// does not vary
+const pearsonR = (xs, ys) => {
+  const n = xs.length
+  if (n < 3) {
+    return null
+  }
+  const mx = mean(xs)
+  const my = mean(ys)
+  let sxy = 0
+  let sxx = 0
+  let syy = 0
+  for (let i = 0; i < n; i++) {
+    const dx = xs[i] - mx
+    const dy = ys[i] - my
+    sxy += dx * dy
+    sxx += dx * dx
+    syy += dy * dy
+  }
+  return sxx > 0 && syy > 0 ? Math.max(-1, Math.min(1, sxy / Math.sqrt(sxx * syy))) : null
+}
+
+// The ranks of a list of numbers (1: the smallest; ties: the mean of their ranks)
+const ranks = values => {
+  const order = values.map((v, i) => i).sort((i, j) => values[i] - values[j])
+  const result = new Array(values.length)
+  let i = 0
+  while (i < order.length) {
+    let j = i
+    while (j + 1 < order.length && values[order[j + 1]] === values[order[i]]) {
+      j++
+    }
+    const rank = (i + j) / 2 + 1
+    for (let k = i; k <= j; k++) {
+      result[order[k]] = rank
+    }
+    i = j + 1
+  }
+  return result
+}
+
+// Spearman's correlation: Pearson's of the ranks
+const spearmanRho = (xs, ys) => xs.length < 3 ? null : pearsonR(ranks(xs), ranks(ys))
+
+// The two-sided p-value of a correlation r with df degrees of freedom (t = r √(df / (1 − r²)))
+const correlationP = (r, df) => {
+  if (r === null || r === undefined || df < 1) {
+    return null
+  }
+  if (Math.abs(r) >= 1) {
+    return 0
+  }
+  const t2 = r * r * df / (1 - r * r)
+  return betaI(df / 2, 0.5, df / (df + t2))
+}
+
+// The 95 % confidence interval of Pearson's r of n pairs (Fisher's z); null with fewer than four pairs
+const correlationCI = (r, n) => {
+  if (r === null || r === undefined || n < 4) {
+    return null
+  }
+  const z = Math.atanh(Math.max(-0.999999, Math.min(0.999999, r)))
+  const se = 1 / Math.sqrt(n - 3)
+  return [Math.tanh(z - 1.96 * se), Math.tanh(z + 1.96 * se)]
+}
+
 export {
+  pearsonR,
+  ranks,
+  spearmanRho,
+  correlationP,
+  correlationCI,
+  symmetricEigen,
+  pca,
   lnGamma,
   gammaQ,
   chiSquareP,

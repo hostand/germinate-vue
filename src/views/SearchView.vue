@@ -28,7 +28,7 @@
             <!-- Long names are cut (the whole name on hover) -->
             <span class="search-page-tab-title" :title="tab.title">{{ tab.title }}</span>
             <!-- How many were found: only when searching everything -->
-            <span class="search-page-count" v-if="search.all" :title="(search.counts[tab.key] || 0).toLocaleString()">{{ getCountText(search.counts[tab.key]) }}</span>
+            <span class="search-page-count" v-if="search.all" :title="formatNumber(search.counts[tab.key] || 0)">{{ getCountText(search.counts[tab.key]) }}</span>
           </template>
 
           <!-- What was searched: the filter icon, then the scope, the field and the values (a chevron when it doesn't fit) -->
@@ -66,7 +66,7 @@ import { apiPostClimateTable } from '@/mixins/api/climate'
 import { apiPostLocationTable, apiPostLocationTableIds, apiPostLocationPolygonTable, apiPostLocationPolygonTableIds } from '@/mixins/api/location'
 import { apiPostMapsTable, apiPostMapdefinitionTable, apiPostMapdefinitionTableIds } from '@/mixins/api/genotype'
 import { mdiDatabaseRemoveOutline } from '@mdi/js'
-import { getNumberWithSuffix } from '@/mixins/formatting'
+import { getNumberWithSuffix, formatNumber } from '@/mixins/formatting'
 
 // The tables of the results, keyed by the table name of the search scopes (see home-typeahead-search.js), in the order
 // of their tabs. Searching everything ("all"), the text is looked for in their searchable columns: those of the legacy
@@ -211,6 +211,7 @@ export default {
     }
   },
   methods: {
+    formatNumber,
     onSearch: function (event) {
       this.searchCount++
       this.countsLoaded = false

@@ -1,0 +1,147 @@
+/* The details of a variable (TraitDetails, ClimateDetails; scoped in each): the tabs, the blocks, the empty state */
+/* Tabs below the main information: as those of the custom pages, without icons */
+.td-tabs {
+  margin-top: 2.25rem;
+}
+.td-tabs >>> .td-tabs-nav {
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--cp-border);
+}
+.td-tabs >>> .td-tabs-nav .nav-link {
+  padding: 0.7rem 1.25rem;
+  border: 1px solid transparent;
+  border-radius: 10px 10px 0 0;
+  color: var(--cp-muted);
+  font-weight: 600;
+  line-height: 1.5;
+}
+.td-tabs >>> .td-tabs-nav .nav-link:hover,
+.td-tabs >>> .td-tabs-nav .nav-link:focus {
+  border-color: transparent;
+  color: var(--cp-text);
+}
+.td-tabs >>> .td-tabs-nav .nav-link.active,
+body.dark-mode .td-tabs >>> .td-tabs-nav .nav-link.active,
+body.dark-mode .td-tabs >>> .td-tabs-nav .nav-link.active:focus {
+  border-color: var(--cp-border) var(--cp-border) var(--cp-surface);
+  background: var(--cp-surface);
+  color: var(--cp-text);
+}
+.td-tab-panel {
+  margin-top: 1.75rem;
+}
+/* Blocks (as those of the other custom pages): the icon in a soft green square beside the title, the content below */
+.td-card {
+  margin-top: 1.5rem;
+  overflow: hidden;
+  border: 1px solid var(--cp-border);
+  border-radius: 16px;
+  background: var(--cp-surface);
+  box-shadow: 0 1px 2px var(--cp-shadow);
+}
+.td-tab-panel > .td-card:first-child {
+  margin-top: 0;
+}
+.td-card-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.9rem;
+  padding: 1.25rem;
+}
+.td-card-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  background: var(--cp-green-soft);
+  color: var(--cp-green);
+  font-size: 1.25rem;
+}
+.td-card-title {
+  margin: 0.1rem 0 0.3rem;
+  color: var(--cp-text);
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+.td-card-text {
+  margin: 0;
+  color: var(--cp-muted);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+.td-card-body {
+  padding: 1.25rem;
+  border-top: 1px solid var(--cp-border);
+}
+/* A body filled by its content (the statistics of text traits: their strip of numbers from edge to edge) */
+.td-card-body.td-card-body-flush {
+  padding: 0;
+}
+.td-card-head-main {
+  flex: 1;
+  min-width: 0;
+}
+.td-card-close {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--cp-muted);
+  cursor: pointer;
+}
+.td-card-close:hover,
+.td-card-close:focus-visible {
+  background: var(--cp-neutral-bg);
+  color: var(--cp-text);
+}
+/* The icon of the type of the selected dataset: its colour, on a soft background of it (as its chip in the table) */
+.td-card-icon.td-type-icon {
+  background: color-mix(in srgb, var(--td-type-color) 14%, transparent);
+  color: var(--td-type-color);
+}
+.td-type-icon >>> svg {
+  width: 1.5rem;
+  height: 1.5rem;
+  fill: var(--td-type-color);
+}
+/* No dataset selected: the message and its button, centred */
+.td-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 3rem 1.25rem;
+  text-align: center;
+}
+.td-empty-text {
+  max-width: 34rem;
+  margin: 0;
+  color: var(--cp-muted);
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+.td-empty-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 1.1rem;
+  border: 0;
+  border-radius: 10px;
+  background: var(--cp-button);
+  color: var(--cp-on-button);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.td-empty-button:hover,
+.td-empty-button:focus-visible {
+  background: var(--cp-button-hover);
+}

@@ -12,11 +12,16 @@
     </template>
     <!-- Germplasm name link -->
     <template v-slot:cell(germplasmName)="data">
-      <GermplasmNameCell :germplasmId="data.item.germplasmId" :name="data.item.germplasmName" />
+      <GermplasmNameCell :germplasmId="data.item.germplasmId" :name="data.item.germplasmName" :link="!plainGermplasm" />
     </template>
-    <!-- Germplasm name link -->
+    <!-- Germplasm name link (plainGermplasm: plain text; the passport icon only beside the germplasm name) -->
     <template v-slot:cell(germplasmDisplayName)="data">
-      <router-link :to="{ name: Pages.passport, params: { germplasmId: data.item.germplasmId } }">{{ data.item.germplasmDisplayName }}</router-link>
+      <span v-if="plainGermplasm">{{ data.item.germplasmDisplayName }}</span>
+      <router-link :to="{ name: Pages.passport, params: { germplasmId: data.item.germplasmId } }" v-else>{{ data.item.germplasmDisplayName }}</router-link>
+    </template>
+    <!-- The abbreviation of the unit of the trait (given by traitId: the rows only have the name of the unit) -->
+    <template v-slot:cell(unitAbbreviation)="data">
+      <span>{{ unitAbbreviations ? (unitAbbreviations[data.item.traitId] || '') : '' }}</span>
     </template>
     <!-- Synonyms -->
     <template v-slot:cell(germplasmSynonyms)="data">
@@ -40,7 +45,8 @@
     </template>
     <!-- Germplasm GID link -->
     <template v-slot:cell(germplasmGid)="data">
-      <router-link :to="{ name: Pages.passport, params: { germplasmId: data.item.germplasmId } }">{{ data.item.germplasmGid }}</router-link>
+      <span v-if="plainGermplasm">{{ data.item.germplasmGid }}</span>
+      <router-link :to="{ name: Pages.passport, params: { germplasmId: data.item.germplasmId } }" v-else>{{ data.item.germplasmGid }}</router-link>
     </template>
     <!-- Entity type -->
     <template v-slot:cell(entityType)="data">
@@ -51,13 +57,20 @@
       <span class="table-country" v-b-tooltip.hover :title="data.item.countryName"><i :class="'fi fi-' + data.item.countryCode2.toLowerCase()" v-if="data.item.countryCode2"/> <span> {{ data.item.countryCode2 }}</span></span>
     </template>
     <!-- Trait data type icon -->
+    <!-- Trait name: clickable when asked (its details) -->
+    <template v-slot:cell(traitName)="data">
+      <button type="button" class="tdt-trait-link" @click="$emit('trait-clicked', { traitId: data.item.traitId, traitName: data.item.traitName, traitDataType: data.item.traitDataType })" v-if="traitClickable">{{ data.item.traitName }}</button>
+      <span v-else>{{ data.item.traitName }}</span>
+    </template>
     <template v-slot:cell(traitDataType)="data">
       <span class="bt-chip" :style="{ '--bt-chip-color': dataTypes[data.item.traitDataType].color() }"><MdiIcon :path="dataTypes[data.item.traitDataType].path" /> {{ dataTypes[data.item.traitDataType].text() }}</span>
     </template>
     <!-- Trait value -->
     <template v-slot:cell(traitValue)="data">
       <span v-if="data.item.traitValue !== undefined && data.item.traitValue !== null">
-        <template v-if="data.item.traitDataType === 'numeric'">{{ formatNumber(+data.item.traitValue, 2) }}</template>
+        <!-- A numeric trait: the number formatted; a value that is not a number (e.g. "32.1 ± 10.97 b") as written -->
+        <template v-if="data.item.traitDataType === 'numeric' && `${data.item.traitValue}`.trim() !== '' && isFinite(data.item.traitValue)">{{ formatNumber(+data.item.traitValue, 2) }}</template>
+        <template v-else-if="data.item.traitDataType === 'numeric'">{{ data.item.traitValue }}</template>
         <template v-else-if="data.item.traitDataType === 'date'">{{ formatDate(data.item.traitValue) }}</template>
         <template v-else-if="data.item.traitDataType === 'categorical'">{{ data.item.traitValue }}</template>
         <template v-else>{{ isNaN(data.item.traitValue) ? data.item.traitValue : formatNumber(parseFloat(data.item.traitValue), 2) }}</template>
@@ -79,9 +92,28 @@ export default {
   name: 'TrialsDataTable',
   props: {
     ...defaultProps.FULL,
+    ...defaultProps.ACTIONS,
     shown: {
       type: Boolean,
       default: true
+    },
+    // The abbreviation of the unit of each trait ({ traitId: abbreviation }): a column of its own after the unit. Not in
+    // the rows of the server: not sortable; its filter is turned into one on the traits by the page (filterByUnit)
+    unitAbbreviations: {
+      type: Object,
+      default: null
+    },
+    // The data exports: no germplasm id, no marking column, the names without links to the passport page (only its
+    // preview)
+    plainGermplasm: {
+      type: Boolean,
+      default: false
+    },
+    // The name of a trait clickable: "trait-clicked" with { traitId, traitName, traitDataType } (the trials export opens
+    // its details)
+    traitClickable: {
+      type: Boolean,
+      default: false
     }
   },
   data: function () {
@@ -260,6 +292,25 @@ export default {
         })
       }
 
+      // The data exports: no germplasm id, no marking of the germplasm
+      if (this.plainGermplasm) {
+        ;['germplasmId', 'marked'].forEach(key => {
+          const index = result.findIndex(c => c.key === key)
+          if (index !== -1) {
+            result.splice(index, 1)
+          }
+        })
+      }
+      // The abbreviation of the unit of each trait: after the name of the unit
+      if (this.unitAbbreviations) {
+        const index = result.findIndex(c => c.key === 'unitName')
+        result.splice(index + 1, 0, {
+          key: 'unitAbbreviation',
+          type: String,
+          sortable: false,
+          label: this.$t('tableColumnTraitUnitAbbreviation')
+        })
+      }
       return result
     }
   },

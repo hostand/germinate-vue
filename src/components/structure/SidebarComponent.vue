@@ -21,6 +21,7 @@
 <script>
 import MdiIcon from '@/components/icons/MdiIcon'
 import SidebarIcon from '@/components/icons/SidebarIcon'
+import { customClimateExport } from '@/components/icons/custom-icons'
 
 import { mapGetters } from 'vuex'
 import { SidebarMenu } from 'vue-sidebar-menu'
@@ -261,7 +262,14 @@ export default {
                     class: 'vsm--badge vsm--badge_default'
                   },
                   href: { name: Pages.export, params: { datasetType: 'climate' } },
-                  icon: { element: 'i', class: 'fa-solid fa-tarp-droplet fa-fw' }
+                  icon: {
+                    element: SidebarIcon,
+                    // Wide and short (a cloud): a little bigger to weigh as much as the others
+                    class: 'vsm--icon-large',
+                    attributes: {
+                      path: customClimateExport
+                    }
+                  }
                 }
               ]
             },
@@ -610,6 +618,11 @@ export default {
   width: 1.45em;
   height: 1.45em;
   vertical-align: middle;
+}
+/* Wide and short icons (e.g. the climate export): bigger, to weigh as much as the others */
+.v-sidebar-menu .vsm--icon.vsm--icon-large svg.mdi-icon {
+  width: 2em;
+  height: 2em;
 }
 
 /* Light theme: in the colours of the new pages (light surface, dark text, green icons and highlights) */

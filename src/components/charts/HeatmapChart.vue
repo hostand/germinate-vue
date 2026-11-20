@@ -7,6 +7,7 @@
 </template>
 
 <script>
+import { getGradientScale } from '@/mixins/chart-palettes'
 import { mapGetters } from 'vuex'
 import BaseChart from '@/components/charts/BaseChart'
 import { uuidv4 } from '@/mixins/util'
@@ -110,7 +111,7 @@ export default {
           y: y,
           x: this.plotData[0].dims,
           type: 'heatmap',
-          colorscale: 'Viridis',
+          colorscale: getGradientScale(),
           customdata: customdata,
           name: '',
           hovertemplate: '%{y}<br>%{customdata}'

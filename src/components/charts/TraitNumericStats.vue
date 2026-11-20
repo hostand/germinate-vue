@@ -39,7 +39,7 @@
         <b-dropdown-item link-class="top-nav-menu-item" :disabled="!chartShown" @click="downloadSvg"><i class="fa-solid fa-file-code fa-fw" aria-hidden="true" /> {{ $t('buttonDownloadSvg') }}</b-dropdown-item>
         <b-dropdown-item link-class="top-nav-menu-item" :disabled="!sourceFile" @click="downloadData"><i class="fa-solid fa-file-lines fa-fw" aria-hidden="true" /> {{ $t('buttonDownloadFile') }}</b-dropdown-item>
         <!-- The colours of the charts: the first one for the bars, the boxes and the means -->
-        <b-dropdown-item link-class="top-nav-menu-item" @click="$refs.baseChart.$refs.customChartColorModal.show()"><i class="fa-solid fa-palette fa-fw" aria-hidden="true" /> {{ $t('buttonChangeChartColors') }}</b-dropdown-item>
+        <b-dropdown-item link-class="top-nav-menu-item" @click="$refs.baseChart.showColors()"><i class="fa-solid fa-palette fa-fw" aria-hidden="true" /> {{ $t('buttonChangeChartColors') }}</b-dropdown-item>
       </template>
       <template slot="additionalButtons">
         <b-button v-b-tooltip.hover :title="$t('chartTooltipMatrixTour')" :aria-label="$t('chartTooltipMatrixTour')" :disabled="!hasChart" @click="$refs.tour.start()">
@@ -67,18 +67,21 @@
             <span class="tds-progress" v-if="rowsProgress && rowsProgress.total > rowsProgress.loaded">{{ $t('pageTraitDetailsStatsLoadingProgress', { loaded: formatNumber(rowsProgress.loaded), total: formatNumber(rowsProgress.total) }) }}</span>
           </div>
           <div class="tds-single" v-else-if="rowsState === 'confirm'">
-            <p><i class="fa-solid fa-circle-info" aria-hidden="true" /> {{ $t('pageTraitDetailsStatsObservationsLarge', { count: formatNumber(summary.n) }) }}</p>
+            <p><i class="fa-solid fa-circle-info" aria-hidden="true" /> {{ vt('pageTraitDetailsStatsObservationsLarge', { count: formatNumber(summary.n) }) }}</p>
             <button type="button" class="tvs-values-link" @click="loadObservations"><i class="fa-solid fa-download" aria-hidden="true" /> {{ $t('pageTraitDetailsStatsLoadObservations') }}</button>
           </div>
         </template>
         <!-- By rep / block: no rep nor block with more than one level -->
         <p class="tds-single" v-else-if="view === 'groups' && groupOptions.length < 1"><i class="fa-solid fa-circle-info" aria-hidden="true" /> {{ $t('pageTraitDetailsStatsNoGroups') }}</p>
 
+        <!-- Over time: no recording dates; many observations grouped by month or year -->
+        <p class="tds-single" v-if="hasChart && view === 'time' && rowsState === 'loaded' && !chartShown"><i class="fa-solid fa-circle-info" aria-hidden="true" /> {{ $t('pageClimateDetailsStatsNoDates') }}</p>
+        <p class="tds-note" v-if="chartShown && timeUnit"><i class="fa-solid fa-circle-info" aria-hidden="true" /> {{ timeUnit === 'year' ? $t('pageClimateDetailsStatsTimeByYearNumeric') : $t('pageClimateDetailsStatsTimeByMonthNumeric') }}</p>
         <!-- Ranking: the repeatability, the order, why the means are raw -->
         <template v-if="chartShown && view === 'ranking'">
           <div class="tcs-bar">
-            <span class="tcs-summary" v-if="repeatabilityInfo" v-b-tooltip.hover :title="$t('pageTraitDetailsStatsRepeatabilityTooltip')">
-              <i class="fa-solid fa-gauge-simple" aria-hidden="true" /> {{ $t('pageTraitDetailsStatsRepeatability') }}: <b>{{ formatFixed(repeatabilityInfo.value, 2) }}</b> · {{ repeatabilityLevel }}
+            <span class="tcs-summary" v-if="repeatabilityInfo" v-b-tooltip.hover :title="vt('pageTraitDetailsStatsRepeatabilityTooltip')">
+              <i class="fa-solid fa-gauge-simple" aria-hidden="true" /> {{ vt('pageTraitDetailsStatsRepeatability') }}: <b>{{ formatFixed(repeatabilityInfo.value, 2) }}</b> · {{ repeatabilityLevel }}
             </span>
             <button type="button" class="tds-pager-toggle" @click="toggleRankingOrder">
               <i :class="['fa-solid', rankingDescending ? 'fa-arrow-down-wide-short' : 'fa-arrow-up-short-wide']" aria-hidden="true" /> {{ rankingDescending ? $t('pageTraitDetailsStatsHighestFirst') : $t('pageTraitDetailsStatsLowestFirst') }}
@@ -92,29 +95,31 @@
           </button>
         </div>
 
-        <div :class="['tvs-chart', { 'is-clickable': view === 'distribution' || view === 'ranking' }]" ref="chart" v-show="chartShown" />
+        <div :class="['tvs-chart', { 'is-clickable': view === 'distribution' || (view === 'ranking' && !isClimate) }]" ref="chart" v-show="chartShown" />
 
-        <!-- Outliers: the rules, the table (a page of them) -->
+        <!-- Outliers: the table (a page of them) -->
         <template v-if="hasChart && view === 'outliers' && rowsState === 'loaded'">
-          <p class="tds-note"><i class="fa-solid fa-circle-info" aria-hidden="true" /> {{ outlierRules }}</p>
-          <p class="tds-single" v-if="outliers.length < 1"><i class="fa-solid fa-circle-check" aria-hidden="true" /> {{ $t('pageTraitDetailsStatsNoOutliers') }}</p>
+          <p class="tds-single" v-if="outliers.length < 1"><i class="fa-solid fa-circle-check" aria-hidden="true" /> {{ vt('pageTraitDetailsStatsNoOutliers') }}</p>
           <div class="tns-table-wrap" v-else>
             <table class="tns-table">
               <thead>
                 <tr>
-                  <th>{{ $t('tableColumnGermplasmName') }}</th>
-                  <th class="is-number">{{ $t('tableColumnTraitRep') }}</th>
-                  <th class="is-number">{{ $t('tableColumnTraitBlock') }}</th>
+                  <th>{{ vt('tableColumnGermplasmName') }}</th>
+                  <!-- A climate: the recording date in place of the rep and the block -->
+                  <th v-if="isClimate">{{ $t('tableColumnClimateDataRecordingDate') }}</th>
+                  <th class="is-number" v-if="!isClimate">{{ $t('tableColumnTraitRep') }}</th>
+                  <th class="is-number" v-if="!isClimate">{{ $t('tableColumnTraitBlock') }}</th>
                   <th class="is-number">{{ $t('pageTraitDetailsStatsValue') }}</th>
                   <th>{{ $t('pageTraitDetailsStatsOutlierReason') }}</th>
                 </tr>
               </thead>
               <tbody>
                 <tr v-for="(outlier, index) in pageOutliers" :key="`tns-outlier-${outliersPage}-${index}`">
-                  <td><GermplasmNameCell :germplasmId="outlier.row.germplasmId" :name="`${outlier.row.germplasm}`" v-if="outlier.row.germplasmId" /><span v-else>{{ outlier.row.germplasm }}</span></td>
-                  <td class="is-number">{{ outlier.row.rep || '–' }}</td>
-                  <td class="is-number">{{ outlier.row.block || '–' }}</td>
-                  <td class="is-number"><b>{{ formatValue(outlier.row.mapped) }}</b></td>
+                  <td><GermplasmNameCell :germplasmId="outlier.row.germplasmId" :name="`${outlier.row.germplasm}`" v-if="outlier.row.germplasmId" /><span v-else><i :class="`fi fi-${outlier.row.country}`" aria-hidden="true" v-if="outlier.row.country" /> {{ outlier.row.germplasm }}</span></td>
+                  <td v-if="isClimate">{{ outlier.row.date || '–' }}</td>
+                  <td class="is-number" v-if="!isClimate">{{ outlier.row.rep || '–' }}</td>
+                  <td class="is-number" v-if="!isClimate">{{ outlier.row.block || '–' }}</td>
+                  <td class="is-number"><b>{{ formatUnit(outlier.row.mapped) }}</b></td>
                   <td>
                     <span :class="['tns-reason', `is-${reason.kind}`]" v-for="reason in outlier.reasons" :key="reason.kind">{{ reason.text }}</span>
                   </td>
@@ -129,14 +134,23 @@
           </div>
         </template>
 
+        <!-- Over time: the locations (their colour, the flag of their country, name and ISO 3 code) -->
+        <div class="tns-time-legend" v-if="chartShown && view === 'time' && timeLegend.length > 0">
+          <span class="tns-time-legend-item" v-for="item in timeLegend" :key="`tns-legend-${item.label}`">
+            <span class="tns-time-legend-line" :style="{ background: item.color }" />
+            <i :class="`fi fi-${item.country}`" aria-hidden="true" v-if="item.country" />
+            {{ item.label }}
+          </span>
+        </div>
+
         <!-- Ranking: many germplasm in pages; the notes -->
         <template v-if="chartShown && view === 'ranking'">
           <div class="tds-pager" v-if="germplasm.length > pageSize">
-            <button type="button" class="tds-pager-button" :disabled="page === 0" @click="setPage(page - 1)" :title="$t('pageTraitDetailsStatsPreviousGermplasm')" :aria-label="$t('pageTraitDetailsStatsPreviousGermplasm')"><i class="fa-solid fa-chevron-left" aria-hidden="true" /></button>
-            <span>{{ $t('pageTraitDetailsStatsGermplasmRange', { from: formatNumber(page * pageSize + 1), to: formatNumber(Math.min(germplasm.length, (page + 1) * pageSize)), total: formatNumber(germplasm.length) }) }}</span>
-            <button type="button" class="tds-pager-button" :disabled="(page + 1) * pageSize >= germplasm.length" @click="setPage(page + 1)" :title="$t('pageTraitDetailsStatsNextGermplasm')" :aria-label="$t('pageTraitDetailsStatsNextGermplasm')"><i class="fa-solid fa-chevron-right" aria-hidden="true" /></button>
+            <button type="button" class="tds-pager-button" :disabled="page === 0" @click="setPage(page - 1)" :title="vt('pageTraitDetailsStatsPreviousGermplasm')" :aria-label="vt('pageTraitDetailsStatsPreviousGermplasm')"><i class="fa-solid fa-chevron-left" aria-hidden="true" /></button>
+            <span>{{ vt('pageTraitDetailsStatsGermplasmRange', { from: formatNumber(page * pageSize + 1), to: formatNumber(Math.min(germplasm.length, (page + 1) * pageSize)), total: formatNumber(germplasm.length) }) }}</span>
+            <button type="button" class="tds-pager-button" :disabled="(page + 1) * pageSize >= germplasm.length" @click="setPage(page + 1)" :title="vt('pageTraitDetailsStatsNextGermplasm')" :aria-label="vt('pageTraitDetailsStatsNextGermplasm')"><i class="fa-solid fa-chevron-right" aria-hidden="true" /></button>
           </div>
-          <p class="tds-note"><i class="fa-solid fa-circle-info" aria-hidden="true" /> {{ $t('pageTraitDetailsStatsRankingRaw') }}<template v-if="germplasm.some(g => g.n === 1)"> {{ $t('pageTraitDetailsStatsSingleObservation') }}</template></p>
+          <p class="tds-note"><i class="fa-solid fa-circle-info" aria-hidden="true" /> {{ vt('pageTraitDetailsStatsRankingRaw') }}<template v-if="germplasm.some(g => g.n === 1)"> {{ $t('pageTraitDetailsStatsSingleObservation') }}</template></p>
         </template>
 
         <!-- By rep / block: the variation explained, the tests -->
@@ -166,8 +180,10 @@ import TraitValueStats from '@/components/charts/TraitValueStats'
 import PassportPreviewModal from '@/components/germplasm/PassportPreviewModal'
 import GermplasmNameCell from '@/components/germplasm/GermplasmNameCell'
 import traitStats, { FONT } from '@/mixins/trait-stats'
-import { formatNumber } from '@/mixins/formatting'
+import { formatNumber, formatDecimals, formatPercent } from '@/mixins/formatting'
 import { quantile, quantileOfCounts, mean, oneWayAnova, kruskalWallis, repeatability } from '@/mixins/stats-math'
+import { getNumericTimeChart, getTimeUnit, hasDates } from '@/mixins/climate-time'
+import { getColors } from '@/mixins/colors'
 
 const Plotly = require('plotly.js/lib/core')
 
@@ -232,6 +248,11 @@ export default {
     PassportPreviewModal
   },
   props: {
+    // The unit of the variable (its abbreviation): with every value shown, in the title of the axes of the values
+    unit: {
+      type: String,
+      default: null
+    },
     // The restrictions of the trait: its limits ({ min, max })
     traitRestrictions: {
       type: Object,
@@ -244,8 +265,10 @@ export default {
       // loaded once confirmed), loading, loaded
       rows: [],
       rowsState: 'none',
-      // distribution, outliers, ranking or groups
+      // distribution, outliers, ranking or groups (a climate: time in place of groups)
       view: 'distribution',
+      // Over time (a climate): the locations of the legend below the chart ({ label, color, country })
+      timeLegend: [],
       page: 0,
       outliersPage: 0,
       pageSize: PAGE_SIZE,
@@ -275,7 +298,12 @@ export default {
         key: 'groups',
         icon: 'fa-table-cells',
         text: this.$t('pageTraitDetailsStatsViewByGroup')
-      }]
+      }, {
+        key: 'time',
+        icon: 'fa-chart-line',
+        text: this.$t('pageClimateDetailsStatsViewOverTime')
+      }].filter(view => this.isClimate ? view.key !== 'groups' : view.key !== 'time')
+      // (a climate: no rep nor block, its values over the recording dates)
     },
     // The numbers seen ({ x, count, raw: the values as written }), in their order; the values not numbers apart
     numeric: function () {
@@ -364,7 +392,14 @@ export default {
       if (this.view === 'groups') {
         return this.groupOptions.length > 0
       }
+      if (this.view === 'time') {
+        return hasDates(this.rows)
+      }
       return this.view !== 'ranking' || this.germplasm.length > 0
+    },
+    // Over time: the observations grouped by month or year (many of them), else null
+    timeUnit: function () {
+      return this.view === 'time' && this.rowsState === 'loaded' ? getTimeUnit(this.rows) : null
     },
     // The bars of the histogram ({ lo, hi, center, count, raw, discrete }): a bar per whole number over a short range,
     // else bins of a nice size (Freedman-Diaconis)
@@ -474,17 +509,17 @@ export default {
         const reasons = []
         let severity = 0
         if (this.isOutsideLimits(x)) {
-          reasons.push({ kind: 'limits', text: this.$t('pageTraitDetailsStatsOutlierLimits', { min: this.limits.min === null ? '–' : this.formatValue(this.limits.min), max: this.limits.max === null ? '–' : this.formatValue(this.limits.max) }) })
+          reasons.push({ kind: 'limits', text: this.$t('pageTraitDetailsStatsOutlierLimits', { min: this.limits.min === null ? '–' : this.formatValue(this.limits.min), max: this.limits.max === null ? '–' : this.formatUnit(this.limits.max) }) })
           severity += 1000
         }
         if (x < s.lowFence || x > s.highFence) {
           const low = x < s.lowFence
-          reasons.push({ kind: 'fence', text: this.$t(low ? 'pageTraitDetailsStatsOutlierLow' : 'pageTraitDetailsStatsOutlierHigh', { fence: this.formatValue(low ? s.lowFence : s.highFence, 1) }) })
+          reasons.push({ kind: 'fence', text: this.$t(low ? 'pageTraitDetailsStatsOutlierLow' : 'pageTraitDetailsStatsOutlierHigh', { fence: this.formatUnit(low ? s.lowFence : s.highFence, 1) }) })
           severity += Math.abs(x - (low ? s.lowFence : s.highFence)) / (s.iqr || 1)
         }
         const g = byGermplasm[row.germplasmId || row.germplasm]
         if (this.discordance && g && g.n >= DISCORDANCE_MIN_N && Math.abs(x - g.median) > this.discordance.threshold) {
-          reasons.push({ kind: 'reps', text: this.$t('pageTraitDetailsStatsOutlierReps', { median: this.formatValue(g.median, 1) }) })
+          reasons.push({ kind: 'reps', text: this.vt('pageTraitDetailsStatsOutlierReps', { median: this.formatUnit(g.median, 1) }) })
           severity += Math.abs(x - g.median) / this.discordance.scale
         }
         if (reasons.length > 0) {
@@ -496,14 +531,6 @@ export default {
     pageOutliers: function () {
       const start = this.outliersPage * PAGE_SIZE
       return this.outliers.slice(start, start + PAGE_SIZE)
-    },
-    outlierRules: function () {
-      const s = this.summary
-      const rules = [this.$t('pageTraitDetailsStatsOutlierFences', { low: this.formatValue(s.lowFence, 1), high: this.formatValue(s.highFence, 1) })]
-      if (this.discordance) {
-        rules.push(this.$t('pageTraitDetailsStatsOutlierRepsRule', { count: DISCORDANCE_MIN_N, threshold: this.formatValue(this.discordance.threshold, 1) }))
-      }
-      return rules.join(' · ')
     },
     // Rep and / or block, those with more than one level
     groupOptions: function () {
@@ -548,7 +575,7 @@ export default {
       if (this.view === 'ranking') {
         return Math.max(1, this.pageGermplasm.length) * RANKING_ROW + RANKING_EXTRA
       }
-      if (this.view === 'groups') {
+      if (this.view === 'groups' || this.view === 'time') {
         return GROUPS_HEIGHT
       }
       return HISTOGRAM_HEIGHT
@@ -556,12 +583,12 @@ export default {
     // The help: what each number and each view tells
     tourNumberTexts: function () {
       return {
-        observations: this.$t('pageTraitDetailsTourNumberObservations'),
-        missing: this.$t('pageTraitDetailsTourNumberMissingShare'),
+        observations: this.vt('pageTraitDetailsTourNumberObservations'),
+        missing: this.vt('pageTraitDetailsTourNumberMissingShare'),
         mean: this.$t('pageTraitDetailsTourNumberMean'),
         median: this.$t('pageTraitDetailsTourNumberMedian'),
-        sd: this.$t('pageTraitDetailsTourNumberSd'),
-        cv: this.$t('pageTraitDetailsTourNumberCv'),
+        sd: this.vt('pageTraitDetailsTourNumberSd'),
+        cv: this.vt('pageTraitDetailsTourNumberCv'),
         range: this.$t('pageTraitDetailsTourNumberRange'),
         outliers: this.$t('pageTraitDetailsTourNumberOutliers'),
         limits: this.$t('pageTraitDetailsTourNumberLimits'),
@@ -570,9 +597,10 @@ export default {
     },
     tourViews: function () {
       const texts = {
-        distribution: this.$t('pageTraitDetailsTourNumericDistribution'),
-        outliers: this.$t('pageTraitDetailsTourNumericOutliers'),
-        ranking: this.$t('pageTraitDetailsTourNumericRanking'),
+        distribution: this.vt('pageTraitDetailsTourNumericDistribution'),
+        outliers: this.vt('pageTraitDetailsTourNumericOutliers'),
+        ranking: this.vt('pageTraitDetailsTourNumericRanking'),
+        time: this.$t('pageClimateDetailsTourNumericTime'),
         groups: this.$t('pageTraitDetailsTourNumericGroups')
       }
       return this.views.map(option => ({ key: option.key, title: option.text, text: texts[option.key] }))
@@ -595,17 +623,17 @@ export default {
       }, {
         key: 'mean',
         text: true,
-        value: s ? this.formatValue(s.mean, 2) : null,
+        value: s ? this.formatUnit(s.mean, 2) : null,
         label: this.$t('pageTraitDetailsStatsMean')
       }, {
         key: 'median',
         text: true,
-        value: s ? this.formatValue(s.median, 1) : null,
+        value: s ? this.formatUnit(s.median, 1) : null,
         label: this.$t('pageTraitDetailsStatsMedian')
       }, {
         key: 'sd',
         text: true,
-        value: s && s.sd !== null ? this.formatValue(s.sd, 2) : null,
+        value: s && s.sd !== null ? this.formatUnit(s.sd, 2) : null,
         label: this.$t('pageTraitDetailsStatsSd')
       }, {
         key: 'cv',
@@ -615,7 +643,7 @@ export default {
       }, {
         key: 'range',
         text: true,
-        value: s ? `${this.formatValue(s.min)} – ${this.formatValue(s.max)}` : null,
+        value: s ? `${this.formatValue(s.min)} – ${this.formatUnit(s.max)}` : null,
         label: this.$t('pageTraitDetailsStatsMinMax')
       }, {
         key: 'outliers',
@@ -721,14 +749,21 @@ export default {
       if (value === null || value === undefined || isNaN(value)) {
         return '–'
       }
-      return value.toLocaleString(this.locale, { maximumFractionDigits: this.decimals + (extra || 0), minimumFractionDigits: 0 })
+      return formatDecimals(value, 0, this.decimals + (extra || 0))
+    },
+    // The title of the axes of the values: the name of the variable and its unit (none without a unit)
+    getValueAxisTitle: function (theme) {
+      return this.unit ? { text: `${this.traitName} (${this.unit})`, font: { family: FONT, size: 12, color: theme.muted } } : undefined
+    },
+    // A value with the unit of the variable (its abbreviation), if it has one
+    formatUnit: function (value, extra) {
+      const text = this.formatValue(value, extra)
+      return this.unit && text !== '–' ? `${text} ${this.unit}` : text
     },
     formatFixed: function (value, digits) {
-      return value.toLocaleString(this.locale, { minimumFractionDigits: digits, maximumFractionDigits: digits })
+      return formatDecimals(value, digits)
     },
-    formatPercent: function (share) {
-      return `${(Math.round(share * 1000) / 10).toLocaleString(this.locale)} %`
-    },
+    formatPercent,
     formatP: function (p) {
       return p < 0.001 ? `< ${this.formatFixed(0.001, 3)}` : this.formatFixed(p, 3)
     },
@@ -738,13 +773,13 @@ export default {
         return
       }
       if (bin.discrete) {
-        this.$emit('value-clicked', bin.raw.length === 1 ? bin.raw[0] : { label: this.formatValue(bin.lo), values: bin.raw })
+        this.$emit('value-clicked', bin.raw.length === 1 ? bin.raw[0] : { label: this.formatUnit(bin.lo), values: bin.raw })
         return
       }
       // The bin includes its start, not its end (but the last one): its end just below
       const last = bin === this.bins[this.bins.length - 1]
       const epsilon = Math.pow(10, -(this.decimals + 3))
-      this.$emit('value-clicked', { label: `${this.formatValue(bin.lo, 1)} – ${this.formatValue(bin.hi, 1)}`, range: [bin.lo, last ? bin.hi : bin.hi - epsilon] })
+      this.$emit('value-clicked', { label: `${this.formatValue(bin.lo, 1)} – ${this.formatUnit(bin.hi, 1)}`, range: [bin.lo, last ? bin.hi : bin.hi - epsilon] })
     },
     draw: function () {
       const element = this.$refs.chart
@@ -758,7 +793,7 @@ export default {
         return
       }
       const theme = this.getTheme()
-      const figure = this.view === 'ranking' ? this.getRanking(theme) : (this.view === 'groups' ? this.getGroupsChart(theme) : this.getDistribution(theme))
+      const figure = this.view === 'ranking' ? this.getRanking(theme) : (this.view === 'groups' ? this.getGroupsChart(theme) : (this.view === 'time' ? this.getTimeChart(theme) : this.getDistribution(theme)))
       const layout = Object.assign({
         height: this.chartHeight,
         paper_bgcolor: 'rgba(0, 0, 0, 0)',
@@ -806,6 +841,25 @@ export default {
         this.bindGermplasmNames(this.pageGermplasm)
         element.on('plotly_afterplot', () => this.view === 'ranking' && this.bindGermplasmNames(this.pageGermplasm))
       }
+      // A climate: the flags of the locations where their labels start
+      this.watchLocationFlags()
+    },
+    // Over time (a climate): the value against the recording date, a line per location, the mean and the median of all
+    getTimeChart: function (theme) {
+      const colors = this.storeCustomChartColors && this.storeCustomChartColors.length > 0 ? this.storeCustomChartColors : (getColors() || [])
+      const figure = getNumericTimeChart(this.rows, {
+        theme,
+        colors,
+        locale: this.locale,
+        t: (key, params) => this.$t(key, params),
+        formatValue: value => this.formatUnit(value, 2),
+        mean: this.summary ? this.summary.mean : null,
+        median: this.summary ? this.summary.median : null,
+        unitLabel: this.unit ? `${this.traitName} (${this.unit})` : null
+      })
+      // The legend below the chart: each location, its colour and the flag of its country
+      this.timeLegend = figure.legend.map(item => Object.assign({ country: this.getLocationCountry(item.label) }, item))
+      return figure
     },
     // The histogram (top) and a box plot of the same values (bottom), on the same axis; the mean and the median as lines,
     // the limits of the trait as dashed lines; bars outside the limits in red
@@ -818,7 +872,7 @@ export default {
       const medianLabel = this.$t('pageTraitDetailsStatsMedian')
       const discrete = bins.length > 0 && bins[0].discrete
       const width = discrete ? 0.8 : (bins.length > 0 ? (bins[0].hi - bins[0].lo) * 0.92 : 1)
-      const binLabel = bin => bin.discrete ? this.formatValue(bin.lo) : `${this.formatValue(bin.lo, 1)} – ${this.formatValue(bin.hi, 1)}`
+      const binLabel = bin => bin.discrete ? this.formatUnit(bin.lo) : `${this.formatValue(bin.lo, 1)} – ${this.formatUnit(bin.hi, 1)}`
       // The axis: the values and the limits of the trait
       const ends = [s.min, s.max, this.limits.min, this.limits.max].filter(x => x !== null)
       const low = Math.min(...ends)
@@ -829,15 +883,15 @@ export default {
       const annotations = []
       // Mean and median: their labels on the side away from each other
       const meanLeft = s.mean < s.median
-      ;[{ x: s.mean, text: `${meanLabel} · ${this.formatValue(s.mean, 2)}`, dash: 'dash', anchor: meanLeft ? 'right' : 'left' },
-        { x: s.median, text: `${medianLabel} · ${this.formatValue(s.median, 1)}`, dash: 'dot', anchor: meanLeft ? 'left' : 'right' }].forEach(line => {
+      ;[{ x: s.mean, text: `${meanLabel} · ${this.formatUnit(s.mean, 2)}`, dash: 'dash', anchor: meanLeft ? 'right' : 'left' },
+        { x: s.median, text: `${medianLabel} · ${this.formatUnit(s.median, 1)}`, dash: 'dot', anchor: meanLeft ? 'left' : 'right' }].forEach(line => {
         shapes.push({ type: 'line', xref: 'x', yref: 'paper', x0: line.x, x1: line.x, y0: histogramBottom, y1: 1, line: { color: theme.strong, width: 1.5, dash: line.dash } })
         annotations.push({ xref: 'x', yref: 'paper', x: line.x, y: 1, yanchor: 'bottom', xanchor: line.anchor, showarrow: false, text: line.text, font: { family: FONT, size: 12, color: theme.strong } })
       })
       // The limits of the trait
       ;[{ x: this.limits.min, key: 'pageTraitDetailsStatsLimitMin', anchor: 'left' }, { x: this.limits.max, key: 'pageTraitDetailsStatsLimitMax', anchor: 'right' }].filter(limit => limit.x !== null).forEach(limit => {
         shapes.push({ type: 'line', xref: 'x', yref: 'paper', x0: limit.x, x1: limit.x, y0: 0, y1: 1, line: { color: DANGER_COLOR, width: 1, dash: 'longdash' } })
-        annotations.push({ xref: 'x', yref: 'paper', x: limit.x, y: histogramBottom, yanchor: 'bottom', xanchor: limit.anchor, xshift: limit.anchor === 'left' ? 4 : -4, showarrow: false, text: this.$t(limit.key, { value: this.formatValue(limit.x) }), font: { family: FONT, size: 11, color: DANGER_COLOR } })
+        annotations.push({ xref: 'x', yref: 'paper', x: limit.x, y: histogramBottom, yanchor: 'bottom', xanchor: limit.anchor, xshift: limit.anchor === 'left' ? 4 : -4, showarrow: false, text: this.$t(limit.key, { value: this.formatUnit(limit.x) }), font: { family: FONT, size: 11, color: DANGER_COLOR } })
       })
       const outlierPoints = s.outliers
       return {
@@ -875,8 +929,8 @@ export default {
           mode: 'markers',
           x: outlierPoints.map(v => v.x),
           y: outlierPoints.map(() => 0),
-          customdata: outlierPoints.map(v => ({ raw: v.raw, label: this.formatValue(v.x) })),
-          hovertext: outlierPoints.map(v => `<b>${this.formatValue(v.x)}</b> · ${this.$t('pageTraitDetailsStatsOutliers')}<br>${observations}: <b>${formatNumber(v.count)}</b>`),
+          customdata: outlierPoints.map(v => ({ raw: v.raw, label: this.formatUnit(v.x) })),
+          hovertext: outlierPoints.map(v => `<b>${this.formatUnit(v.x)}</b> · ${this.$t('pageTraitDetailsStatsOutliers')}<br>${observations}: <b>${formatNumber(v.count)}</b>`),
           hovertemplate: '%{hovertext}<extra></extra>',
           marker: { color: OUTLIER_COLOR, size: outlierPoints.map(v => Math.min(18, 7 + Math.sqrt(v.count) * 2)), line: { color: theme.surface, width: 1 } },
           xaxis: 'x',
@@ -888,6 +942,7 @@ export default {
           shapes,
           annotations,
           xaxis: {
+            title: this.getValueAxisTitle(theme),
             range: [low - pad, high + pad],
             showgrid: false,
             zeroline: false,
@@ -923,6 +978,8 @@ export default {
     // dashed line, its n at the end
     getRanking: function (theme) {
       const germplasm = this.pageGermplasm
+      // A climate: the flag of the country of each location beside its name
+      const flags = this.getLocationFlags(germplasm.map(g => g.name))
       const color = this.getBarColor()
       const s = this.summary
       const meanLabel = this.$t('pageTraitDetailsStatsMean')
@@ -937,7 +994,7 @@ export default {
           y: germplasm.map((g, i) => i),
           error_x: { type: 'data', array: germplasm.map(g => g.se || 0), visible: true, color: theme.line, thickness: 1.5, width: 4 },
           customdata: germplasm.map(g => ({ germplasmId: g.germplasmId })),
-          hovertext: germplasm.map(g => [`<b>${g.name}</b>`, `${meanLabel}: <b>${this.formatValue(g.mean, 2)}</b>${g.se !== null ? ` ± ${this.formatValue(g.se, 2)} (${seLabel})` : ''}`, `${this.$t('pageTraitDetailsStatsMinMax')}: ${this.formatValue(g.min)} – ${this.formatValue(g.max)}`, this.$t('pageTraitDetailsStatsSampleSize', { count: formatNumber(g.n) }), g.germplasmId ? `<i>${previewLabel}</i>` : null].filter(t => t).join('<br>')),
+          hovertext: germplasm.map(g => [`<b>${g.name}</b>`, `${meanLabel}: <b>${this.formatUnit(g.mean, 2)}</b>${g.se !== null ? ` ± ${this.formatUnit(g.se, 2)} (${seLabel})` : ''}`, `${this.$t('pageTraitDetailsStatsMinMax')}: ${this.formatValue(g.min)} – ${this.formatUnit(g.max)}`, this.$t('pageTraitDetailsStatsSampleSize', { count: formatNumber(g.n) }), g.germplasmId ? `<i>${previewLabel}</i>` : null].filter(t => t).join('<br>')),
           hovertemplate: '%{hovertext}<extra></extra>',
           marker: {
             size: 10,
@@ -949,7 +1006,7 @@ export default {
         layout: {
           margin: { t: 34, r: 70, b: 40, l: 10 },
           shapes: [{ type: 'line', xref: 'x', yref: 'paper', x0: allMean, x1: allMean, y0: 0, y1: 1, line: { color: theme.strong, width: 1.5, dash: 'dash' } }],
-          annotations: [{ xref: 'x', yref: 'paper', x: allMean, y: 1, yanchor: 'bottom', showarrow: false, text: `${meanLabel} · ${this.formatValue(allMean, 2)}`, font: { family: FONT, size: 12, color: theme.strong } }].concat(germplasm.map((g, i) => ({
+          annotations: [{ xref: 'x', yref: 'paper', x: allMean, y: 1, yanchor: 'bottom', showarrow: false, text: `${meanLabel} · ${this.formatUnit(allMean, 2)}`, font: { family: FONT, size: 12, color: theme.strong } }].concat(germplasm.map((g, i) => ({
             xref: 'paper',
             yref: 'y',
             x: 1,
@@ -961,6 +1018,7 @@ export default {
             font: { family: FONT, size: 12, color: theme.muted }
           }))),
           xaxis: {
+            title: this.getValueAxisTitle(theme),
             showgrid: true,
             gridcolor: theme.grid,
             griddash: 'dot',
@@ -972,7 +1030,7 @@ export default {
             autorange: 'reversed',
             tickmode: 'array',
             tickvals: germplasm.map((g, i) => i),
-            ticktext: germplasm.map(g => this.getLabel(g.name)),
+            ticktext: germplasm.map(g => flags.prefix + this.getLabel(g.name)),
             showgrid: false,
             zeroline: false,
             showline: false,
@@ -981,7 +1039,8 @@ export default {
             automargin: true,
             tickfont: { family: FONT, size: 12, color: theme.text },
             fixedrange: true
-          }
+          },
+          images: flags.images
         }
       }
     },
@@ -1017,7 +1076,7 @@ export default {
         layout: {
           margin: { t: 34, r: 20, b: 60, l: 56 },
           shapes: [{ type: 'line', xref: 'paper', yref: 'y', x0: 0, x1: 1, y0: allMean, y1: allMean, line: { color: theme.strong, width: 1, dash: 'dash' } }],
-          annotations: [{ xref: 'paper', yref: 'y', x: 1, y: allMean, xanchor: 'right', yanchor: 'bottom', showarrow: false, text: `${this.$t('pageTraitDetailsStatsMean')} · ${this.formatValue(allMean, 2)}`, font: { family: FONT, size: 12, color: theme.strong } }],
+          annotations: [{ xref: 'paper', yref: 'y', x: 1, y: allMean, xanchor: 'right', yanchor: 'bottom', showarrow: false, text: `${this.$t('pageTraitDetailsStatsMean')} · ${this.formatUnit(allMean, 2)}`, font: { family: FONT, size: 12, color: theme.strong } }],
           xaxis: {
             type: 'category',
             tickmode: 'array',
@@ -1029,6 +1088,7 @@ export default {
             fixedrange: true
           },
           yaxis: {
+            title: this.getValueAxisTitle(theme),
             showgrid: true,
             gridcolor: theme.grid,
             griddash: 'dot',
@@ -1046,6 +1106,26 @@ export default {
 <!-- The views, the sentences, the notes, the pages: as the dates and the categories -->
 <style src="@/assets/trait-stats.css"></style>
 <style>
+/* Over time (a climate): the legend of the locations below the chart: a line of their colour, their flag and name */
+.tns .tns-time-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem 1.25rem;
+  margin: 0.25rem 1.25rem 1rem;
+  color: var(--cp-text);
+  font-size: 0.85rem;
+}
+.tns .tns-time-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+.tns .tns-time-legend-line {
+  width: 18px;
+  height: 3px;
+  border-radius: 2px;
+}
 /* Outliers: a light table */
 .tns .tns-table-wrap {
   margin-top: 0.75rem;
